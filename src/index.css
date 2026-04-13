@@ -1,0 +1,742 @@
+@import "tailwindcss";
+
+:root {
+  /* ── B&W Premium Light Mode ─────────────────────────── */
+  --background: #f8fafc;          /* slate-50: warm off-white, not blinding */
+  --foreground: #09090b;          /* zinc-950: deep not pure black */
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #18181b;             /* zinc-900: B&W black */
+  --primary-foreground: #fafafa;
+  --secondary: #f4f4f5;           /* zinc-100 */
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;               /* zinc-100 */
+  --muted-foreground: #71717a;    /* zinc-500 */
+  --accent: #f4f4f5;
+  --accent-foreground: #18181b;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e4e4e7;              /* zinc-200 */
+  --input: #e4e4e7;
+  --ring: #18181b; 
+  --radius: 12px;
+  
+  /* Premium Glass Utilities */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-blur: blur(8px);
+}
+
+.dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #09090b;
+  --card-foreground: #fafafa;
+  --popover: #09090b;
+  --popover-foreground: #fafafa;
+  --primary: #fafafa;
+  --primary-foreground: #09090b;
+  --secondary: #18181b;
+  --secondary-foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --accent: #18181b;
+  --accent-foreground: #fafafa;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #d4d4d8;
+  
+  /* Premium Glass Utilities Dark */
+  --glass-bg: rgba(9, 9, 11, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-font-sans: var(--font-sans);
+  --color-font-serif: var(--font-serif);
+  --color-font-mono: var(--font-mono);
+  --color-radius: var(--radius);
+  --color-shadow-2xs: var(--shadow-2xs);
+  --color-shadow-xs: var(--shadow-xs);
+  --color-shadow-sm: var(--shadow-sm);
+  --color-shadow: var(--shadow);
+  --color-shadow-md: var(--shadow-md);
+  --color-shadow-lg: var(--shadow-lg);
+  --color-shadow-xl: var(--shadow-xl);
+  --color-shadow-2xl: var(--shadow-2xl);
+  --color-tracking-normal: var(--tracking-normal);
+  --color-spacing: var(--spacing);
+
+  /* Legacy Dashboard Custom Properties Preserved */
+  --color-accent-blue: #1890FF;
+  --color-accent-red: #F85149;
+  --color-accent-green: #00A37E;
+  --color-accent-orange: #FAAD14;
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
+  --color-muted-2: var(--muted-2);
+  --color-muted-2-foreground: var(--muted-2-foreground);
+  --color-transparent: transparent;
+  --radius-xs: calc(var(--radius) - 4px);
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1400px;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-fade-in-out: fade-in-out 4s ease-in-out;
+  --animate-fade-in: fade-in 0.7s ease-out forwards;
+  --animate-progress: progress 8s linear;
+  --animate-infinite-slider: infiniteSlider 20s linear infinite;
+  --animate-infinite-slider-reverse: infiniteSliderReverse 20s linear infinite;
+  --animate-shadow-ping: shadow-ping 1.5s ease-in-out infinite;
+  --animate-flip-btn: flip-btn 6s infinite steps(2, end);
+  --animate-rotate-btn: rotate-btn 3s linear infinite both;
+  --animate-light-to-right-top: light-to-right 4s linear infinite;
+  --animate-light-to-right-bottom: light-to-right 4s linear infinite;
+  --animate-marquee: marquee 25s linear infinite;
+  --animate-slide-to-right: slide-to-right 3s linear infinite;
+  --animate-slide-to-top: slide-to-top 3s linear infinite;
+  --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite alternate;
+  --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+  --animate-shine: shine var(--duration) infinite linear;
+  --font-cursive: var(--font-cursive);
+  --font-playfair: "Playfair Display", serif;
+  --font-caveat: "Caveat", cursive;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes success {
+    0% {
+      transform: scale(1);
+      background-color: rgb(147 51 234);
+    }
+
+    50% {
+      transform: scale(1.05);
+      background-color: rgb(34 197 94);
+    }
+
+    100% {
+      transform: scale(1);
+      background-color: rgb(34 197 94);
+    }
+  }
+
+  --animate-fadeIn: fadeIn 0.5s ease-out forwards;
+  --animate-success: success 0.5s ease-in-out forwards;
+}
+
+@keyframes accordion-down {
+  from {
+    height: 0;
+  }
+
+  to {
+    height: var(--radix-accordion-content-height);
+  }
+}
+
+@keyframes accordion-up {
+  from {
+    height: var(--radix-accordion-content-height);
+  }
+
+  to {
+    height: 0;
+  }
+}
+
+@keyframes fade-in-out {
+  0% {
+    opacity: 0;
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes progress {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes infiniteSlider {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(calc(-250px * 5));
+  }
+}
+
+@keyframes infiniteSliderReverse {
+  0% {
+    transform: translateX(calc(-250px * 5));
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes shadow-ping {
+  0% {
+    box-shadow: 0 0 0 0px theme("colors.neutral.100");
+  }
+
+  50% {
+    box-shadow: 0 0 0 12px theme("colors.neutral.300");
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px transparent;
+  }
+}
+
+@keyframes flip-btn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotate-btn {
+  to {
+    transform: rotate(90deg);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer-slide {
+  to {
+    transform: translate(calc(100cqw - 100%), 0);
+  }
+}
+
+@keyframes spin-around {
+  0% {
+    transform: translateZ(0) rotate(0);
+  }
+
+  15%,
+  35% {
+    transform: translateZ(0) rotate(90deg);
+  }
+
+  65%,
+  85% {
+    transform: translateZ(0) rotate(270deg);
+  }
+
+  100% {
+    transform: translateZ(0) rotate(360deg);
+  }
+}
+
+@keyframes shine {
+  0% {
+    background-position: 0% 0%;
+  }
+
+  50% {
+    background-position: 100% 100%;
+  }
+
+  to {
+    background-position: 0% 0%;
+  }
+}
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+@layer base {
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.segmented-card {
+  position: relative;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.segmented-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  z-index: 10;
+}
+
+.border-segment-blue::before {
+  background-color: var(--color-accent-blue);
+}
+
+.border-segment-red::before {
+  background-color: var(--color-accent-red);
+}
+
+.border-segment-green::before {
+  background-color: var(--color-accent-green);
+}
+
+.border-segment-orange::before {
+  background-color: var(--color-accent-orange);
+}
+
+/* Ant Design Overrides targetting custom classes */
+.custom-search .ant-input-search-button {
+  border-radius: 0 9999px 9999px 0 !important;
+}
+
+.custom-search .ant-input {
+  border-radius: 9999px 0 0 9999px !important;
+}
+
+.custom-search.ant-input-search>.ant-input-group>.ant-input-affix-wrapper {
+  border-radius: 9999px 0 0 9999px !important;
+}
+
+/* Custom Table Badge styling override for glow effect */
+/* B&W Contrast Logic (Googlar Theme) */
+:root {
+  --bw-black: #000000;
+  --bw-white: #ffffff;
+  --bw-border: #e5e7eb;
+}
+
+.dark {
+  --bw-border: #27272a;
+}
+
+.btn-bw-inverse {
+  transition: all 0.2s ease-in-out;
+  border: 1px solid var(--bw-black) !important;
+}
+
+/* Light Mode: White Background -> Black Text */
+.btn-bw-inverse {
+  background-color: var(--bw-white) !important;
+  color: var(--bw-black) !important;
+}
+
+/* Hover/Active: Invert to Black Background -> White Text */
+.btn-bw-inverse:hover, .btn-bw-inverse:active, .btn-bw-inverse.active {
+  background-color: var(--bw-black) !important;
+  color: var(--bw-white) !important;
+}
+
+.dark .btn-bw-inverse {
+  border: 1px solid var(--bw-white) !important;
+  background-color: var(--bw-black) !important;
+  color: var(--bw-white) !important;
+}
+
+.dark .btn-bw-inverse:hover, .dark .btn-bw-inverse:active, .dark .btn-bw-inverse.active {
+  background-color: var(--bw-white) !important;
+  color: var(--bw-black) !important;
+}
+
+/* Ant Design Select Inversion Overrides */
+.ant-select-dropdown {
+  padding: 4px !important;
+}
+
+.ant-select-item-option-selected {
+  background-color: var(--bw-black) !important;
+  color: var(--bw-white) !important;
+}
+
+.dark .ant-select-item-option-selected {
+  background-color: var(--bw-white) !important;
+  color: var(--bw-black) !important;
+}
+
+.ant-select-item-option-active {
+  background-color: #f4f4f5 !important;
+}
+
+.dark .ant-select-item-option-active {
+  background-color: #27272a !important;
+}
+
+.glow-badge-success {
+  border: 1px solid #00ffbc !important;
+  color: #00ffbc !important;
+  font-weight: bold;
+}
+
+.glow-badge-warning {
+  border: 1px solid #FAAD14 !important;
+  color: #FAAD14 !important;
+  font-weight: bold;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Semantic Audit — Category row tints (light / dark)
+═══════════════════════════════════════════════════════ */
+.row-cat-negativa   { background-color: rgba(239,  68,  68, 0.06) !important; }
+.row-cat-duvida     { background-color: rgba(245, 158,  11, 0.06) !important; }
+.row-cat-segmentar  { background-color: rgba( 16, 185, 129, 0.06) !important; }
+.row-cat-teste      { background-color: rgba(139,  92, 246, 0.06) !important; }
+
+.dark .row-cat-negativa  { background-color: rgba(239,  68,  68, 0.12) !important; }
+.dark .row-cat-duvida    { background-color: rgba(245, 158,  11, 0.12) !important; }
+.dark .row-cat-segmentar { background-color: rgba( 16, 185, 129, 0.12) !important; }
+.dark .row-cat-teste     { background-color: rgba(139,  92, 246, 0.12) !important; }
+
+/* ═══════════════════════════════════════════════════════
+   Semantic Table — Ultra-thin B&W scrollbar
+═══════════════════════════════════════════════════════ */
+.semantic-table-wrapper .ant-table-body {
+  scrollbar-width: thin;
+  scrollbar-color: #000 transparent;
+}
+.semantic-table-wrapper .ant-table-body::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.semantic-table-wrapper .ant-table-body::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 2px;
+}
+.dark .semantic-table-wrapper .ant-table-body::-webkit-scrollbar-thumb {
+  background: #fff;
+}
+.semantic-table-wrapper .ant-table-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Sticky left column shadow */
+.semantic-table .ant-table-cell-fix-left::after {
+  box-shadow: 4px 0 8px -2px rgba(0,0,0,0.12) !important;
+}
+.dark .semantic-table .ant-table-cell-fix-left::after {
+  box-shadow: 4px 0 8px -2px rgba(0,0,0,0.5) !important;
+}
+/* Sticky right column shadow */
+.semantic-table .ant-table-cell-fix-right::before {
+  box-shadow: -4px 0 8px -2px rgba(0,0,0,0.12) !important;
+}
+.dark .semantic-table .ant-table-cell-fix-right::before {
+  box-shadow: -4px 0 8px -2px rgba(0,0,0,0.5) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   B&W Premium — Global Light Mode Overrides
+   Eliminates all Ant Design blue accents in light mode
+═══════════════════════════════════════════════════════ */
+
+/* Body & Page background */
+body:not(.dark) {
+  background-color: #f8fafc !important; /* slate-50 */
+}
+
+/* ─── Typography Hierarchy (Light Mode) ─────────────── */
+:root {
+  --bw-text-primary:   #0f172a; /* slate-950 — titles, main data   */
+  --bw-text-secondary: #3f3f46; /* zinc-700  — labels, descriptions */
+  --bw-text-placeholder: #71717a; /* zinc-500 — hints, disabled      */
+}
+
+/* ─── Ant Design Focus/Active: Remove Blue ───────────── */
+
+/* Input focus ring */
+:not(.dark) .ant-input:focus,
+:not(.dark) .ant-input-focused,
+:not(.dark) .ant-input-affix-wrapper:focus,
+:not(.dark) .ant-input-affix-wrapper-focused {
+  border-color: #18181b !important;
+  box-shadow: 0 0 0 2px rgba(24,24,27,0.12) !important;
+}
+
+/* Input hover border */
+:not(.dark) .ant-input:hover,
+:not(.dark) .ant-input-affix-wrapper:hover {
+  border-color: #52525b !important;
+}
+
+/* Ant Button primary (not the custom .btn-bw-inverse) */
+:not(.dark) .ant-btn-primary {
+  background-color: #18181b !important;
+  border-color: #18181b !important;
+  color: #fafafa !important;
+  box-shadow: none !important;
+}
+:not(.dark) .ant-btn-primary:hover {
+  background-color: #3f3f46 !important;
+  border-color: #3f3f46 !important;
+}
+
+/* Ant Select focus */
+:not(.dark) .ant-select-focused .ant-select-selector,
+:not(.dark) .ant-select-selector:focus {
+  border-color: #18181b !important;
+  box-shadow: 0 0 0 2px rgba(24,24,27,0.12) !important;
+}
+:not(.dark) .ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: #52525b !important;
+}
+
+/* Ant Tabs active underline */
+:not(.dark) .ant-tabs-ink-bar {
+  background-color: #18181b !important;
+}
+:not(.dark) .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #18181b !important;
+}
+:not(.dark) .ant-tabs-tab:hover {
+  color: #3f3f46 !important;
+}
+
+/* Ant Table row hover */
+:not(.dark) .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: #f4f4f5 !important; /* zinc-100 */
+}
+
+/* Ant Table header */
+:not(.dark) .ant-table-thead > tr > th {
+  background-color: #f4f4f5 !important;
+  color: #3f3f46 !important;
+  border-bottom: 1px solid #e4e4e7 !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ─── Company Card: B&W Binary Selection ─────────────── */
+/* When a company card is "active/selected", invert to black */
+.company-card-active {
+  background-color: #18181b !important;
+  color: #fafafa !important;
+  border-color: #18181b !important;
+}
+.company-card-active * {
+  color: #fafafa !important;
+}
+
+/* ─── Ant Modal (Light Mode) ─────────────────────────── */
+:not(.dark) .ant-modal-content {
+  background-color: #ffffff;
+  border: 1px solid #e4e4e7;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.08);
+}
+:not(.dark) .ant-modal-header {
+  background-color: #ffffff;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+/* ─── Ant Collapse (Accordion) Light Mode ───────────── */
+:not(.dark) .ant-collapse {
+  background: transparent;
+  border: none;
+}
+:not(.dark) .ant-collapse > .ant-collapse-item {
+  border: 1px solid #e4e4e7;
+  border-radius: 12px !important;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+:not(.dark) .ant-collapse > .ant-collapse-item > .ant-collapse-header {
+  background-color: #ffffff;
+  padding: 14px 16px;
+}
+:not(.dark) .ant-collapse > .ant-collapse-item.ant-collapse-item-active > .ant-collapse-header {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e4e4e7;
+}
+:not(.dark) .ant-collapse-content {
+  background-color: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════
+   V3 Premium Audit Table — Sticky & High Contrast
+═══════════════════════════════════════════════════════ */
+.v3-audit-table .ant-table-cell {
+  padding: 16px 12px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.v3-audit-table .ant-table-cell-fix-left,
+.v3-audit-table .ant-table-cell-fix-right {
+  background-color: var(--card) !important;
+}
+
+.v3-audit-table .ant-table-cell-fix-left-last::after {
+  box-shadow: inset 10px 0 8px -8px rgba(0, 0, 0, 0.05) !important;
+}
+
+.v3-audit-table .ant-table-row {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Premium Tabs V3 — Blackout / Zinc Style */
+.premium-tabs-v3 .ant-tabs-nav {
+  margin-bottom: 0 !important;
+}
+
+.premium-tabs-v3 .ant-tabs-tab {
+  padding: 12px 0 !important;
+  margin-right: 32px !important;
+  transition: all 0.3s ease;
+}
+
+.premium-tabs-v3 .ant-tabs-tab-btn {
+  font-weight: 500 !important;
+  letter-spacing: -0.01em;
+  font-size: 13px !important;
+}
+
+.premium-tabs-v3 .ant-tabs-tab-active .ant-tabs-tab-btn {
+  font-weight: 700 !important;
+  color: #000 !important;
+}
+
+.dark .premium-tabs-v3 .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #fff !important;
+}
+
+.premium-tabs-v3 .ant-tabs-ink-bar {
+  height: 2px !important;
+  background: #000 !important;
+}
+
+.dark .premium-tabs-v3 .ant-tabs-ink-bar {
+  background: #fff !important;
+}
+
+/* Custom Select V3 — Blackout Style */
+.custom-select-premium .ant-select-selector {
+  border-radius: 12px !important;
+  border: 1px solid var(--border) !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  background: var(--background) !important;
+}
+
+/* Custom Select Action V3 — .btn-bw-inverse derivative */
+.custom-select-v3-action .ant-select-selector {
+  border-radius: 8px !important;
+  border: 1px solid #000 !important;
+  background-color: #fff !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.custom-select-v3-action .ant-select-selection-item {
+  font-weight: 700 !important;
+  color: #000 !important;
+}
+
+.custom-select-v3-action:hover .ant-select-selector {
+  background-color: #000 !important;
+  border-color: #000 !important;
+}
+
+.custom-select-v3-action:hover .ant-select-selection-item {
+  color: #fff !important;
+}
+
+.dark .custom-select-v3-action .ant-select-selector {
+  border-color: #fff !important;
+  background-color: #000 !important;
+}
+
+.dark .custom-select-v3-action .ant-select-selection-item {
+  color: #fff !important;
+}
+
+.dark .custom-select-v3-action:hover .ant-select-selector {
+  background-color: #fff !important;
+}
+
+.dark .custom-select-v3-action:hover .ant-select-selection-item {
+  color: #000 !important;
+}
+
