@@ -432,8 +432,8 @@ export function SemanticAudit({
 
         const doubtTerms = baseFilteredTerms.filter((t: CampaignTerm) => {
             const state = triageState[t.id];
-            if (state?.category === 'duvida') return true;
-            if (state?.category && state.category !== 'duvida') return false;
+            if ((state?.category as string) === 'duvida') return true;
+            if (state?.category && (state.category as string) !== 'duvida') return false;
             return isDuv(t);
         });
 
