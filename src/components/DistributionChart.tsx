@@ -8,26 +8,19 @@ interface DistributionChartProps {
 
 export function DistributionChart({ data, isDark = false }: DistributionChartProps) {
     const isNegativar = (row: CampaignTerm) => {
-        const val = (row.negativize || '').toLowerCase()
-        return val.includes('❌') || val.includes('sim') || val.includes('true') || val === 'x'
+        return row.negativar === true || String(row.negativar || '').includes('❌');
     }
 
     const isDuvida = (row: CampaignTerm) => {
-        const val = (row.observation || '').trim()
-        return val !== '' && !isNegativar(row)
+        return row.duvida === true || String(row.duvida || '').includes('❓');
     }
 
-    const isSegmentarAtiva = (val: string) => val.includes('✅')
-    const isSegmentarAlerta = (val: string) => val.includes('⚠️') || val.includes('❓')
-
     const isSegmentado = (row: CampaignTerm) => {
-        const val = (row.segment || '').trim()
-        return isSegmentarAtiva(val) || isSegmentarAlerta(val)
+        return row.segmentar === true || String(row.segmentar || '').includes('✅');
     }
 
     const isTesteAB = (row: CampaignTerm) => {
-        const val = (row.ab_test || '').toLowerCase()
-        return val === 'true' || val === 'sim' || val.includes('✅')
+        return row.teste_ab === true || String(row.teste_ab || '').includes('⚠️');
     }
 
     const negativarCount = data.filter(isNegativar).length
@@ -37,22 +30,22 @@ export function DistributionChart({ data, isDark = false }: DistributionChartPro
     const geralCount = data.length - negativarCount - duvidasCount - segmentadoCount - testeABCount
 
     const chartData = [
-        { name: 'Geral', value: geralCount > 0 ? geralCount : 0, color: '#9CA3AF' },
-        { name: 'Segmentar', value: segmentadoCount, color: '#00FF85' }, // Ultra Neon Green
-        { name: 'Teste A/B', value: testeABCount, color: '#00C2FF' }, // Ultra Neon Cyan/Blue
-        { name: 'Dúvidas', value: duvidasCount, color: '#FFB800' }, // Ultra Bright Gold
-        { name: 'Negativar', value: negativarCount, color: '#FF003D' } // Intense Neon Red
+        { name: 'Geral', value: geralCount > 0 ? geralCount : 0, color: 'url(#titaniumGradient)' },
+        { name: 'Segmentar', value: segmentadoCount, color: 'url(#silverGradient)' },
+        { name: 'Teste A/B', value: testeABCount, color: 'url(#steelGradient)' },
+        { name: 'Dúvidas', value: duvidasCount, color: '#f59e0b' }, // Metallic Orange
+        { name: 'Negativar', value: negativarCount, color: '#ef4444' } // Metallic Red
     ].filter(item => item.value > 0)
 
     const CustomTooltip = ({ active, payload }: any) => {
         if (active && payload && payload.length) {
             return (
                 <div className={`
-                    p-3 rounded-lg border shadow-lg text-xs
-                    ${isDark ? 'bg-zinc-900 border-zinc-800 text-white' : 'bg-white border-zinc-200 text-zinc-900'}
+                    p-3 rounded-xl border shadow-2xl text-xs backdrop-blur-md
+                    ${isDark ? 'bg-black/80 border-white/10 text-white' : 'bg-white/80 border-zinc-200 text-zinc-900'}
                 `}>
-                    <p className="font-semibold mb-1">{payload[0].name}</p>
-                    <p className="text-zinc-500 dark:text-zinc-400">Total: <span className={`font-bold ${isDark ? 'text-white' : 'text-zinc-900'}`}>{payload[0].value}</span> termos</p>
+                    <p className="font-bold mb-1 uppercase tracking-tighter">{payload[0].name}</p>
+                    <p className="text-zinc-500">Total: <span className="font-extrabold text-foreground">{payload[0].value}</span> termos</p>
                 </div>
             )
         }
@@ -60,9 +53,9 @@ export function DistributionChart({ data, isDark = false }: DistributionChartPro
     }
 
     return (
-        <div className={`w-full h-full p-6 flex flex-col transition-colors ${isDark ? 'rounded-[20px] bg-gradient-to-br from-zinc-800 to-black border border-zinc-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.12)]' : 'rounded-[24px] bg-white border border-transparent shadow-[0_4px_16px_rgba(0,0,0,0.04)]'}`}>
+        <div className={`w-full h-full p-6 flex flex-col transition-all duration-500 ${isDark ? 'rounded-[20px] bg-black border border-white/10 shadow-2xl' : 'rounded-[24px] bg-white border border-zinc-100 shadow-sm'}`}>
             <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-base font-semibold text-zinc-900 dark:text-white`}>
+                <h3 className={`text-sm font-bold uppercase tracking-widest text-zinc-500`}>
                     Distribuição de Termos
                 </h3>
             </div>

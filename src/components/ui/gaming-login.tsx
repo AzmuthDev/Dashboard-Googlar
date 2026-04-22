@@ -297,10 +297,15 @@ const LoginForm: React.FC<LoginFormProps> = () => {
     );
 };
 
-// Export as default components
-const LoginPage = {
-    LoginForm,
-    AnimatedBackground
+// Main Export Component
+const LoginPage: React.FC<{ onLoginSuccess?: () => void }> = () => {
+    return (
+        <div className="relative min-h-screen w-full flex items-center justify-center p-4 overflow-hidden">
+            <AnimatedBackground />
+            <LoginForm />
+        </div>
+    );
 };
 
+export { AnimatedBackground, LoginForm };
 export default LoginPage;

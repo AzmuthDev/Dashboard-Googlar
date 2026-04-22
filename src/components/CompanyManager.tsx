@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react'
-import { Typography, Button, Input, Modal, message, List, Select, Upload } from 'antd'
-import { PlusOutlined, InboxOutlined } from '@ant-design/icons'
+import { Typography, Button, Input, Modal, message, List, Select, Upload, Spin } from 'antd'
+import { useQueryClient } from '@tanstack/react-query'
+import { PlusOutlined, InboxOutlined, LoadingOutlined } from '@ant-design/icons'
+import { motion } from 'framer-motion'
 import type { Company } from '../types'
 import { CompanyCards } from './ui/company-list-cards'
 import type { CompanyData } from './ui/company-list-cards'
 import { LinkDataModal } from './ui/link-data-modal'
+import { 
+    fetchCompanies, 
+    createCompany, 
+    deleteCompany, 
+    updateCompany,
+    provisionCompanyTable
+} from '../lib/supabaseProvider'
 
 const { Title, Text } = Typography
 
@@ -20,6 +29,7 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
     const [isAddModalVisible, setIsAddModalVisible] = useState(false)
     const [isUsersModalVisible, setIsUsersModalVisible] = useState(false)
     const [isLinkModalVisible, setIsLinkModalVisible] = useState(false)
+    const [isProvisioning, setIsProvisioning] = useState(false)
     
     // Edit mode
     const [isEditingCompany, setIsEditingCompany] = useState(false)
@@ -32,74 +42,99 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
     const [newCompanyCover, setNewCompanyCover] = useState<string | undefined>()
     const [activeCompanyEdits, setActiveCompanyEdits] = useState<string | null>(null)
     const [activeCompanyLink, setActiveCompanyLink] = useState<string | null>(null)
+    const [provisioningStep, setProvisioningStep] = useState<string>('')
+    const queryClient = useQueryClient()
 
     const isAdmin = currentUser?.isAdmin
 
+    const loadCompanies = async () => {
+        const data = await fetchCompanies()
+        setCompanies(data)
+    }
+
     useEffect(() => {
-        let storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]')
-
-        // Migrate legacy string array users to object array
-        storedCompanies = storedCompanies.map((c: any) => {
-            if (c.users && c.users.length > 0 && typeof c.users[0] === 'string') {
-                return { ...c, users: c.users.map((email: string) => ({ email, role: 'viewer' })) }
-            }
-            return c
-        })
-
-        const storedUsers = JSON.parse(localStorage.getItem('googlar_authorized_users') || '[]')
-        setCompanies(storedCompanies)
-        setUsers(storedUsers)
+        loadCompanies();
+        try {
+            const storedUsers = JSON.parse(localStorage.getItem('googlar_authorized_users') || '[]');
+            setUsers(Array.isArray(storedUsers) ? storedUsers : []);
+        } catch (e) {
+            console.error('[CompanyManager] Error parsing authorized users:', e);
+            setUsers([]);
+        }
     }, [])
 
-    const handleSaveCompany = () => {
+    const handleSaveCompany = async () => {
         if (!newCompanyName.trim()) {
             message.error("Nome da empresa é obrigatório.")
             return
         }
 
-        if (isEditingCompany && editingCompanyId) {
-            // Update existing company
-            const updated = companies.map(c => {
-                if (c.id === editingCompanyId) {
-                    return {
-                        ...c,
-                        name: newCompanyName.trim(),
-                        sheetsUrl: newCompanySheetsUrl.trim() || undefined,
-                        logoUrl: newCompanyLogo,
-                        coverUrl: newCompanyCover
-                    }
-                }
-                return c
-            })
-            localStorage.setItem('googlar_companies', JSON.stringify(updated))
-            setCompanies(updated)
-            message.success("Empresa atualizada com sucesso!")
-        } else {
-            // Create new company
-            const newCompany: Company = {
-                id: Date.now().toString(),
-                name: newCompanyName.trim(),
-                sheetsUrl: newCompanySheetsUrl.trim() || undefined,
-                users: [],
-                isActive: true,
-                logoUrl: newCompanyLogo,
-                coverUrl: newCompanyCover
+        setIsProvisioning(true)
+        try {
+            if (isEditingCompany && editingCompanyId) {
+                // Update existing company in Supabase
+                const { error } = await updateCompany(editingCompanyId, {
+                    name: newCompanyName.trim(),
+                    sheetsUrl: newCompanySheetsUrl.trim() || undefined,
+                    logoUrl: newCompanyLogo,
+                    coverUrl: newCompanyCover
+                })
+
+                if (error) throw new Error(error.message || error)
+                message.success("Empresa atualizada no Supabase!")
+            } else {
+                // AUTOMATED PROVISIONING FLOW (V4)
+                setProvisioningStep('Validando Metadados...')
+                await new Promise(r => setTimeout(r, 800))
+                
+                const sanitizedName = newCompanyName.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, '_')
+                const tableName = `mesa_${sanitizedName}`
+
+                setProvisioningStep('Criando Registro na Tabela Companies...')
+                const { error } = await createCompany({
+                    name: newCompanyName.trim(),
+                    sheetsUrl: newCompanySheetsUrl.trim() || undefined,
+                    logoUrl: newCompanyLogo,
+                    coverUrl: newCompanyCover,
+                    users: [],
+                    isActive: true,
+                    tableName: tableName
+                })
+
+                if (error) throw new Error(error.message || error)
+                
+                setProvisioningStep('Provisionando Mesa Exclusiva no Supabase...')
+                const { error: rpcError } = await provisionCompanyTable(newCompanyName.trim())
+                if (rpcError) throw new Error(`Erro ao criar Mesa: ${rpcError.message || rpcError}`)
+                
+                setProvisioningStep('Configurando Políticas e Realtime...')
+                await new Promise(r => setTimeout(r, 1000))
+                
+                setProvisioningStep('Finalizando Arquitetura de Isolamento...')
+                await new Promise(r => setTimeout(r, 800))
+
+                message.success("Empresa e Infraestrutura provisionadas com sucesso!")
+                
+                // NOTIFY APP (Force global refresh)
+                window.dispatchEvent(new CustomEvent('googlar_companies_updated'));
+                queryClient.invalidateQueries({ queryKey: ['companies'] });
             }
 
-            const updated = [...companies, newCompany]
-            localStorage.setItem('googlar_companies', JSON.stringify(updated))
-            setCompanies(updated)
-            message.success("Empresa criada com sucesso!")
+            await loadCompanies()
+            
+            // Reset form
+            setNewCompanyName('')
+            setNewCompanySheetsUrl('')
+            setNewCompanyLogo(undefined)
+            setNewCompanyCover(undefined)
+            setIsEditingCompany(false)
+            setEditingCompanyId(null)
+            setIsAddModalVisible(false)
+        } catch (err: any) {
+            message.error(`Falha no provisionamento: ${err.message}`)
+        } finally {
+            setIsProvisioning(false)
         }
-        
-        // Reset form
-        setNewCompanyName('')
-        setNewCompanySheetsUrl('')
-        setNewCompanyLogo(undefined)
-        setNewCompanyCover(undefined)
-        setIsEditingCompany(false)
-        setEditingCompanyId(null)
-        setIsAddModalVisible(false)
     }
 
     const openCreateModal = () => {
@@ -128,14 +163,13 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
     const handleDeleteCompany = (id: string) => {
         Modal.confirm({
             title: 'Tem certeza?',
-            content: 'Você realmente deseja remover esta empresa? Isso não apagará as planilhas do Google, mas desconectará o painel.',
+            content: 'Você realmente deseja remover esta empresa do Supabase?',
             okText: 'Sim, excluir',
             okType: 'danger',
             cancelText: 'Cancelar',
-            onOk: () => {
-                const updated = companies.filter(c => c.id !== id)
-                localStorage.setItem('googlar_companies', JSON.stringify(updated))
-                setCompanies(updated)
+            onOk: async () => {
+                await deleteCompany(id)
+                await loadCompanies()
                 message.success("Empresa removida.")
             }
         });
@@ -165,17 +199,17 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
         ? companies
         : companies.filter(c => 
             (currentUser?.assignedCompanyIds && currentUser.assignedCompanyIds.includes(c.id)) || 
-            c.users.some((u: any) => u.email.toLowerCase() === currentUser?.email?.toLowerCase())
+            (c.users || []).some((u: any) => u.email?.toLowerCase() === currentUser?.email?.toLowerCase())
           )
 
     const mappedCompanies: CompanyData[] = displayCompanies.map(c => {
-        const companyUsers = users.filter(u => c.users.some((cu: any) => cu.email.toLowerCase() === u.email.toLowerCase()));
+        const companyUsers = (users || []).filter(u => (c.users || []).some((cu: any) => cu.email?.toLowerCase() === u.email?.toLowerCase()));
         return {
             id: c.id,
             name: c.name,
             spreadsheetStatus: c.dataSourceType === 'local' ? "Arquivo Vinculado" : (c.sheetsUrl ? "Sheet Vinculado" : "Não vinculada"),
             users: companyUsers.map(u => ({ name: u.name, email: u.email })),
-            usersCount: c.users.length,
+            usersCount: (c.users || []).length,
             isActive: c.isActive !== false,
             logoUrl: c.logoUrl,
             coverUrl: c.coverUrl
@@ -183,7 +217,48 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
     })
 
     return (
-        <div className="p-6">
+        <div className="p-6 relative">
+            {/* METALLIC PROVISIONING LOADER OVERLAY */}
+            {isProvisioning && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="fixed inset-0 z-[1000] flex flex-col items-center justify-center bg-black/90 backdrop-blur-2xl"
+                >
+                    <div className="relative mb-12">
+                        <div className="w-32 h-32 rounded-full border-4 border-transparent border-t-white animate-spin-metallic" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <Spin indicator={<LoadingOutlined style={{ fontSize: 40, color: 'white' }} spin />} />
+                        </div>
+                        {/* Metallic Glow Effect */}
+                        <div className="absolute -inset-4 bg-white/5 blur-3xl rounded-full -z-10 animate-pulse" />
+                    </div>
+                    
+                    <div className="text-center space-y-4">
+                        <h2 className="text-2xl font-black uppercase tracking-[0.3em] text-white">
+                            Provisionando Infraestrutura
+                        </h2>
+                        <div className="flex items-center justify-center gap-3">
+                            <div className="h-px w-12 bg-white/20" />
+                            <p className="text-zinc-500 font-mono text-[10px] tracking-[0.2em] uppercase">
+                                {provisioningStep || 'Iniciando Setup V4...'}
+                            </p>
+                            <div className="h-px w-12 bg-white/20" />
+                        </div>
+                    </div>
+
+                    {/* Progress Bar Style */}
+                    <div className="mt-12 w-64 h-1 bg-white/5 rounded-full overflow-hidden border border-white/10">
+                        <motion.div 
+                            className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.5)]"
+                            initial={{ width: "0%" }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: 4, ease: "easeInOut" }}
+                        />
+                    </div>
+                </motion.div>
+            )}
+
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <Title level={4} className="!m-0 !text-black dark:!text-white">
@@ -198,7 +273,7 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                         type="default"
                         icon={<PlusOutlined />}
                         onClick={openCreateModal}
-                        className="btn-bw-inverse !border-none shadow-md font-bold"
+                        className="btn-bw-inverse !border-none shadow-md font-bold px-6"
                         size="large"
                     >
                         Nova Empresa
@@ -225,7 +300,7 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
 
             {/* Modal de Criação / Edição de Empresa */}
             <Modal
-                title={isEditingCompany ? "Editar Empresa" : "Criar Nova Empresa"}
+                title={<span className="text-xl font-black uppercase tracking-tighter dark:text-white">{isEditingCompany ? "Editar Empresa" : "Criar Nova Empresa"}</span>}
                 open={isAddModalVisible}
                 onOk={handleSaveCompany}
                 onCancel={() => {
@@ -239,41 +314,62 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 }}
                 okText={isEditingCompany ? "Salvar Alterações" : "Criar Empresa"}
                 cancelText="Cancelar"
+                className="luxury-modal"
+                centered
+                cancelButtonProps={{
+                    className: ' !text-zinc-400 hover:!text-white border-none'
+                }}
+                okButtonProps={{ 
+                   className: 'btn-bw-inverse !border-none',
+                   disabled: isProvisioning 
+                }}
             >
-                <div className="mt-4 flex flex-col gap-6">
+                {isProvisioning ? (
+                    <div className="py-20 flex flex-col items-center justify-center animate-in fade-in duration-500">
+                        <div className="relative w-24 h-24 mb-6">
+                            <div className="absolute inset-0 bg-white/20 blur-[30px] rounded-full animate-pulse" />
+                            <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#FFFFFF' }} spin />} />
+                        </div>
+                        <Text className="text-white text-sm font-black uppercase tracking-[0.2em] text-center">
+                            Provisionando Base de Dados de Auditoria...
+                        </Text>
+                        <Text className="text-zinc-500 text-[10px] uppercase font-bold mt-2">Versão 4.0 Supabase Infra</Text>
+                    </div>
+                ) : (
+                    <div className="mt-4 flex flex-col gap-6">
                     <div>
-                        <Text strong className="block mb-2 text-zinc-700 dark:text-zinc-300">Nome da Empresa / Cliente</Text>
+                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Nome da Empresa / Cliente</Text>
                         <Input
                             placeholder="Ex: Acme Corp."
                             value={newCompanyName}
                             onChange={(e) => setNewCompanyName(e.target.value)}
-                            className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                            className="bg-white/5 border-zinc-700 hover:border-zinc-400 focus:border-white text-white px-4 py-2.5 rounded-xl transition-all"
                         />
                     </div>
                     <div>
-                        <Text strong className="block mb-2 text-zinc-700 dark:text-zinc-300">Público Link do Google Sheets (Opcional)</Text>
+                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Público Link do Google Sheets (Opcional)</Text>
                         <Input
                             placeholder="https://docs.google.com/spreadsheets/d/..."
                             value={newCompanySheetsUrl}
                             onChange={(e) => setNewCompanySheetsUrl(e.target.value)}
-                            className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 font-mono text-xs"
+                            className="bg-white/10 border-zinc-700 hover:border-zinc-400 focus:border-white text-white/90 px-4 py-2.5 rounded-xl font-mono text-[11px] transition-all"
                         />
-                        <Text className="text-zinc-400 block mt-1 text-[12px]">
-                            A planilha deve estar em acesso "Qualquer pessoa com o link" ou compartilhada.
+                        <Text className="text-zinc-400 block mt-2 text-[10px] font-medium leading-tight">
+                            A planilha deve estar com acesso "Qualquer pessoa com o link" ou compartilhada.
                         </Text>
                     </div>
                     <div>
-                        <Text className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-2">Logo da Empresa (Opcional)</Text>
+                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Logo da Empresa (Opcional)</Text>
                         <div className="flex items-center gap-4">
                             {newCompanyLogo && (
-                                <img src={newCompanyLogo} alt="Logo Preview" className="w-16 h-16 object-cover rounded-xl border border-zinc-200 dark:border-zinc-800" />
+                                <img src={newCompanyLogo} alt="Logo Preview" className="w-16 h-16 object-cover rounded-xl border border-zinc-700 shadow-2xl" />
                             )}
                             <div className="flex-1">
                                 <Upload.Dragger
                                     name="logo"
                                     multiple={false}
                                     showUploadList={false}
-                                    className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                    className="bg-white/5 border-zinc-700 hover:border-zinc-400 transition-all rounded-2xl p-4"
                                     beforeUpload={(file) => {
                                         const reader = new FileReader();
                                         reader.onloadend = () => {
@@ -286,25 +382,25 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                                     <p className="ant-upload-drag-icon !m-0">
                                         <InboxOutlined className="text-zinc-400" />
                                     </p>
-                                    <p className="ant-upload-text text-zinc-500 text-xs">
-                                        Clique ou arraste um logo
+                                    <p className="ant-upload-text text-zinc-300 text-[10px] font-bold uppercase tracking-widest mt-2">
+                                        Novo Logo
                                     </p>
                                 </Upload.Dragger>
                             </div>
                         </div>
                     </div>
                     <div>
-                        <Text className="text-zinc-700 dark:text-zinc-300 font-semibold block mb-2">Imagem de Capa (Opcional)</Text>
+                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Imagem de Capa (Opcional)</Text>
                         <div className="flex items-center gap-4">
                             {newCompanyCover && (
-                                <img src={newCompanyCover} alt="Cover Preview" className="w-[120px] h-16 object-cover rounded-xl border border-zinc-200 dark:border-zinc-800" />
+                                <img src={newCompanyCover} alt="Cover Preview" className="w-[120px] h-16 object-cover rounded-xl border border-zinc-700 shadow-2xl" />
                             )}
                             <div className="flex-1">
                                 <Upload.Dragger
                                     name="cover"
                                     multiple={false}
                                     showUploadList={false}
-                                    className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+                                    className="bg-white/5 border-zinc-700 hover:border-zinc-400 transition-all rounded-2xl p-4"
                                     beforeUpload={(file) => {
                                         const reader = new FileReader();
                                         reader.onloadend = () => {
@@ -317,14 +413,15 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                                     <p className="ant-upload-drag-icon !m-0">
                                         <InboxOutlined className="text-zinc-400" />
                                     </p>
-                                    <p className="ant-upload-text text-zinc-500 text-xs">
-                                        Clique ou arraste uma capa
+                                    <p className="ant-upload-text text-zinc-300 text-[10px] font-bold uppercase tracking-widest mt-2">
+                                        Nova Capa
                                     </p>
                                 </Upload.Dragger>
                             </div>
                         </div>
                     </div>
                 </div>
+            )}
             </Modal>
 
             {/* Modal de Acessos por Empresa */}
@@ -389,9 +486,9 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 }}
                 companyId={activeCompanyLink}
                 companyName={companies.find(c => c.id === activeCompanyLink)?.name || ''}
+                company={companies.find(c => c.id === activeCompanyLink)}
                 onSuccess={() => {
-                    const stored = JSON.parse(localStorage.getItem('googlar_companies') || '[]');
-                    setCompanies(stored);
+                    loadCompanies();
                 }}
             />
 

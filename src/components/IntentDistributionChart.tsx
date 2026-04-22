@@ -17,9 +17,9 @@ interface IntentDistributionChartProps {
 }
 
 const COLORS = {
-    validated: '#00ffbc', // Verde Googlar
-    review: '#FAAD14',   // Amarelo Alerta
-    irrelevant: '#ef4444' // Vermelho Destrutivo
+    validated: 'url(#silverGradient)', // Metal Silver
+    review: '#f59e0b',   // Metallic Orange
+    irrelevant: '#ef4444' // Metallic Red
 }
 
 const CustomTooltip = ({ active, payload, isDark }: any) => {
@@ -57,9 +57,13 @@ export function IntentDistributionChart({ data, isDark }: IntentDistributionChar
         }
 
         data.forEach(item => {
-            if (item.negativize?.includes('❌')) {
+            const isNegative = item.negativar === true || String(item.negativar || '').includes('❌');
+            const isReview = item.duvida === true || String(item.duvida || '').includes('❓') || 
+                             (item.status_granularidade && String(item.status_granularidade).includes('⚠️'));
+            
+            if (isNegative) {
                 stats.irrelevant++
-            } else if (item.duvida?.trim() !== '' || item.status_granularity?.includes('⚠️')) {
+            } else if (isReview) {
                 stats.review++
             } else {
                 stats.validated++
@@ -79,7 +83,7 @@ export function IntentDistributionChart({ data, isDark }: IntentDistributionChar
         <div className={cn(
             "p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500 h-full",
             isDark 
-                ? "bg-zinc-950/80 border-zinc-800/50 shadow-[0_0_40px_rgba(0,0,0,0.5),0_0_20px_rgba(255,255,255,0.02)]" 
+                ? "bg-black metal-border shadow-2xl" 
                 : "bg-white border-zinc-100 shadow-xl"
         )}>
             <div className="flex flex-col gap-1 mb-8">
@@ -111,7 +115,7 @@ export function IntentDistributionChart({ data, isDark }: IntentDistributionChar
                             animationDuration={1500}
                         >
                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.fill} className="drop-shadow-lg" />
+                                <Cell key={`cell-${index}`} fill={entry.fill} className={isDark ? "drop-shadow-[0_0_8px_rgba(255,255,255,0.1)]" : "drop-shadow-lg"} />
                             ))}
                         </Pie>
                         <Tooltip content={<CustomTooltip isDark={isDark} />} />

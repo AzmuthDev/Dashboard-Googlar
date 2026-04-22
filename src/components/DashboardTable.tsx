@@ -60,33 +60,28 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
     }, [activeTab, visibleDataCount, expandedGroups.size, hiddenRows.size])
 
     const isNegativar = (row: CampaignTerm) => {
-        const val = (row.negativize || '').toLowerCase()
-        return val.includes('❌') || val.includes('sim') || val.includes('true') || val === 'x'
+        return row.negativar === true || String(row.negativar || '').includes('❌');
     }
 
     const isDuvida = (row: CampaignTerm) => {
-        const val = (row.observation || '').trim()
-        const duvColumn = (row.duvida || '').trim()
-        return (duvColumn !== '' || val !== '') && !isNegativar(row)
+        return row.duvida === true || String(row.duvida || '').includes('❓');
     }
 
-    const isSegmentarAtiva = (val: string) => val.includes('✅')
-    const isSegmentarAlerta = (val: string) => val.includes('⚠️') || val.includes('❓')
+    const isSegmentarAtiva = (val: any) => val === true || String(val || '').includes('✅')
+    const isSegmentarAlerta = (val: any) => String(val || '').includes('⚠️') || String(val || '').includes('❓')
 
     const isSegmentado = (row: CampaignTerm) => {
-        const val = (row.segment || '').trim()
-        return isSegmentarAtiva(val) || isSegmentarAlerta(val)
+        return isSegmentarAtiva(row.segmentar) || isSegmentarAlerta(row.segmentar)
     }
 
     const isTesteAB = (row: CampaignTerm) => {
-        const val = (row.ab_test || '').toLowerCase()
-        return val === 'true' || val === 'sim' || val.includes('✅') || val.includes('⚠️')
+        return row.teste_ab === true || String(row.teste_ab || '').includes('⚠️');
     }
 
     const filteredData = useMemo(() => {
         let base = visibleData;
-        if (isLabMode) base = base.filter(r => (r.ab_test || '').includes('⚠️') || (r.status_granularity || '').includes('⚠️'))
-        if (searchTerm) base = base.filter(r => r.search_term.toLowerCase().includes(searchTerm.toLowerCase()))
+        if (isLabMode) base = base.filter(r => String(r.teste_ab || '').includes('⚠️') || (r.status_granularidade || '').includes('⚠️'))
+        if (searchTerm) base = base.filter(r => (r.termo_de_pesquisa || '').toLowerCase().includes(searchTerm.toLowerCase()))
 
         switch (activeTab) {
             case 'negative': return base.filter(isNegativar)
@@ -132,7 +127,7 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
     const segmentedGroups = useMemo(() => {
         const groups: Record<string, CampaignTerm[]> = {}
         filteredData.filter(isSegmentado).forEach(item => {
-            const groupName = item.suggestion_group || 'Sem Grupo Sugerido'
+            const groupName = item.sugestao_grupo || 'Sem Grupo Sugerido'
             if (!groups[groupName]) groups[groupName] = []
             groups[groupName].push(item)
         })
@@ -156,11 +151,11 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
     const renderRow = (item: CampaignTerm, isSelected: boolean) => {
         const isNeg = isNegativar(item)
         const isDuv = isDuvida(item)
-        const statusVal = (item.status_granularity || '').trim() || 'Pendente'
+        const statusVal = (item.status_granularidade || '').trim() || 'Pendente'
         
         let statusGlow = "bg-muted text-muted-foreground"
-        if (statusVal.includes('OK') || isSegmentarAtiva(item.segment)) statusGlow = "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm"
-        if (isDuv || isSegmentarAlerta(item.segment)) statusGlow = "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+        if (statusVal.includes('OK') || isSegmentarAtiva(item.segmentar)) statusGlow = "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm"
+        if (isDuv || isSegmentarAlerta(item.segmentar)) statusGlow = "bg-amber-500/10 text-amber-500 border border-amber-500/20"
         if (isNeg) statusGlow = "bg-red-500/10 text-red-500 border border-red-500/20"
 
         return (
@@ -182,8 +177,8 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                 <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                     <div className="col-span-1">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold truncate text-foreground">{item.search_term}</h3>
-                            <HoverCard content={item.observation || "IA: Nenhuma observação adicional."}>
+                            <h3 className="text-sm font-bold truncate text-foreground">{item.termo_de_pesquisa}</h3>
+                            <HoverCard content={item.observacao || "IA: Nenhuma observação adicional."}>
                                 <div className="cursor-help">
                                     {isNeg && <Ban className="w-3.5 h-3.5 text-red-500" />}
                                     {isDuv && <HelpCircle className="w-3.5 h-3.5 text-amber-500" />}
@@ -191,12 +186,12 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                                 </div>
                             </HoverCard>
                         </div>
-                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{item.campaign_name}</p>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{item.campanha}</p>
                     </div>
-                    <div className="hidden md:block col-span-1 text-muted-foreground text-xs leading-none">{item.ad_group || '—'}</div>
+                    <div className="hidden md:block col-span-1 text-muted-foreground text-xs leading-none">{item.grupo_de_anuncios || '—'}</div>
                     <div className="col-span-1 md:text-center">
-                        <span className="text-sm font-semibold text-foreground">R$ {item.cost.toFixed(2).replace('.', ',')}</span>
-                        <p className="text-[10px] text-muted-foreground">{item.clicks} cli</p>
+                        <span className="text-sm font-semibold text-foreground">R$ {Number(item.custo || 0).toFixed(2).replace('.', ',')}</span>
+                        <p className="text-[10px] text-muted-foreground">{item.cliques} cli</p>
                     </div>
                     <div className="col-span-1 flex justify-end">
                         <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full", statusGlow)}>

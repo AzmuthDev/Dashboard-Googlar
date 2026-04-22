@@ -12,15 +12,15 @@ interface WasteAuditProps {
 export function WasteAudit({ data, onNegativar }: WasteAuditProps) {
     const topWaste = useMemo(() => {
         return data
-            .filter(item => (item.conversions === 0 || !item.conversions))
-            .sort((a, b) => b.cost - a.cost)
+            .filter(item => (parseFloat(String(item.conversoes || '0')) || 0) === 0)
+            .sort((a, b) => (parseFloat(String(b.custo || '0')) || 0) - (parseFloat(String(a.custo || '0')) || 0))
             .slice(0, 5)
     }, [data])
 
     if (topWaste.length === 0) return null
 
     // Max cost for the progress bar calculation
-    const maxCost = Math.max(...topWaste.map(item => item.cost), 1);
+    const maxCost = Math.max(...topWaste.map(item => parseFloat(String(item.custo || '0')) || 0), 1);
 
     return (
         <div className="mb-16 p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500 bg-card border-border shadow-xl">
@@ -54,24 +54,24 @@ export function WasteAudit({ data, onNegativar }: WasteAuditProps) {
                     >
                         {/* Term Name - Flex 1 */}
                         <div className="flex flex-col min-w-0">
-                            <span className="text-[12px] font-black uppercase tracking-tighter truncate leading-tight mb-1 text-foreground" title={item.search_term}>
-                                {item.search_term}
+                            <span className="text-[12px] font-black uppercase tracking-tighter truncate leading-tight mb-1 text-foreground" title={item.termo_de_pesquisa}>
+                                {item.termo_de_pesquisa}
                             </span>
-                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{item.campaign_name}</span>
+                            <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{item.campanha}</span>
                         </div>
 
                         {/* Progress Bar & Numeric Data */}
                         <div className="flex flex-col gap-2">
                              <div className="flex justify-between items-end mb-1">
                                 <span className="text-[13px] font-black text-foreground uppercase">
-                                    R$ {item.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    R$ {Number(item.custo || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
                                 <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Custo</span>
                             </div>
                             <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border border-border">
                                 <motion.div 
                                     initial={{ width: 0 }}
-                                    animate={{ width: `${(item.cost / maxCost) * 100}%` }}
+                                    animate={{ width: `${((parseFloat(String(item.custo || '0')) || 0) / maxCost) * 100}%` }}
                                     className="h-full bg-gradient-to-r from-[#ef4444] to-[#ef4444]/60 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.3)]"
                                 />
                             </div>

@@ -30,11 +30,11 @@
 }
 
 .dark {
-  --background: #09090b;
+  --background: #000000;
   --foreground: #fafafa;
-  --card: #09090b;
+  --card: #000000;
   --card-foreground: #fafafa;
-  --popover: #09090b;
+  --popover: #000000;
   --popover-foreground: #fafafa;
   --primary: #fafafa;
   --primary-foreground: #09090b;
@@ -46,13 +46,19 @@
   --accent-foreground: #fafafa;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #27272a;
-  --input: #27272a;
+  --border: rgba(255, 255, 255, 0.1); /* Sutil metal border fallback */
+  --input: #18181b;
   --ring: #d4d4d8;
   
+  /* Luxury Metal Tokens */
+  --metal-silver: #E5E7EB;
+  --metal-steel: #9CA3AF;
+  --metal-titanium: #4B5563;
+  --metal-gunmetal: #2e2e2e;
+
   /* Premium Glass Utilities Dark */
-  --glass-bg: rgba(9, 9, 11, 0.7);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-bg: rgba(0, 0, 0, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
@@ -739,4 +745,276 @@ body:not(.dark) {
 .dark .custom-select-v3-action:hover .ant-select-selection-item {
   color: #000 !important;
 }
-
+
+/* ═══════════════════════════════════════════════════════
+   Luxury Tech B&W — Premium Utilities
+═══════════════════════════════════════════════════════ */
+
+/* Metallic Border Effect (45deg Silver/Titanium) */
+.metal-border {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--card), var(--card)) padding-box,
+              linear-gradient(45deg, #1a1a1a, #4B5563, #E5E7EB, #4B5563, #1a1a1a) border-box;
+}
+
+.dark .metal-border {
+    background: linear-gradient(#000, #000) padding-box,
+                linear-gradient(45deg, #1a1a1a, #4B5563, #E5E7EB, #4B5563) border-box;
+}
+
+/* Brushed Metal Noise Texture */
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 1;
+}
+
+.dark .noise-overlay {
+    opacity: 0.05;
+}
+
+/* Vantablack Card Refinement */
+.premium-card-black {
+    background-color: #000000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+}
+
+.premium-card-black::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Ant Design Dark Mode Contrast Overrides
+═══════════════════════════════════════════════════════ */
+.dark .ant-input-affix-wrapper,
+.dark .ant-input {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dark .ant-input::placeholder,
+.dark .ant-input-affix-wrapper input::placeholder {
+  color: #888888 !important;
+}
+
+.dark .ant-input-affix-wrapper:hover,
+.dark .ant-input:hover,
+.dark .ant-input-affix-wrapper:focus-within,
+.dark .ant-input:focus {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.1) !important;
+}
+
+.dark .ant-select-selector {
+  color: #ffffff !important;
+}
+
+.dark .ant-select-selection-placeholder {
+  color: #888888 !important;
+}
+
+.dark .ant-select-arrow {
+  color: #a1a1aa !important;
+}
+
+.dark-dropdown .ant-select-item {
+  color: #ffffff !important;
+}
+
+.dark-dropdown .ant-select-item-option-active {
+  background-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Modais (Vantablack / Metal style) */
+.dark .ant-modal-content {
+  background-color: #050505 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark .ant-modal-header {
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  padding-bottom: 12px !important;
+}
+
+.dark .ant-modal-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.dark .ant-modal-close {
+  color: #a1a1aa !important;
+}
+
+.dark .ant-modal-close:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Luxury Dashboard Components (B&W Premium)
+═══════════════════════════════════════════════════════ */
+
+.luxury-modal .ant-modal-content {
+    border-radius: 24px !important;
+    padding: 24px !important;
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+    overflow: hidden;
+}
+
+.dark .luxury-modal .ant-modal-content {
+    background: #000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.luxury-input {
+    height: 48px !important;
+    background: var(--background) !important;
+    border: 1px solid #d4d4d8 !important;
+    border-radius: 12px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.luxury-input:hover {
+    border-color: #71717a !important;
+}
+
+.luxury-input:focus {
+    border-color: #000 !important;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.dark .luxury-input {
+    background: #09090b !important;
+    border: 1px solid #27272a !important;
+    color: #fff !important;
+}
+
+.dark .luxury-input:hover {
+    border-color: #3f3f46 !important;
+}
+
+.dark .luxury-input:focus {
+    border-color: #fff !important;
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Metallic Spinner V4 */
+@keyframes spin-metallic {
+  0% { transform: rotate(0deg); border-top-color: #fff; }
+  50% { border-top-color: #71717a; }
+  100% { transform: rotate(360deg); border-top-color: #fff; }
+}
+
+.animate-spin-metallic {
+  animation: spin-metallic 1.5s linear infinite;
+}
+
+/* ── UI/UX Contraste - Dark Mode Improvements ─────────────────────────── */
+.dark .ant-select-dropdown {
+  background-color: #09090B !important;
+  border: 1px solid #27272A !important;
+}
+
+.dark .ant-select-item-option-content {
+  color: #FFFFFF !important;
+}
+
+.dark .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background-color: #2D2D2D !important;
+}
+
+.dark .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: #18181B !important;
+  color: #FFFFFF !important;
+  font-weight: bold !important;
+}
+
+/* Global inputs for dark mode */
+.dark input.ant-input, 
+.dark .ant-input,
+.dark .ant-select-selection-search-input,
+.dark .ant-select-selection-item {
+  color: #FFFFFF !important;
+}
+
+.dark input.ant-input::placeholder,
+.dark .ant-input::placeholder,
+.dark .ant-select-selection-placeholder {
+  color: #9CA3AF !important;
+}
+
+/* Sidebar contrast fix */
+.dark aside .text-zinc-600,
+.dark aside .text-muted-foreground {
+  color: #A1A1AA !important; /* Mínimo contraste exigido sobre o fundo preto */
+}
+.dark aside:hover .text-zinc-600,
+.dark aside:hover .text-muted-foreground {
+  color: #FFFFFF !important; /* Destaque ao hover em inativos */
+}
+
+/* Tabs Contrast (Todos, Negativas, Dúvidas) */
+.dark .ant-tabs-tab .ant-tabs-tab-btn {
+  color: #64748B !important; /* text-slate-500 */
+}
+.dark .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #FFFFFF !important; /* text-white */
+}
+
+/* Toast Error Contrast */
+.dark .ant-message-error .ant-message-notice-content {
+  background-color: #EF4444 !important; /* bg-red-500 */
+  color: #FFFFFF !important;
+  border: 1px solid #B91C1C !important;
+}
+.dark .ant-message-error .ant-message-notice-content .anticon {
+  color: #FFFFFF !important;
+}
+
+/* Ant Design Table Dark Mode Fix */
+.dark .ant-table {
+  background: transparent !important;
+  color: #E4E4E7 !important;
+}
+.dark .ant-table-thead > tr > th {
+  background: #18181B !important; /* zinc-900 */
+  color: #A1A1AA !important; /* zinc-400 */
+  border-bottom: 1px solid #27272A !important; /* zinc-800 */
+}
+.dark .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #27272A !important;
+  background: transparent !important;
+}
+.dark .ant-table-tbody > tr.ant-table-row:hover > td,
+.dark .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background: rgba(39, 39, 42, 0.5) !important; /* zinc-800/50 */
+}
+.dark .ant-pagination-item a,
+.dark .ant-table-pagination.ant-pagination {
+  color: #A1A1AA !important;
+}
+.dark .ant-pagination-item-active {
+  background-color: #27272A !important;
+  border-color: #3F3F46 !important;
+}
+.dark .ant-pagination-item-active a {
+  color: #FFFFFF !important;
+}

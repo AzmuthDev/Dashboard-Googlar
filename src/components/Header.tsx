@@ -5,6 +5,7 @@ import type { Company, CampaignTerm } from '../types'
 import { Sparkles, Bot } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet'
 import { SemanticCopilot } from './SemanticCopilot'
+import { fetchCompanies } from '../lib/supabaseProvider'
 
 const { Header: AntHeader } = Layout
 
@@ -22,10 +23,17 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
     const [linkedCompanies, setLinkedCompanies] = useState<Company[]>([])
 
     useEffect(() => {
-        const updateLinkedCompanies = () => {
-            const stored = JSON.parse(localStorage.getItem('googlar_companies') || '[]')
-            const linked = stored.filter((c: Company) => c.dataSourceType === 'sheets' || c.dataSourceType === 'local' || c.sheetsUrl)
-            setLinkedCompanies(linked)
+        const updateLinkedCompanies = async () => {
+            // 1. Fetch from Supabase (New Standard V4)
+            const supabaseCompanies = await fetchCompanies();
+            
+            // Garantimos que apenas empresas válidas do banco apareçam
+            // Ordenamos por nome para facilitar a busca
+            const linked = supabaseCompanies
+                .filter(c => c && c.id && c.name)
+                .sort((a, b) => a.name.localeCompare(b.name));
+            
+            setLinkedCompanies(linked);
         };
 
         updateLinkedCompanies();
@@ -56,22 +64,22 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
 
             <div className="flex items-center gap-6">
                 <Input
-                    placeholder="Search..."
-                    prefix={<SearchOutlined className="text-zinc-400" />}
-                    className="w-64 rounded-full border-border bg-muted shadow-sm px-4 py-1.5 focus:border-primary hover:border-primary/50"
+                    placeholder="Buscar Termo..."
+                    prefix={<SearchOutlined className="text-white" />}
+                    className="w-64 rounded-xl border-zinc-800 bg-[#111111] text-white placeholder-zinc-500 hover:border-white focus:border-white shadow-xl px-4 py-2 transition-all"
                 />
 
-                <div className="relative cursor-pointer hover:bg-muted p-2 rounded-full transition-colors flex items-center justify-center">
-                    <BellOutlined className="text-[18px] text-foreground/70" />
+                <div className="relative cursor-pointer hover:bg-muted dark:hover:bg-white/10 p-2 rounded-full transition-colors flex items-center justify-center">
+                    <BellOutlined className="text-[18px] text-foreground/70 dark:text-white" />
                     {isConfigured && <div className="absolute top-1 right-2 w-2 h-2 bg-primary rounded-full border border-background"></div>}
                 </div>
 
                 {/* SEMANTIC COPILOT TRIGGER */}
                 <Sheet>
                     <SheetTrigger asChild>
-                        <div className="relative group cursor-pointer p-2 rounded-full hover:bg-muted transition-all active:scale-95 flex items-center justify-center">
+                        <div className="relative group cursor-pointer p-2 rounded-full hover:bg-muted dark:hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center">
                             <div className="absolute inset-0 bg-blue-500/5 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
-                            <Sparkles className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-all relative z-10" />
+                            <Sparkles className="w-5 h-5 text-muted-foreground dark:text-white/80 group-hover:text-primary dark:group-hover:text-white transition-all relative z-10" />
                             <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full animate-pulse shadow-[0_0_12px_rgba(0,0,0,0.5)] border border-background z-20" />
                         </div>
                     </SheetTrigger>
@@ -93,25 +101,26 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                     </SheetContent>
                 </Sheet>
 
-                <div className="flex items-center gap-2 btn-bw-inverse p-1.5 rounded-xl border border-border shadow-md transition-all">
-                    <DatabaseOutlined className="text-inherit ml-2" />
+                <div className="flex items-center gap-2 bg-[#111111] p-1.5 rounded-xl border border-zinc-800 shadow-xl transition-all hover:border-zinc-700">
+                    <DatabaseOutlined className="text-white ml-2 opacity-70" />
                     <Select
-                        placeholder="Vincular Empresas"
+                        placeholder={(<span className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest">Selecionar Empresa</span>)}
                         value={activeCompanyId || undefined}
                         onChange={onSelectCompany}
                         style={{ width: 220 }}
-                        bordered={false}
-                        className="font-medium"
+                        variant="borderless"
+                        className="font-bold dark-selector luxury-select"
                         options={linkedCompanies.map(c => ({
                             value: c.id,
                             label: (
-                                <div className="flex items-center gap-2">
-                                    <span className="truncate">{c.name}</span>
-                                    {c.dataSourceType === 'local' && <span className="text-[10px] border border-current px-1.5 py-0.5 rounded">Local</span>}
+                                <div className="flex items-center gap-2 text-white">
+                                    <span className="truncate uppercase text-[11px] tracking-tight">{c.name}</span>
+                                    {c.dataSourceType === 'local' && <span className="text-[9px] border border-white/20 px-1.5 py-0.5 rounded uppercase font-black">CSV</span>}
                                 </div>
                             )
                         }))}
-                        notFoundContent={<Typography.Text type="secondary" className="p-2 block text-sm">Nenhuma base vinculada.</Typography.Text>}
+                        notFoundContent={<Typography.Text className="p-2 block text-xs text-zinc-500 uppercase font-black">Nenhuma base vinculada.</Typography.Text>}
+                        popupClassName="dark-dropdown luxury-dropdown"
                     />
                     
                     <Tooltip title="Sincronizar dados">
@@ -120,7 +129,7 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                             loading={isLoading}
                             onClick={onRefresh}
                             type="text"
-                            icon={<SyncOutlined className="text-inherit" />}
+                            icon={<SyncOutlined className="text-inherit dark:text-white" />}
                             className="text-inherit hover:opacity-80 flex items-center justify-center p-2"
                         />
                     </Tooltip>

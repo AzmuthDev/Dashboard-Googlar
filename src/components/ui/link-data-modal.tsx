@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
+import { message } from 'antd';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { X, Link2, FileSpreadsheet, UploadCloud, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { message } from 'antd';
 import { carregarDados } from '../../utils/dataIngestion';
 import { syncCampaignTermsToSupabase } from '../../utils/supabaseSync';
+import { updateCompany } from '../../lib/supabaseProvider';
 import { cn } from '../../lib/utils';
 import type { Company } from '../../types';
 
@@ -13,10 +14,11 @@ interface LinkDataModalProps {
     onClose: () => void;
     companyId: string | null;
     companyName: string;
+    company?: Company;
     onSuccess: () => void;
 }
 
-export function LinkDataModal({ isOpen, onClose, companyId, companyName, onSuccess }: LinkDataModalProps) {
+export function LinkDataModal({ isOpen, onClose, companyId, companyName, company, onSuccess }: LinkDataModalProps) {
     const [activeTab, setActiveTab] = useState<'sheets' | 'local'>('sheets');
     const [sheetsUrl, setSheetsUrl] = useState('');
     const [isUploading, setIsUploading] = useState(false);
@@ -30,9 +32,6 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, onSucce
             setSheetsUrl('');
             setUploadProgress(0);
             setIsUploading(false);
-
-            const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]');
-            const company = storedCompanies.find((c: Company) => c.id === companyId);
             
             if (company && company.sheetsUrl) {
                 setSheetsUrl(company.sheetsUrl);
@@ -43,7 +42,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, onSucce
                 setActiveTab('sheets');
             }
         }
-    }, [isOpen, companyId]);
+    }, [isOpen, companyId, company]);
 
     const handleSaveSheets = async () => {
         if (!sheetsUrl.trim() || !sheetsUrl.includes('docs.google.com/spreadsheets')) {
@@ -54,16 +53,13 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, onSucce
         if (!companyId) return;
 
         try {
-            // 1. Salvar URL da empresa no localStorage
-            const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]');
-            const updatedCompanies = storedCompanies.map((c: Company) => {
-                if (c.id === companyId) {
-                    return { ...c, sheetsUrl: sheetsUrl.trim(), dataSourceType: 'sheets' };
-                }
-                return c;
+            // 1. Salvar URL da empresa no Supabase
+            const { error: updError } = await updateCompany(companyId, { 
+                sheetsUrl: sheetsUrl.trim(), 
+                dataSourceType: 'sheets' 
             });
-            localStorage.setItem('googlar_companies', JSON.stringify(updatedCompanies));
-            window.dispatchEvent(new Event('googlar_companies_updated'));
+
+            if (updError) throw new Error(updError.message || updError);
 
             // 2. Buscar dados do Sheets
             setSyncStatus('fetching');
@@ -120,23 +116,13 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, onSucce
             const parsedData = await carregarDados(file, 'local', companyId);
             setUploadProgress(50);
 
-            // Salva no localStorage
-            localStorage.setItem(`googlar_local_data_${companyId}`, JSON.stringify({
-                fileName: file.name,
-                updatedAt: new Date().toISOString(),
-                data: parsedData
-            }));
-
-            const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]');
-            const updatedCompanies = storedCompanies.map((c: Company) => {
-                if (c.id === companyId) {
-                    const { sheetsUrl, ...rest } = c;
-                    return { ...rest, dataSourceType: 'local', localFileName: file.name };
-                }
-                return c;
+            // 1. Salvar Metadados no Supabase
+            const { error: updError } = await updateCompany(companyId, { 
+                dataSourceType: 'local', 
+                localFileName: file.name 
             });
-            localStorage.setItem('googlar_companies', JSON.stringify(updatedCompanies));
-            window.dispatchEvent(new Event('googlar_companies_updated'));
+
+            if (updError) throw new Error(updError.message || updError);
 
             // Sincroniza com Supabase
             setSyncStatus('syncing');

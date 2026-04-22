@@ -42,29 +42,39 @@ export async function syncCampaignTermsToSupabase(
     const rows = terms.map((term, index) => ({
       id: `${companyId}_${index}`,   // ID único por empresa + índice
       company_id: companyId,
-      campaign_id: term.campaign_id || `cmp_${companyId}_${index}`,
-      campaign_name: term.campaign_name || '',
-      ad_group: term.ad_group || '',
-      keyword: term.keyword || '',
-      search_term: term.search_term || '',
-      observation: term.observation || '',
-      duvida: term.duvida || '',
-      suggestion_group: term.suggestion_group || '',
-      segment: term.segment || '',
-      negativize: term.negativize || '',
-      ab_test: term.ab_test || '',
-      status_granularity: term.status_granularity || '',
-      clicks: Number(term.clicks) || 0,
-      impressions: Number(term.impressions) || 0,
+      
+      // Identificadores
+      campanha: term.campanha || '',
+      grupo_de_anuncios: term.grupo_de_anuncios || '',
+      
+      // Dados Semânticos
+      palavra_chave: term.palavra_chave || '',
+      termo_de_pesquisa: term.termo_de_pesquisa || '',
+      
+      // Sinalizadores de Agente
+      segmentar: String(term.segmentar || ''),
+      negativar: String(term.negativar || ''),
+      teste_ab: String(term.teste_ab || ''),
+      duvida: String(term.duvida || ''),
+      
+      // Análise & Logs
+      observacao: term.observacao || '',
+      sugestao_grupo: term.sugestao_grupo || '',
+      status_granularidade: term.status_granularidade || '',
+      
+      // Métricas de Performance
+      cliques: Number(term.cliques) || 0,
+      impressoes: Number(term.impressoes) || 0,
       ctr: Number(term.ctr) || 0,
-      avg_cpc: Number(term.avg_cpc) || 0,
-      cost: Number(term.cost) || 0,
-      conversions: Number(term.conversions) || 0,
-      cost_per_conversion: Number(term.cost_per_conversion) || 0,
-      conversion_rate: Number(term.conversion_rate) || 0,
-      match_type: term.match_type || '',
-      added_excluded: term.added_excluded || '',
-      intervencao_humana: term.intervencao_humana || '',
+      cpc_medio: Number(term.cpc_medio) || 0,
+      custo: Number(term.custo) || 0,
+      conversoes: Number(term.conversoes) || 0,
+      custo_conv: Number(term.custo_conv) || 0,
+      taxa_conv: Number(term.taxa_conv) || 0,
+      
+      // Metadados
+      tipo_corresp: term.tipo_corresp || '',
+      adicionada_excluida: term.adicionada_excluida || '',
       synced_at: new Date().toISOString(),
     }))
 

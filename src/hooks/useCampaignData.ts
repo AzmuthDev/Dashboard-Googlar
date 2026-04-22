@@ -1,87 +1,41 @@
 import { useQuery } from '@tanstack/react-query';
-import { carregarDados } from '../utils/dataIngestion';
-import { syncCampaignTermsToSupabase, fetchCampaignTermsFromSupabase } from '../utils/supabaseSync';
-import { message } from 'antd';
+import { fetchTermsFromTable, fetchCompanies, fetchCampaignTerms } from '../lib/supabaseProvider';
 import { type CampaignTerm } from '../types';
 
-export const useCampaignTerms = (companyId?: string) => {
+/**
+ * Hook para buscar dados da Empresa (Arquitetura V4 - Híbrida)
+ * Suporta tanto Mesas Exclusivas (tableName) quanto Tabela Central (companyId)
+ */
+export const useCampaignTerms = (companyId?: string, tableName?: string) => {
     return useQuery({
-        queryKey: ['campaign-terms', companyId],
+        queryKey: ['campaign-terms', companyId, tableName],
         queryFn: async () => {
-            if (!companyId) return [];
+            const targetTable = tableName || (companyId ? `data_company_${companyId}` : null);
 
-            const companiesStr = localStorage.getItem('googlar_companies');
-            if (!companiesStr) return [];
+            if (!targetTable) return [];
 
-            const companies = JSON.parse(companiesStr);
-            const company = companies.find((c: any) => c.id === companyId);
-            if (!company) return [];
+            console.log(`[useCampaignTerms] 🔍 Buscando dados na mesa: ${targetTable}`);
+            const data = await fetchTermsFromTable(targetTable);
 
-            // ─── PRIORIDADE 1: Supabase ───────────────────────────────────────
-            console.log('[useCampaignTerms] 🔍 Buscando dados no Supabase...');
-            const { data: supabaseData, error: supabaseError } = await fetchCampaignTermsFromSupabase(companyId);
-
-            if (!supabaseError && supabaseData.length > 0) {
-                console.log(`[useCampaignTerms] ✅ ${supabaseData.length} termos carregados do Supabase.`);
-                return supabaseData;
+            if (data && data.length > 0) {
+                console.log(`[useCampaignTerms] ✅ ${data.length} termos carregados da mesa ${targetTable}.`);
+                return data;
             }
 
-            if (supabaseError) {
-                console.warn('[useCampaignTerms] ⚠️ Erro no Supabase, tentando fallback:', supabaseError);
-            } else {
-                console.log('[useCampaignTerms] 📭 Supabase vazio. Buscando no Google Sheets e sincronizando...');
-            }
-
-            // ─── PRIORIDADE 2: Arquivo Local (localStorage) ───────────────────
-            if (company.dataSourceType === 'local') {
-                const localDataStr = localStorage.getItem(`googlar_local_data_${companyId}`);
-                if (localDataStr) {
-                    try {
-                        const parsed = JSON.parse(localDataStr);
-                        const localData: CampaignTerm[] = parsed.data || [];
-
-                        // Sincroniza com Supabase em background
-                        if (localData.length > 0) {
-                            syncCampaignTermsToSupabase(companyId, localData).then(result => {
-                                if (result.success) {
-                                    console.log(`[useCampaignTerms] ☁️ ${result.count} termos locais sincronizados com Supabase.`);
-                                }
-                            });
-                        }
-
-                        return localData;
-                    } catch (e) {
-                        console.error("Erro ao ler dados locais da empresa:", e);
-                        return [];
-                    }
-                }
-                return [];
-            }
-
-            // ─── PRIORIDADE 3: Google Sheets (fallback + auto-sync) ───────────
-            if (!company.sheetsUrl) return [];
-
-            try {
-                console.log('[useCampaignTerms] 📊 Carregando do Google Sheets...');
-                const parsedRows = await carregarDados(company.sheetsUrl, 'sheets', companyId);
-
-                // Sincroniza com Supabase automaticamente em background
-                if (parsedRows.length > 0) {
-                    syncCampaignTermsToSupabase(companyId, parsedRows).then(result => {
-                        if (result.success) {
-                            console.log(`[useCampaignTerms] ☁️ ${result.count} termos do Sheets sincronizados com Supabase.`);
-                        } else {
-                            console.warn('[useCampaignTerms] ⚠️ Falha ao sincronizar com Supabase:', result.error);
-                        }
-                    });
-                }
-
-                return parsedRows;
-            } catch (err: any) {
-                message.error(err.message || "Erro desconhecido ao carregar planilha.");
-                throw new Error(err.message || "Erro desconhecido ao carregar planilha.");
-            }
+            console.log(`[useCampaignTerms] 📭 Mesa ${targetTable} está vazia ou não processada.`);
+            return [];
         },
-        staleTime: 5 * 60 * 1000, // Cache de 5 minutos
+        staleTime: 5 * 60 * 1000,
+        enabled: !!(companyId || tableName),
+    });
+};
+
+export const useCompanies = () => {
+    return useQuery({
+        queryKey: ['companies'],
+        queryFn: async () => {
+            return await fetchCompanies();
+        },
+        staleTime: 30 * 1000,
     });
 };

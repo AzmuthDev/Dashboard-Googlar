@@ -56,11 +56,13 @@ export const EvervaultCard = ({
       <div
         onMouseMove={onMouseMove}
         className={cn(
-            "group/card w-full relative overflow-hidden bg-transparent flex items-center justify-center h-full transition-all duration-300",
+            "group/card w-full relative overflow-hidden flex items-center justify-center h-full transition-all duration-500",
             variant === 'circle' ? "rounded-full" : "rounded-[20px]",
-            showBorder ? "border border-zinc-200 dark:border-zinc-800 shadow-sm" : "border-none shadow-none"
+            isDark ? "bg-black border border-white/10" : "bg-white border border-zinc-200",
+            showBorder ? "shadow-2xl" : "shadow-none"
         )}
       >
+        <div className="noise-overlay" />
         <CardPattern
           mouseX={mouseX}
           mouseY={mouseY}

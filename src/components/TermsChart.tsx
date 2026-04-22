@@ -1,6 +1,7 @@
+import { useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { ArrowUpRight } from 'lucide-react'
-import type { CampaignTerm } from '../hooks/useCampaignData'
+import type { CampaignTerm } from '../types'
 
 interface TermsChartProps {
     data: CampaignTerm[]
@@ -8,17 +9,19 @@ interface TermsChartProps {
 }
 
 export function TermsChart({ data, isDark }: TermsChartProps) {
-    if (!data || data.length === 0) return null
+    const topTerms = useMemo(() => {
+        if (!data || data.length === 0) return []
+        return [...data]
+            .sort((a, b) => (parseFloat(String(b.custo || '0')) || 0) - (parseFloat(String(a.custo || '0')) || 0))
+            .slice(0, 7)
+            .map(term => ({
+                name: term.termo_de_pesquisa,
+                cost: parseFloat(String(term.custo || '0')) || 0,
+                clicks: parseFloat(String(term.cliques || '0')) || 0,
+            }))
+    }, [data])
 
-    // Formatar e pegar os Top 7 por custo
-    const topTerms = [...data]
-        .sort((a, b) => b.cost - a.cost)
-        .slice(0, 7)
-        .map(term => ({
-            name: term.search_term,
-            cost: term.cost,
-            clicks: term.clicks,
-        }))
+    if (!data || data.length === 0) return null
 
     const bgClass = isDark
         ? 'bg-gradient-to-br from-zinc-800 to-black border-zinc-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.12)] rounded-[20px]'
@@ -71,18 +74,15 @@ export function TermsChart({ data, isDark }: TermsChartProps) {
                         />
                         <Bar
                             dataKey="cost"
-                            radius={[8, 8, 8, 8]}
-                            barSize={32}
+                            radius={[6, 6, 0, 0]}
+                            barSize={36}
+                            fill="url(#silverGradient)"
                         >
                             {topTerms.map((_, index) => (
                                 <Cell
                                     key={`cell-${index}`}
-                                    className="transition-all duration-300 cursor-pointer"
-                                    fill={
-                                        isDark
-                                            ? (index === 2 ? '#a1a1aa' : '#e4e4e7') // zinc-400 and zinc-200 in dark mode
-                                            : (index === 2 ? '#a1a1aa' : '#27272A') // zinc-400 and zinc-900 (black) in light mode
-                                    }
+                                    className="transition-all duration-500 hover:opacity-80"
+                                    opacity={1 - (index * 0.1)}
                                 />
                             ))}
                         </Bar>

@@ -97,55 +97,56 @@ export const CompanyCards = React.forwardRef<HTMLDivElement, CompanyCardsProps>(
 
                 <div ref={scrollContainerRef} className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory">
                     <motion.div className="flex flex-nowrap gap-6 py-4 px-2">
-                        {companies.map((company) => {
-                            // Find corresponding realtime user data to fetch avatars
+                        {(() => {
                             const storedUsers = (() => {
                                 try { return JSON.parse(localStorage.getItem('googlar_authorized_users') || '[]'); }
                                 catch { return []; }
                             })();
 
-                            const usersArray = company.users.slice(0, 5).map((u, idx) => {
-                                const realUser = storedUsers.find((su: any) => su.email.toLowerCase() === u.email.toLowerCase());
-                                const name = u.name || u.email.split('@')[0];
-                                const fallbackImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
-                                return {
-                                    id: idx + 1,
-                                    name: name,
-                                    designation: u.role === 'admin' ? "Administrador" : u.role === 'editor' ? "Editor" : "Usuário Base",
-                                    image: realUser?.avatarUrl || fallbackImage
-                                };
+                            return companies.map((company) => {
+                                const usersArray = (company.users || []).slice(0, 5).map((u, idx) => {
+                                    const realUser = Array.isArray(storedUsers) ? storedUsers.find((su: any) => su.email?.toLowerCase() === u.email?.toLowerCase()) : null;
+                                    const name = u.name || u.email?.split('@')[0] || 'Usuário';
+                                    const fallbackImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`;
+                                    return {
+                                        id: idx + 1,
+                                        name: name,
+                                        designation: u.role === 'admin' ? "Administrador" : u.role === 'editor' ? "Editor" : "Usuário Base",
+                                        image: realUser?.avatarUrl || fallbackImage
+                                    };
+                                });
+
+                                const actions = [];
+                                if (isAdmin) {
+                                    actions.push({ Icon: Link, title: "Vincular Planilha", onClick: (e: any) => { e.stopPropagation(); onConnectSheet?.(company.id); } });
+                                    actions.push({ Icon: Pencil, title: "Editar Perfil", onClick: (e: any) => { e.stopPropagation(); onEditCompany?.(company.id); } });
+                                    actions.push({ Icon: Settings2, title: "Gerenciar Acessos", onClick: (e: any) => { e.stopPropagation(); onManageAccess?.(company.id); } });
+                                    actions.push({ Icon: Trash2, isDanger: true, title: "Excluir Empresa", onClick: (e: any) => { e.stopPropagation(); onDeleteCompany?.(company.id); } });
+                                }
+
+                                return (
+                                    <motion.div
+                                        key={company.id}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        className="flex-shrink-0 snap-center"
+                                    >
+                                        <WorkflowBuilderCard
+                                            imageUrl={company.coverUrl || company.logoUrl || ""}
+                                            logoUrl={company.logoUrl}
+                                            title={company.name}
+                                            status={company.isActive ? "Active" : "Inactive"}
+                                            lastUpdated={company.spreadsheetStatus}
+                                            description={company.spreadsheetStatus.includes("Vinculado") ? "Base de dados ativa e conectada ao fluxo." : "Não conectada. Vincule uma planilha Google."}
+                                            tags={["Base", company.spreadsheetStatus]}
+                                            users={usersArray}
+                                            actions={actions}
+                                            onEnter={() => onAccessCompany?.(company.id)}
+                                        />
+                                    </motion.div>
+                                );
                             });
-
-                            const actions = [];
-                            if (isAdmin) {
-                                actions.push({ Icon: Link, title: "Vincular Planilha", onClick: (e: any) => { e.stopPropagation(); onConnectSheet?.(company.id); } });
-                                actions.push({ Icon: Pencil, title: "Editar Perfil", onClick: (e: any) => { e.stopPropagation(); onEditCompany?.(company.id); } });
-                                actions.push({ Icon: Settings2, title: "Gerenciar Acessos", onClick: (e: any) => { e.stopPropagation(); onManageAccess?.(company.id); } });
-                                actions.push({ Icon: Trash2, isDanger: true, title: "Excluir Empresa", onClick: (e: any) => { e.stopPropagation(); onDeleteCompany?.(company.id); } });
-                            }
-
-                            return (
-                                <motion.div
-                                    key={company.id}
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    className="flex-shrink-0 snap-center"
-                                >
-                                    <WorkflowBuilderCard
-                                        imageUrl={company.coverUrl || company.logoUrl || ""}
-                                        logoUrl={company.logoUrl}
-                                        title={company.name}
-                                        status={company.isActive ? "Active" : "Inactive"}
-                                        lastUpdated={company.spreadsheetStatus}
-                                        description={company.spreadsheetStatus.includes("Vinculado") ? "Base de dados ativa e conectada ao fluxo." : "Não conectada. Vincule uma planilha Google."}
-                                        tags={["Base", company.spreadsheetStatus]}
-                                        users={usersArray}
-                                        actions={actions}
-                                        onEnter={() => onAccessCompany?.(company.id)}
-                                    />
-                                </motion.div>
-                            );
-                        })}
+                        })()}
                     </motion.div>
                 </div>
             </div>

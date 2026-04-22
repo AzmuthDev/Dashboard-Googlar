@@ -10,6 +10,7 @@ const { RangePicker } = DatePicker
 
 interface SemanticCopilotProps {
     data: CampaignTerm[]
+    isDark?: boolean
 }
 
 interface Message {
@@ -17,7 +18,7 @@ interface Message {
     content: string
 }
 
-export function SemanticCopilot({ data }: SemanticCopilotProps) {
+export function SemanticCopilot({ data, isDark }: SemanticCopilotProps) {
     const [messages, setMessages] = useState<Message[]>([
         { role: 'assistant', content: '**Semantic Copilot Ativo.** Pronto para auditoria de tráfego e identificação de Deslizes Semânticos via Metodologia Guglar. Como posso analisar seus dados agora?' }
     ])
@@ -50,11 +51,11 @@ export function SemanticCopilot({ data }: SemanticCopilotProps) {
 
             const contextData = filteredData || data.slice(0, 50) // Limit context for safety
             const dataSummary = contextData.map(item => ({
-                termo: item.search_term,
-                custo: item.cost,
-                cliques: item.clicks,
-                conversoes: item.conversions,
-                sugestao: item.suggestion_group
+                termo: item.termo_de_pesquisa,
+                custo: item.custo,
+                cliques: item.cliques,
+                conversoes: item.conversoes,
+                sugestao: item.sugestao_grupo
             }))
 
             const systemPrompt = `Você é o Semantic Copilot, um Especialista Sênior em Google Ads e Auditoria de Tráfego embutido no 'Googlar Dashboard'. Sua missão é analisar arrays de dados em JSON contendo Termos de Pesquisa e métricas (Custo, Cliques, CTR, Conversões) aplicando estritamente a Metodologia Guglar.

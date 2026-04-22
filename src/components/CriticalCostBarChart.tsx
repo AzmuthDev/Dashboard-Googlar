@@ -48,12 +48,12 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
     // Top 10 terms by cost for visibility
     const chartData = useMemo(() => {
         return data
-            .sort((a, b) => b.cost - a.cost)
+            .sort((a, b) => (parseFloat(String(b.custo || '0')) || 0) - (parseFloat(String(a.custo || '0')) || 0))
             .slice(0, 10)
             .map(item => ({
-                name: item.search_term,
-                value: item.cost,
-                isCritical: item.negativize?.includes('❌') || item.conversions === 0
+                name: item.termo_de_pesquisa,
+                value: parseFloat(String(item.custo || '0')) || 0,
+                isCritical: (item.negativar && String(item.negativar).includes('❌')) || (parseFloat(String(item.conversoes || '0')) || 0) === 0
             }))
     }, [data])
 
@@ -61,7 +61,7 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
         <div className={cn(
             "p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500",
             isDark 
-                ? "bg-zinc-950/80 border-zinc-800/50 shadow-[0_0_40px_rgba(0,0,0,0.5),0_0_20px_rgba(255,255,255,0.02)]" 
+                ? "bg-black metal-border shadow-2xl" 
                 : "bg-white border-zinc-100 shadow-xl"
         )}>
             <div className="flex items-center justify-between mb-10">
@@ -131,7 +131,7 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
                             {chartData.map((entry, index) => (
                                 <Cell 
                                     key={`cell-${index}`} 
-                                    fill={entry.isCritical ? '#ef4444' : (isDark ? '#27272a' : '#52525b')} 
+                                    fill={entry.isCritical ? '#ef4444' : (isDark ? 'url(#silverGradient)' : '#52525b')} 
                                 />
                             ))}
                             <LabelList 

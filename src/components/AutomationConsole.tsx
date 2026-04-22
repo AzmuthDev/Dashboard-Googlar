@@ -8,6 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs'
 import { AIAgent } from './AIAgent'
 import { WhatsAppBotConfig } from './WhatsAppBotConfig'
 import { cn } from '../lib/utils'
+import { fetchCompanies } from '../lib/supabaseProvider'
 
 const { Title, Text } = Typography
 
@@ -42,8 +43,19 @@ export function AutomationConsole({ isAdmin, activeCompanyId, isDarkMode, onSele
     const [showTerminal, setShowTerminal] = useState(false);
 
     useEffect(() => {
-        const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]');
-        setCompanies(storedCompanies);
+        const loadInitialData = async () => {
+            const supabaseCompanies = await fetchCompanies();
+            const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]');
+            
+            // Merge logic (similar to Header)
+            const combinedMap = new Map<string, Company>();
+            storedCompanies.forEach((c: Company) => combinedMap.set(c.id, c));
+            supabaseCompanies.forEach((c: Company) => combinedMap.set(c.id, c));
+            
+            setCompanies(Array.from(combinedMap.values()));
+        };
+
+        loadInitialData();
 
         const storedAutomations = JSON.parse(localStorage.getItem('googlar_automations') || '{}');
         setAutomations(storedAutomations);

@@ -138,8 +138,8 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
             {/* Sidebar */}
             <div
                 className={`
-          fixed top-0 left-0 h-full z-40 transition-all duration-300 ease-in-out flex flex-col 
-          bg-background border-r border-border
+          fixed top-0 left-0 h-full z-40 transition-all duration-500 ease-in-out flex flex-col 
+          bg-background border-r border-white/10
           ${isDarkMode ? 'shadow-2xl' : 'shadow-[4px_0_24px_rgba(0,0,0,0.02)]'}
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
           ${isCollapsed ? "w-20" : "w-64"}
@@ -202,12 +202,12 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
                                         onClick={() => handleItemClick(item)}
                                         title={isCollapsed ? item.name : undefined}
                                         className={[
-                                            'w-full flex items-center space-x-3 px-3 py-3 rounded-2xl text-left transition-all duration-300 group relative z-10 overflow-hidden outline-none',
+                                            'w-full flex items-center space-x-3 px-3 py-3 rounded-2xl text-left transition-all duration-500 group relative z-10 overflow-hidden outline-none',
                                             isActive
-                                                ? 'bg-primary text-primary-foreground font-bold shadow-xl scale-[1.02] border-none'
+                                                ? 'bg-primary text-primary-foreground font-bold shadow-[0_0_20px_rgba(255,255,255,0.1)] scale-[1.02] border-none'
                                                 : (isLocked || isBrief)
                                                     ? 'text-muted-foreground cursor-not-allowed opacity-40 grayscale blur-[0.2px]'
-                                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted hover:translate-x-0.5 hover:pl-4',
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-white/5 hover:translate-x-0.5 hover:pl-4',
                                             isCollapsed ? 'justify-center px-2' : '',
                                         ].join(' ')}
                                     >

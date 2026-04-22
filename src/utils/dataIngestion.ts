@@ -1,6 +1,6 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
-import type { CampaignTerm } from '../hooks/useCampaignData';
+import type { CampaignTerm } from '../types';
 
 /**
  * Normalizes a CSV header key:
@@ -53,29 +53,27 @@ function cleanAndFormatRow(rawRow: any): Partial<CampaignTerm> {
     };
 
     return {
-        // All lookups now use accent-free, lowercase keys
-        campaign_name: getStr(row['campanha'] || row['campaign_name'] || '—'),
-        ad_group:      getStr(row['grupo de anuncios'] || row['ad_group'] || '—'),
-        keyword:       getStr(row['palavra-chave'] || row['keyword'] || '—'),
-        search_term:   getStr(row['termo de pesquisa'] || row['search_term'] || '—'),
-        observation:   getStr(row['observacao'] || row['observation'] || row['obs.'] || row['obs'] || ''),
-        duvida:        getStr(row['duvida'] || row['duvida?'] || row['duvidas'] || ''),
-        suggestion_group:    getStr(row['grupo de sugestao'] || row['suggestion_group'] || ''),
-        segment:             getStr(row['segmentar'] || row['segmento'] || row['segment'] || ''),
-        negativize:          getStr(row['negativar?'] || row['negativar'] || row['negativize'] || ''),
-        ab_test:             getStr(row['teste_ab'] || row['teste a/b'] || row['teste_a_b'] || row['ab_test'] || ''),
-        status_granularity:  getStr(row['status_granularidade'] || row['status de granularidade'] || row['status_granularity'] || row['status'] || ''),
-        clicks:              getNum(row['cliques'] || row['clicks']),
-        impressions:         getNum(row['impr.'] || row['impressoes'] || row['impressions']),
+        campanha:            getStr(row['campanha'] || row['campaign_name'] || '—'),
+        grupo_de_anuncios:   getStr(row['grupo de anuncios'] || row['ad_group'] || '—'),
+        palavra_chave:       getStr(row['palavra-chave'] || row['keyword'] || '—'),
+        termo_de_pesquisa:   getStr(row['termo de pesquisa'] || row['search_term'] || '—'),
+        observacao:          getStr(row['observacao'] || row['observation'] || row['obs.'] || row['obs'] || ''),
+        duvida:              getStr(row['duvida'] || row['duvida?'] || row['duvidas'] || ''),
+        sugestao_grupo:      getStr(row['grupo de sugestao'] || row['suggestion_group'] || ''),
+        segmentar:           getStr(row['segmentar'] || row['segmento'] || row['segment'] || ''),
+        negativar:           getStr(row['negativar?'] || row['negativar'] || row['negativize'] || ''),
+        teste_ab:            getStr(row['teste_ab'] || row['teste a/b'] || row['teste_a_b'] || row['ab_test'] || ''),
+        status_granularidade: getStr(row['status_granularidade'] || row['status de granularidade'] || row['status_granularity'] || row['status'] || ''),
+        cliques:             getNum(row['cliques'] || row['clicks']),
+        impressoes:          getNum(row['impr.'] || row['impressoes'] || row['impressions']),
         ctr:                 getNum(row['ctr']),
-        avg_cpc:             getNum(row['cpc medio'] || row['avg_cpc']),
-        cost:                getNum(row['custo'] || row['cost']),
-        conversions:         getNum(row['conversoes'] || row['conversions']),
-        cost_per_conversion: getNum(row['custo / conv.'] || row['custo por conversao'] || row['cost_per_conversion']),
-        conversion_rate:     getNum(row['taxa de conv.'] || row['taxa de conversao'] || row['conversion_rate']),
-        match_type:          getStr(row['tipo de correspondencia'] || row['match_type'] || ''),
-        added_excluded:      getStr(row['adicionado/excluido'] || row['added_excluded'] || ''),
-        intervencao_humana:  getStr(row['comentario (otavio)'] || row['intervencao humana'] || row['manual_intervention'] || ''),
+        cpc_medio:           getNum(row['cpc medio'] || row['avg_cpc']),
+        custo:               getNum(row['custo'] || row['cost']),
+        conversoes:          getNum(row['conversoes'] || row['conversions']),
+        custo_conv:          getNum(row['custo / conv.'] || row['custo por conversao'] || row['cost_per_conversion']),
+        taxa_conv:           getNum(row['taxa de conv.'] || row['taxa de conversao'] || row['conversion_rate']),
+        tipo_corresp:        getStr(row['tipo de correspondencia'] || row['match_type'] || ''),
+        adicionada_excluida: getStr(row['adicionado/excluido'] || row['added_excluded'] || ''),
     };
 }
 

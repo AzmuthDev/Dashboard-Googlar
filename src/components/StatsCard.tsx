@@ -17,11 +17,11 @@ export function StatsCard({ label, value, trend, trendValue, isDark, isPrimary, 
     let borderShadowClass = '';
 
     if (isDark) {
-        // DARK MODE: Metallic style
-        bgClass = 'bg-gradient-to-br from-zinc-800 to-black text-white';
-        labelColor = 'text-zinc-400';
+        // DARK MODE: Luxury Metallic style
+        bgClass = 'bg-black text-white';
+        labelColor = 'text-zinc-500';
         valueColor = 'text-white';
-        borderShadowClass = 'border-zinc-800/80 shadow-[0_8px_30px_rgb(0,0,0,0.12)]';
+        borderShadowClass = 'metal-border shadow-2xl';
     } else {
         // LIGHT MODE: Skillset style
         if (isPrimary) {
