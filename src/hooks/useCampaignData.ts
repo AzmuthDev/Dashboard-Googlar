@@ -19,7 +19,19 @@ export const useCampaignTerms = (companyId?: string, tableName?: string) => {
 
             if (data && data.length > 0) {
                 console.log(`[useCampaignTerms] ✅ ${data.length} termos carregados da mesa ${targetTable}.`);
-                return data;
+                
+                // Sanitização: Garante que campos numéricos que vêm como string do BD sejam números para o JS
+                return data.map(term => ({
+                    ...term,
+                    cliques: Number(term.cliques || 0),
+                    impressoes: Number(term.impressoes || 0),
+                    ctr: Number(String(term.ctr || 0).replace(',', '.')),
+                    custo: Number(String(term.custo || 0).replace(',', '.')),
+                    cpc_medio: Number(String(term.cpc_medio || 0).replace(',', '.')),
+                    conversoes: Number(String(term.conversoes || 0).replace(',', '.')),
+                    custo_conv: Number(String(term.custo_conv || 0).replace(',', '.')),
+                    taxa_conv: Number(String(term.taxa_conv || 0).replace(',', '.'))
+                }));
             }
 
             console.log(`[useCampaignTerms] 📭 Mesa ${targetTable} está vazia ou não processada.`);
