@@ -338,86 +338,84 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 ) : (
                     <div className="mt-4 flex flex-col gap-6">
                     <div>
-                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Nome da Empresa / Cliente</Text>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Nome da Empresa / Cliente</label>
                         <Input
                             placeholder="Ex: Acme Corp."
                             value={newCompanyName}
                             onChange={(e) => setNewCompanyName(e.target.value)}
-                            className="bg-white/5 border-zinc-700 hover:border-zinc-400 focus:border-white text-white px-4 py-2.5 rounded-xl transition-all"
+                            className="!bg-slate-800 !border-slate-600 hover:!border-slate-400 focus:!border-white !text-white px-4 py-2.5 rounded-xl transition-all"
                         />
                     </div>
                     <div>
-                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Público Link do Google Sheets (Opcional)</Text>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Público Link do Google Sheets (Opcional)</label>
                         <Input
                             placeholder="https://docs.google.com/spreadsheets/d/..."
                             value={newCompanySheetsUrl}
                             onChange={(e) => setNewCompanySheetsUrl(e.target.value)}
-                            className="bg-white/10 border-zinc-700 hover:border-zinc-400 focus:border-white text-white/90 px-4 py-2.5 rounded-xl font-mono text-[11px] transition-all"
+                            className="!bg-slate-800 !border-slate-600 hover:!border-slate-400 focus:!border-white !text-slate-200 px-4 py-2.5 rounded-xl font-mono text-[11px] transition-all"
                         />
-                        <Text className="text-zinc-400 block mt-2 text-[10px] font-medium leading-tight">
-                            A planilha deve estar com acesso "Qualquer pessoa com o link" ou compartilhada.
-                        </Text>
+                        <p className="text-slate-400 block mt-2 text-[10px] font-medium leading-tight">
+                            A planilha deve estar com acesso &quot;Qualquer pessoa com o link&quot; ou compartilhada.
+                        </p>
                     </div>
+                    {/* Logo upload — using native input to avoid Ant Design dark mode CSS conflicts */}
                     <div>
-                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Logo da Empresa (Opcional)</Text>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Logo da Empresa (Opcional)</label>
                         <div className="flex items-center gap-4">
                             {newCompanyLogo && (
-                                <img src={newCompanyLogo} alt="Logo Preview" className="w-16 h-16 object-cover rounded-xl border border-zinc-700 shadow-2xl" />
+                                <img src={newCompanyLogo} alt="Logo Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-600 shadow-2xl shrink-0" />
                             )}
-                            <div className="flex-1">
-                                <Upload.Dragger
-                                    name="logo"
-                                    multiple={false}
-                                    showUploadList={false}
-                                    className="bg-white/5 border-zinc-700 hover:border-zinc-400 transition-all rounded-2xl p-4"
-                                    beforeUpload={(file) => {
+                            <label
+                                className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer rounded-2xl border-2 border-dashed border-slate-600 hover:border-slate-400 bg-slate-800/50 hover:bg-slate-700/50 transition-all py-5 px-4"
+                            >
+                                <InboxOutlined className="text-2xl text-slate-400" />
+                                <span className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">
+                                    {newCompanyLogo ? 'Trocar Logo' : 'Selecionar Logo'}
+                                </span>
+                                <span className="text-slate-500 text-[9px]">JPG, PNG, WEBP</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
                                         const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            setNewCompanyLogo(reader.result as string);
-                                        };
+                                        reader.onloadend = () => setNewCompanyLogo(reader.result as string);
                                         reader.readAsDataURL(file);
-                                        return false;
                                     }}
-                                >
-                                    <p className="ant-upload-drag-icon !m-0">
-                                        <InboxOutlined className="text-zinc-400" />
-                                    </p>
-                                    <p className="ant-upload-text text-zinc-300 text-[10px] font-bold uppercase tracking-widest mt-2">
-                                        Novo Logo
-                                    </p>
-                                </Upload.Dragger>
-                            </div>
+                                />
+                            </label>
                         </div>
                     </div>
+                    {/* Cover upload — same approach */}
                     <div>
-                        <Text className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400">Imagem de Capa (Opcional)</Text>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Imagem de Capa (Opcional)</label>
                         <div className="flex items-center gap-4">
                             {newCompanyCover && (
-                                <img src={newCompanyCover} alt="Cover Preview" className="w-[120px] h-16 object-cover rounded-xl border border-zinc-700 shadow-2xl" />
+                                <img src={newCompanyCover} alt="Cover Preview" className="w-[120px] h-16 object-cover rounded-xl border border-slate-600 shadow-2xl shrink-0" />
                             )}
-                            <div className="flex-1">
-                                <Upload.Dragger
-                                    name="cover"
-                                    multiple={false}
-                                    showUploadList={false}
-                                    className="bg-white/5 border-zinc-700 hover:border-zinc-400 transition-all rounded-2xl p-4"
-                                    beforeUpload={(file) => {
+                            <label
+                                className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer rounded-2xl border-2 border-dashed border-slate-600 hover:border-slate-400 bg-slate-800/50 hover:bg-slate-700/50 transition-all py-5 px-4"
+                            >
+                                <InboxOutlined className="text-2xl text-slate-400" />
+                                <span className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">
+                                    {newCompanyCover ? 'Trocar Capa' : 'Selecionar Capa'}
+                                </span>
+                                <span className="text-slate-500 text-[9px]">JPG, PNG, WEBP — Proporção 16:9 recomendada</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
                                         const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            setNewCompanyCover(reader.result as string);
-                                        };
+                                        reader.onloadend = () => setNewCompanyCover(reader.result as string);
                                         reader.readAsDataURL(file);
-                                        return false;
                                     }}
-                                >
-                                    <p className="ant-upload-drag-icon !m-0">
-                                        <InboxOutlined className="text-zinc-400" />
-                                    </p>
-                                    <p className="ant-upload-text text-zinc-300 text-[10px] font-bold uppercase tracking-widest mt-2">
-                                        Nova Capa
-                                    </p>
-                                </Upload.Dragger>
-                            </div>
+                                />
+                            </label>
                         </div>
                     </div>
                 </div>

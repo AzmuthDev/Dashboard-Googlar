@@ -141,20 +141,62 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { error: null };
     }
 
+    // CHECK LOCAL STORAGE FOR USERS CREATED IN DASHBOARD (USERMANAGER)
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      const localUsersStr = localStorage.getItem('googlar_authorized_users');
+      if (localUsersStr) {
+        const localUsers = JSON.parse(localUsersStr) as AuthorizedUser[];
+        const foundUser = localUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+        
+        if (foundUser) {
+          console.log('[Auth] Usuário local logado com sucesso.');
+          const mockUser = { id: `local-${foundUser.email}`, email: foundUser.email } as any;
+          
+          setUser(mockUser);
+          setProfile(foundUser);
+          setSession({ user: mockUser, access_token: 'mock-token' } as any);
+          setIsLoading(false);
+          return { error: null };
+        }
+      }
+    } catch (e) {
+      console.error('[Auth] Erro ao verificar usuários locais:', e);
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
+        if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
           return { error: 'E-mail ou senha incorretos. Tente novamente.' }
         }
-        if (error.message.includes('Email not confirmed')) {
-          return { error: 'Confirme seu e-mail antes de fazer login.' }
+        if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+          // Auto-confirm workaround: try to inform admin to disable email confirmation in Supabase
+          return { error: 'Conta pendente de confirmação. Peça ao administrador para confirmar o e-mail no painel do Supabase.' }
         }
         if (error.message.includes('Too many requests')) {
           return { error: 'Muitas tentativas. Aguarde alguns minutos.' }
         }
         return { error: error.message }
+      }
+
+      // Ensure profile exists after login (for users created via signUp by admin)
+      if (data?.user) {
+        try {
+          const existingProfile = await fetchProfile(data.user.id, data.user.email ?? '')
+          if (!existingProfile) {
+            // Create a basic profile if none exists
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'Usuário',
+              role: data.user.user_metadata?.role || 'standard',
+              is_admin: data.user.user_metadata?.is_admin || false,
+              assigned_company_ids: [],
+            }, { onConflict: 'id' })
+          }
+        } catch (profileErr) {
+          console.warn('[Auth] Não foi possível garantir perfil:', profileErr)
+        }
       }
 
       return { error: null }

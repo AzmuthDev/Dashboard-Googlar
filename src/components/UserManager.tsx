@@ -3,6 +3,7 @@ import { Button, Input, Modal, message, Typography, Upload, Divider, Select } fr
 import { UserAddOutlined, MailOutlined, KeyOutlined, UserOutlined, InboxOutlined, EditOutlined, SafetyCertificateOutlined, BankOutlined } from '@ant-design/icons'
 import { UserProfileCard } from './ui/user-profile-card'
 import type { AuthorizedUser, Company, UserRole } from '../types'
+import { supabase } from '../lib/supabase'
 
 const { Title, Text } = Typography
 
@@ -68,7 +69,7 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         }
     }, [currentUser])
 
-    const handleAddUser = () => {
+    const handleAddUser = async () => {
         if (!newName.trim()) {
             message.error('Por favor, insira o nome do usuário.')
             return
@@ -79,8 +80,8 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             return
         }
 
-        if (!password || password.length < 4) {
-            message.error('A senha deve ter pelo menos 4 caracteres.')
+        if (!password || password.length < 6) {
+            message.error('A senha deve ter pelo menos 6 caracteres.')
             return
         }
 
@@ -94,22 +95,65 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             return
         }
 
-        const newUser: AuthorizedUser = {
-            name: newName.trim(),
-            email: newEmail.toLowerCase(),
-            password: password,
-            role: newRole,
-            isAdmin: newRole === 'admin',
-            assignedCompanyIds: assignedCompanyIds,
-            addedAt: new Date().toLocaleDateString('pt-BR')
-        }
+        const loadingKey = 'create-user'
+        message.loading({ content: 'Criando usuário no Supabase...', key: loadingKey, duration: 0 })
 
-        const updatedUsers = [...users, newUser]
-        localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-        setUsers(updatedUsers)
-        resetAddForm()
-        setIsAddModalVisible(false)
-        message.success('Usuário autorizado com sucesso!')
+        try {
+            // 1. Create user in Supabase Auth
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+                email: newEmail.toLowerCase(),
+                password: password,
+                options: {
+                    data: {
+                        name: newName.trim(),
+                        role: newRole,
+                        is_admin: newRole === 'admin',
+                    },
+                    // Skip email confirmation for dashboard-created users
+                    emailRedirectTo: undefined,
+                }
+            })
+
+            if (signUpError) {
+                if (signUpError.message.includes('already registered')) {
+                    message.error({ content: 'Este e-mail já está registrado no Supabase.', key: loadingKey })
+                } else {
+                    message.error({ content: `Erro Supabase: ${signUpError.message}`, key: loadingKey })
+                }
+                return
+            }
+
+            // 2. Upsert profile row (the trigger may create it, but we ensure data is correct)
+            if (signUpData?.user?.id) {
+                await supabase.from('profiles').upsert({
+                    id: signUpData.user.id,
+                    name: newName.trim(),
+                    role: newRole,
+                    is_admin: newRole === 'admin',
+                    assigned_company_ids: assignedCompanyIds,
+                }, { onConflict: 'id' })
+            }
+
+            // 3. Also keep in localStorage for immediate display (no full refresh needed)
+            const newUser: AuthorizedUser = {
+                name: newName.trim(),
+                email: newEmail.toLowerCase(),
+                password: password, // kept locally so admin can see it if needed
+                role: newRole,
+                isAdmin: newRole === 'admin',
+                assignedCompanyIds: assignedCompanyIds,
+                addedAt: new Date().toLocaleDateString('pt-BR')
+            }
+            const updatedUsers = [...users, newUser]
+            localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
+            setUsers(updatedUsers)
+
+            resetAddForm()
+            setIsAddModalVisible(false)
+            message.success({ content: '✅ Usuário criado no Supabase! Ele já pode fazer login.', key: loadingKey, duration: 4 })
+        } catch (err: any) {
+            message.error({ content: `Erro inesperado: ${err.message}`, key: loadingKey })
+        }
     }
 
     const resetAddForm = () => {

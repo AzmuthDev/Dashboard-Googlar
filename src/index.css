@@ -707,6 +707,21 @@ body:not(.dark) {
   background: var(--background) !important;
 }
 
+.dark .custom-select-premium .ant-select-selector {
+  background-color: #1f2937 !important; /* Tailwind gray-800 */
+  border-color: #374151 !important; /* Tailwind gray-700 */
+}
+
+.dark .custom-select-premium .ant-select-selection-item,
+.dark .custom-select-premium .ant-select-selection-placeholder {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+.dark .custom-select-premium .ant-select-arrow {
+  color: #9ca3af !important;
+}
+
 /* Custom Select Action V3 — .btn-bw-inverse derivative */
 .custom-select-v3-action .ant-select-selector {
   border-radius: 8px !important;
@@ -818,25 +833,7 @@ body:not(.dark) {
   box-shadow: 0 0 0 2px rgba(255,255,255,0.1) !important;
 }
 
-.dark .ant-select-selector {
-  color: #ffffff !important;
-}
 
-.dark .ant-select-selection-placeholder {
-  color: #888888 !important;
-}
-
-.dark .ant-select-arrow {
-  color: #a1a1aa !important;
-}
-
-.dark-dropdown .ant-select-item {
-  color: #ffffff !important;
-}
-
-.dark-dropdown .ant-select-item-option-active {
-  background-color: rgba(255,255,255,0.1) !important;
-}
 
 /* Modais (Vantablack / Metal style) */
 .dark .ant-modal-content {
@@ -928,37 +925,93 @@ body:not(.dark) {
 }
 
 /* ── UI/UX Contraste - Dark Mode Improvements ─────────────────────────── */
-.dark .ant-select-dropdown {
-  background-color: #09090B !important;
-  border: 1px solid #27272A !important;
+/* Container do Select (campo fechado / trigger) */
+.dark .ant-select-selector,
+.dark .custom-select-premium .ant-select-selector,
+.dark .luxury-select .ant-select-selector {
+  background-color: #1f2937 !important; /* bg-gray-800 */
+  color: #f3f4f6 !important; /* text-gray-100 */
+  border: 1px solid #4b5563 !important; /* border-gray-600 */
+}
+.dark .ant-select:hover .ant-select-selector,
+.dark .custom-select-premium:hover .ant-select-selector {
+  border-color: #9ca3af !important; /* hover:border-gray-400 */
 }
 
-.dark .ant-select-item-option-content {
-  color: #FFFFFF !important;
+/* Fix text color inside selector */
+.dark .ant-select-selection-item,
+.dark .ant-select-selection-placeholder,
+.dark .custom-select-premium .ant-select-selection-item {
+  color: #f3f4f6 !important;
 }
 
-.dark .ant-select-item-option-active:not(.ant-select-item-option-disabled) {
-  background-color: #2D2D2D !important;
+/* Seta do select */
+.dark .ant-select-arrow {
+  color: #a1a1aa !important;
 }
 
-.dark .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
-  background-color: #18181B !important;
-  color: #FFFFFF !important;
-  font-weight: bold !important;
+/* Fundo do menu suspenso (lista de opções) */
+.dark .ant-select-dropdown,
+.dark-dropdown {
+  background-color: #1f2937 !important; /* bg-gray-800 */
+  border: 1px solid #374151 !important; /* border-gray-700 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Global inputs for dark mode */
+/* Texto das opções */
+.dark .ant-select-item-option-content,
+.dark-dropdown .ant-select-item-option-content,
+.dark-dropdown .ant-select-item {
+  color: #f3f4f6 !important; /* text-gray-100 */
+}
+
+/* Estado de hover nas opções */
+.dark .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.dark-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+.dark .ant-select-item-option-active:hover:not(.ant-select-item-option-disabled) {
+  background-color: #2563eb !important; /* bg-blue-600 */
+  color: #ffffff !important;
+  transition: background-color 150ms, color 150ms !important;
+}
+.dark .ant-select-item-option-active:not(.ant-select-item-option-disabled) .ant-select-item-option-content,
+.dark-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled) .ant-select-item-option-content {
+  color: #ffffff !important;
+}
+
+/* Opção selecionada (active/selected) */
+.dark .ant-select-item-option-selected:not(.ant-select-item-option-disabled),
+.dark-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: #1d4ed8 !important; /* bg-blue-700 */
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+.dark .ant-select-item-option-selected:not(.ant-select-item-option-disabled) .ant-select-item-option-content,
+.dark-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) .ant-select-item-option-content {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+}
+
+/* Input de busca interno do dropdown e inputs globais */
 .dark input.ant-input, 
 .dark .ant-input,
-.dark .ant-select-selection-search-input,
-.dark .ant-select-selection-item {
-  color: #FFFFFF !important;
+.dark .ant-select-dropdown .ant-select-selection-search-input,
+.dark .ant-select-selection-search-input {
+  background-color: #374151 !important; /* bg-gray-700 */
+  color: #f3f4f6 !important; /* text-gray-100 */
+  border: 1px solid #4b5563 !important; /* border-gray-600 */
+}
+
+.dark input.ant-input:focus,
+.dark .ant-input:focus,
+.dark .ant-select-selection-search-input:focus {
+  border-color: #3b82f6 !important; /* focus:border-blue-500 */
 }
 
 .dark input.ant-input::placeholder,
 .dark .ant-input::placeholder,
-.dark .ant-select-selection-placeholder {
-  color: #9CA3AF !important;
+.dark .ant-select-selection-search-input::placeholder {
+  color: #9ca3af !important; /* placeholder-gray-400 */
+  opacity: 1 !important;
 }
 
 /* Sidebar contrast fix */

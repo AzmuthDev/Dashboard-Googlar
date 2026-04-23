@@ -764,7 +764,8 @@ export function SemanticAudit({
                         <Select
                             showSearch
                             placeholder="Campanha..."
-                            className="w-[200px] custom-select-premium"
+                            className="w-[200px] [&_.ant-select-selector]:!bg-slate-800 [&_.ant-select-selector]:!border-slate-600 [&_.ant-select-selection-item]:!text-slate-100 [&_.ant-select-selection-placeholder]:!text-slate-400 [&_.ant-select-arrow]:!text-slate-400"
+                            popupClassName="!bg-slate-800 !border !border-slate-700 !shadow-[0_10px_30px_rgba(0,0,0,0.8)] [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-active]:!text-white [&_.ant-select-item-option-selected]:!bg-blue-600 [&_.ant-select-item-option-selected]:!text-white [&_.ant-select-item-option-content]:!text-inherit"
                             value={selectedCampaign}
                             onChange={val => setSelectedCampaign(val)}
                             options={campaignList.map(c => ({ label: c, value: c }))}
@@ -773,7 +774,8 @@ export function SemanticAudit({
                             showSearch
                             disabled={!selectedCampaign}
                             placeholder="Grupo..."
-                            className="w-[200px] custom-select-premium"
+                            className="w-[200px] [&_.ant-select-selector]:!bg-slate-800 [&_.ant-select-selector]:!border-slate-600 [&_.ant-select-selection-item]:!text-slate-100 [&_.ant-select-selection-placeholder]:!text-slate-400 [&_.ant-select-arrow]:!text-slate-400"
+                            popupClassName="!bg-slate-800 !border !border-slate-700 !shadow-[0_10px_30px_rgba(0,0,0,0.8)] [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-active]:!text-white [&_.ant-select-item-option-selected]:!bg-blue-600 [&_.ant-select-item-option-selected]:!text-white [&_.ant-select-item-option-content]:!text-inherit"
                             value={selectedAdGroup}
                             onChange={val => setSelectedAdGroup(val)}
                             options={adGroupList.map(g => ({ label: g, value: g }))}
@@ -802,7 +804,7 @@ export function SemanticAudit({
                             icon={<Sparkles size={16} />}
                             onClick={handleAutoTriage}
                             loading={isAutoTriaging}
-                            className="h-10 px-5 rounded-2xl font-bold bg-zinc-900 text-white dark:bg-slate-900 dark:border dark:border-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-zinc-800 dark:hover:bg-slate-800"
+                            className="h-10 px-5 rounded-2xl font-bold bg-zinc-900 !text-white dark:bg-slate-800 dark:border dark:border-slate-700 dark:!text-white flex items-center justify-center hover:bg-zinc-800 dark:hover:bg-slate-700 transition-colors"
                         >
                             Auto-Triagem IA
                         </Button>
