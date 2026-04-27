@@ -51,50 +51,51 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
     // Current user detailed info
     const [currentUserDetails, setCurrentUserDetails] = useState<{ name?: string, role?: string, avatarUrl?: string }>({})
 
-    useEffect(() => {
-        const loadData = async () => {
-            // 1. Carregar Empresas (do localStorage ou Supabase se quiser migrar depois)
-            const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]')
-            setCompanies(storedCompanies)
+    const loadData = async () => {
+        // 1. Carregar Empresas (do localStorage ou Supabase se quiser migrar depois)
+        const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]')
+        setCompanies(storedCompanies)
 
-            // 2. Carregar Usuários do Supabase (Arquitetura Multi-Máquina)
-            try {
-                const { data, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                
-                if (error) throw error
+        // 2. Carregar Usuários do Supabase (Arquitetura Multi-Máquina)
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+            
+            if (error) throw error
 
-                if (data) {
-                    const mappedUsers: AuthorizedUser[] = data.map(p => ({
-                        name: p.name,
-                        email: p.email || '',
-                        role: p.role,
-                        isAdmin: p.is_admin,
-                        assignedCompanyIds: p.assigned_company_ids || [],
-                        addedAt: new Date(p.created_at).toLocaleDateString('pt-BR'),
-                        avatarUrl: p.avatar_url,
-                        jobTitle: p.job_title
-                    }))
-                    setUsers(mappedUsers)
+            if (data) {
+                const mappedUsers: AuthorizedUser[] = data.map(p => ({
+                    name: p.name,
+                    email: p.email || '',
+                    role: p.role,
+                    isAdmin: p.is_admin,
+                    assignedCompanyIds: p.assigned_company_ids || [],
+                    addedAt: new Date(p.created_at).toLocaleDateString('pt-BR'),
+                    avatarUrl: p.avatar_url,
+                    jobTitle: p.job_title
+                }))
+                setUsers(mappedUsers)
 
-                    // 3. Detalhes do Usuário Atual
-                    if (currentUser?.email) {
-                        const found = mappedUsers.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase())
-                        if (found) {
-                            setCurrentUserDetails({
-                                name: found.name,
-                                role: found.jobTitle || (found.isAdmin ? 'Fundador / Admin' : 'Colaborador'),
-                                avatarUrl: found.avatarUrl
-                            })
-                        }
+                // 3. Detalhes do Usuário Atual
+                if (currentUser?.email) {
+                    const found = mappedUsers.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase())
+                    if (found) {
+                        setCurrentUserDetails({
+                            name: found.name,
+                            role: found.jobTitle || (found.isAdmin ? 'Fundador / Admin' : 'Colaborador'),
+                            avatarUrl: found.avatarUrl
+                        })
                     }
                 }
-            } catch (err) {
-                console.error('[UserManager] Erro ao carregar usuários:', err)
-                message.error('Erro ao carregar lista de usuários do banco.')
             }
+        } catch (err) {
+            console.error('[UserManager] Erro ao carregar usuários:', err)
+            message.error('Erro ao carregar lista de usuários do banco.')
         }
+    }
+
+    useEffect(() => {
         loadData()
     }, [currentUser])
 
@@ -279,12 +280,16 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             async onOk() {
                 try {
                     // Remove do Profiles (O usuário ainda existirá no Auth, mas sem perfil não acessa o painel)
-                    await supabase.from('profiles').delete().eq('email', email.toLowerCase())
+                    const { error } = await supabase.from('profiles').delete().eq('email', email.toLowerCase())
                     
-                    setUsers(prev => prev.filter(u => u.email.toLowerCase() !== email.toLowerCase()))
-                    message.success('Acesso removido do banco de dados.')
-                } catch (err) {
-                    message.error('Erro ao remover acesso.')
+                    if (error) throw error;
+                    
+                    message.success('Acesso removido com sucesso.')
+                    // Refresh from DB instead of local state to guarantee correctness
+                    await loadData()
+                } catch (err: any) {
+                    console.error("Delete Error:", err)
+                    message.error('Erro ao remover acesso. Verifique as permissões de banco de dados.')
                 }
             }
         })
