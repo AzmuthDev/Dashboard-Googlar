@@ -1,4 +1,4 @@
-# Documentação Técnica: Auditoria Semântica Premium
+# Documentação Técnica: Auditoria Semântica
 
 Esta documentação detalha o funcionamento do módulo de **Auditoria Semântica**, a ferramenta central para triagem estratégica de termos de pesquisa e otimização de campanhas no Antygraviti OS.
 
