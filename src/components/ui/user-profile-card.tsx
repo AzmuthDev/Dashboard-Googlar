@@ -111,14 +111,11 @@ export const UserProfileCard = ({
                 </div>
                 <span className="grid flex-1">
                     <motion.span className="text-xs font-medium text-muted-foreground row-start-1 col-start-1" variants={summaryTextVariants}>
-                        {isCurrentUser ? 'Meu Perfil' : 'Gerenciar Usuário'}
+                        {isCurrentUser && 'Meu Perfil'}
                     </motion.span>
 
-                    {/* Action Buttons Container */}
-                    <motion.div
-                        className="flex items-center gap-2 row-start-1 col-start-1"
-                        variants={actionTextVariants}
-                    >
+                    {/* Action Buttons Container - Always visible if not collapsed */}
+                    <div className="flex items-center gap-2 row-start-1 col-start-1 opacity-100 translate-y-0">
                         {isCurrentUser && onEditProfile && (
                             <button onClick={onEditProfile} className="text-xs font-medium text-primary flex items-center gap-1 cursor-pointer select-none group focus:outline-none">
                                 Editar Perfil <ArrowUpRight className="size-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
@@ -139,7 +136,7 @@ export const UserProfileCard = ({
                                 <Trash2 className="size-3.5" />
                             </button>
                         )}
-                    </motion.div>
+                    </div>
                 </span>
             </div>
         </motion.div>

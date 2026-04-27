@@ -124,12 +124,17 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             return
         }
 
-        const loadingKey = 'create-user'
-        message.loading({ content: 'Criando usuário no Supabase...', key: loadingKey, duration: 0 })
-
         try {
+            // Criar um cliente temporário sem persistência para não deslogar o admin
+            const { createClient } = await import('@supabase/supabase-js')
+            const tempSupabase = createClient(
+                import.meta.env.VITE_SUPABASE_URL,
+                import.meta.env.VITE_SUPABASE_ANON_KEY,
+                { auth: { persistSession: false } }
+            )
+
             // 1. Create user in Supabase Auth
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            const { data: signUpData, error: signUpError } = await tempSupabase.auth.signUp({
                 email: newEmail.toLowerCase(),
                 password: password,
                 options: {
@@ -138,8 +143,6 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
                         role: newRole,
                         is_admin: newRole === 'admin',
                     },
-                    // Skip email confirmation for dashboard-created users
-                    emailRedirectTo: undefined,
                 }
             })
 
@@ -267,15 +270,24 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
     }
 
     const handleDeleteUser = async (email: string) => {
-        try {
-            // Remove do Profiles (O usuário ainda existirá no Auth, mas sem perfil não acessa o painel)
-            await supabase.from('profiles').delete().eq('email', email.toLowerCase())
-            
-            setUsers(prev => prev.filter(u => u.email.toLowerCase() !== email.toLowerCase()))
-            message.success('Acesso removido do banco de dados.')
-        } catch (err) {
-            message.error('Erro ao remover acesso.')
-        }
+        Modal.confirm({
+            title: 'Remover Acesso',
+            content: `Tem certeza que deseja remover o acesso de ${email}? Ele não conseguirá mais entrar no painel.`,
+            okText: 'Sim, Remover',
+            okType: 'danger',
+            cancelText: 'Cancelar',
+            async onOk() {
+                try {
+                    // Remove do Profiles (O usuário ainda existirá no Auth, mas sem perfil não acessa o painel)
+                    await supabase.from('profiles').delete().eq('email', email.toLowerCase())
+                    
+                    setUsers(prev => prev.filter(u => u.email.toLowerCase() !== email.toLowerCase()))
+                    message.success('Acesso removido do banco de dados.')
+                } catch (err) {
+                    message.error('Erro ao remover acesso.')
+                }
+            }
+        })
     }
 
 
