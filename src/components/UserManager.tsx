@@ -52,21 +52,50 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
     const [currentUserDetails, setCurrentUserDetails] = useState<{ name?: string, role?: string, avatarUrl?: string }>({})
 
     useEffect(() => {
-        const stored = JSON.parse(localStorage.getItem('googlar_authorized_users') || '[]')
-        setUsers(stored)
-        const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]')
-        setCompanies(storedCompanies)
+        const loadData = async () => {
+            // 1. Carregar Empresas (do localStorage ou Supabase se quiser migrar depois)
+            const storedCompanies = JSON.parse(localStorage.getItem('googlar_companies') || '[]')
+            setCompanies(storedCompanies)
 
-        if (currentUser?.email) {
-            const found = stored.find((u: any) => u.email.toLowerCase() === currentUser.email.toLowerCase())
-            if (found) {
-                setCurrentUserDetails({
-                    name: found.name,
-                    role: found.jobTitle || (isAdmin ? 'Fundador / Admin' : 'Colaborador'),
-                    avatarUrl: found.avatarUrl
-                })
+            // 2. Carregar Usuários do Supabase (Arquitetura Multi-Máquina)
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                
+                if (error) throw error
+
+                if (data) {
+                    const mappedUsers: AuthorizedUser[] = data.map(p => ({
+                        name: p.name,
+                        email: p.email || '',
+                        role: p.role,
+                        isAdmin: p.is_admin,
+                        assignedCompanyIds: p.assigned_company_ids || [],
+                        addedAt: new Date(p.created_at).toLocaleDateString('pt-BR'),
+                        avatarUrl: p.avatar_url,
+                        jobTitle: p.job_title
+                    }))
+                    setUsers(mappedUsers)
+
+                    // 3. Detalhes do Usuário Atual
+                    if (currentUser?.email) {
+                        const found = mappedUsers.find(u => u.email.toLowerCase() === currentUser.email.toLowerCase())
+                        if (found) {
+                            setCurrentUserDetails({
+                                name: found.name,
+                                role: found.jobTitle || (found.isAdmin ? 'Fundador / Admin' : 'Colaborador'),
+                                avatarUrl: found.avatarUrl
+                            })
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('[UserManager] Erro ao carregar usuários:', err)
+                message.error('Erro ao carregar lista de usuários do banco.')
             }
         }
+        loadData()
     }, [currentUser])
 
     const handleAddUser = async () => {
@@ -123,30 +152,28 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
                 return
             }
 
-            // 2. Upsert profile row (the trigger may create it, but we ensure data is correct)
+            // 2. Upsert profile row (Ensures multi-machine sync)
             if (signUpData?.user?.id) {
                 await supabase.from('profiles').upsert({
                     id: signUpData.user.id,
                     name: newName.trim(),
+                    email: newEmail.toLowerCase(), // Fundamental para identificação
                     role: newRole,
                     is_admin: newRole === 'admin',
                     assigned_company_ids: assignedCompanyIds,
                 }, { onConflict: 'id' })
             }
 
-            // 3. Also keep in localStorage for immediate display (no full refresh needed)
+            // 3. Atualizar estado local
             const newUser: AuthorizedUser = {
                 name: newName.trim(),
                 email: newEmail.toLowerCase(),
-                password: password, // kept locally so admin can see it if needed
                 role: newRole,
                 isAdmin: newRole === 'admin',
                 assignedCompanyIds: assignedCompanyIds,
                 addedAt: new Date().toLocaleDateString('pt-BR')
             }
-            const updatedUsers = [...users, newUser]
-            localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-            setUsers(updatedUsers)
+            setUsers(prev => [...prev, newUser])
 
             resetAddForm()
             setIsAddModalVisible(false)
@@ -173,42 +200,38 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         setIsEditModalVisible(true)
     }
 
-    const handleSaveEditUser = () => {
+    const handleSaveEditUser = async () => {
         if (!editingUser) return
 
-        const updatedUsers = users.map(u => {
-            if (u.email.toLowerCase() === editingUser.email.toLowerCase()) {
-                return {
-                    ...u,
+        try {
+            // 1. Buscar o ID do usuário pelo email (já que no profiles o ID é o UUID do Auth)
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', editingUser.email.toLowerCase())
+                .single()
+
+            if (profileData) {
+                await supabase.from('profiles').update({
                     name: editName.trim(),
                     role: editRole,
-                    isAdmin: editRole === 'admin',
-                    assignedCompanyIds: editCompanyIds
-                }
+                    is_admin: editRole === 'admin',
+                    assigned_company_ids: editCompanyIds
+                }).eq('id', profileData.id)
             }
-            return u
-        })
 
-        // Also sync companies if needed (ensuring users within companies are updated if they were hard-synced there)
-        const updatedCompanies: Company[] = companies.map(c => {
-            const hasUser = editingUser.assignedCompanyIds?.includes(c.id) || editCompanyIds.includes(c.id);
-            if (hasUser) {
-                const otherUsers = c.users.filter((u: any) => u.email.toLowerCase() !== editingUser.email.toLowerCase());
-                if (editCompanyIds.includes(c.id)) {
-                    const mappedRole: 'admin' | 'editor' | 'viewer' = editRole === 'admin' ? 'admin' : 'viewer';
-                    return { ...c, users: [...otherUsers, { email: editingUser.email, role: mappedRole }] };
-                }
-                return { ...c, users: otherUsers };
-            }
-            return c;
-        });
+            // 2. Atualizar estado local
+            setUsers(prev => prev.map(u => 
+                u.email.toLowerCase() === editingUser.email.toLowerCase() 
+                ? { ...u, name: editName, role: editRole, isAdmin: editRole === 'admin', assignedCompanyIds: editCompanyIds }
+                : u
+            ))
 
-        localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-        localStorage.setItem('googlar_companies', JSON.stringify(updatedCompanies))
-        setUsers(updatedUsers)
-        setCompanies(updatedCompanies)
-        setIsEditModalVisible(false)
-        message.success('Usuário atualizado com sucesso!')
+            setIsEditModalVisible(false)
+            message.success('Usuário atualizado no banco com sucesso!')
+        } catch (err) {
+            message.error('Erro ao salvar alterações no Supabase.')
+        }
     }
 
     const handlePasswordChange = () => {
@@ -243,11 +266,16 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         message.success('Senha atualizada com sucesso!')
     }
 
-    const handleDeleteUser = (email: string) => {
-        const updatedUsers = users.filter(u => u.email !== email)
-        localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-        setUsers(updatedUsers)
-        message.success('Acesso removido.')
+    const handleDeleteUser = async (email: string) => {
+        try {
+            // Remove do Profiles (O usuário ainda existirá no Auth, mas sem perfil não acessa o painel)
+            await supabase.from('profiles').delete().eq('email', email.toLowerCase())
+            
+            setUsers(prev => prev.filter(u => u.email.toLowerCase() !== email.toLowerCase()))
+            message.success('Acesso removido do banco de dados.')
+        } catch (err) {
+            message.error('Erro ao remover acesso.')
+        }
     }
 
 

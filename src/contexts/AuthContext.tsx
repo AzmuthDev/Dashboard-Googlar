@@ -121,89 +121,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [])
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
-    // BYPASS DE EMERGÊNCIA PARA ADMINISTRADOR
-    if (email === 'joseeduardorms29@gmail.com' && password === 'googlar2024') {
-      console.log('[Auth] Bypass de mestre ativado.');
-      const mockUser = { id: 'admin-master-id', email: email } as any;
-      const mockProfile: AuthorizedUser = {
-        name: "José Eduardo (Master)",
-        email: email,
-        role: 'admin',
-        isAdmin: true,
-        addedAt: new Date().toLocaleDateString('pt-BR'),
-        assignedCompanyIds: []
-      };
-      
-      setUser(mockUser);
-      setProfile(mockProfile);
-      setSession({ user: mockUser, access_token: 'mock-token' } as any);
-      setIsLoading(false);
-      return { error: null };
-    }
-
-    // CHECK LOCAL STORAGE FOR USERS CREATED IN DASHBOARD (USERMANAGER)
     try {
-      const localUsersStr = localStorage.getItem('googlar_authorized_users');
-      if (localUsersStr) {
-        const localUsers = JSON.parse(localUsersStr) as AuthorizedUser[];
-        const foundUser = localUsers.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-        
-        if (foundUser) {
-          console.log('[Auth] Usuário local logado com sucesso.');
-          const mockUser = { id: `local-${foundUser.email}`, email: foundUser.email } as any;
-          
-          setUser(mockUser);
-          setProfile(foundUser);
-          setSession({ user: mockUser, access_token: 'mock-token' } as any);
-          setIsLoading(false);
-          return { error: null };
-        }
-      }
-    } catch (e) {
-      console.error('[Auth] Erro ao verificar usuários locais:', e);
-    }
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
 
       if (error) {
         if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
           return { error: 'E-mail ou senha incorretos. Tente novamente.' }
         }
-        if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
-          // Auto-confirm workaround: try to inform admin to disable email confirmation in Supabase
-          return { error: 'Conta pendente de confirmação. Peça ao administrador para confirmar o e-mail no painel do Supabase.' }
-        }
-        if (error.message.includes('Too many requests')) {
-          return { error: 'Muitas tentativas. Aguarde alguns minutos.' }
+        if (error.message.includes('Email not confirmed')) {
+          return { error: 'E-mail pendente de confirmação.' }
         }
         return { error: error.message }
       }
 
-      // Ensure profile exists after login (for users created via signUp by admin)
+      // Sincroniza o perfil imediatamente após o login
       if (data?.user) {
-        try {
-          const existingProfile = await fetchProfile(data.user.id, data.user.email ?? '')
-          if (!existingProfile) {
-            // Create a basic profile if none exists
-            await supabase.from('profiles').upsert({
-              id: data.user.id,
-              name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'Usuário',
-              role: data.user.user_metadata?.role || 'standard',
-              is_admin: data.user.user_metadata?.is_admin || false,
-              assigned_company_ids: [],
-            }, { onConflict: 'id' })
-          }
-        } catch (profileErr) {
-          console.warn('[Auth] Não foi possível garantir perfil:', profileErr)
-        }
+        const prof = await fetchProfile(data.user.id, data.user.email ?? '')
+        if (prof) setProfile(prof)
       }
 
       return { error: null }
-    } catch {
+    } catch (err) {
+      console.error('[Auth] Erro ao entrar:', err)
       return { error: 'Erro de conexão. Verifique sua internet.' }
     }
   }
+
 
   const signOut = async () => {
     await supabase.auth.signOut()

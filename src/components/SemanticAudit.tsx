@@ -271,17 +271,23 @@ export function SemanticAudit({
         try {
             const { error } = await supabase
                 .from(targetTable)
-                .update({ auditor_comment: comment })
+                .update({ observacao: comment })
                 .eq('id', id);
 
             if (error) throw error;
             
+            // Update local cache to reflect changes immediately across the UI
+            queryClient.setQueryData(['campaign-terms', activeCompanyId, activeCompany?.tableName], (oldData: CampaignTerm[] | undefined) => {
+                if (!oldData) return [];
+                return oldData.map(t => t.id === id ? { ...t, observacao: comment } : t);
+            });
+
             setTriageState(prev => ({
                 ...prev,
                 [id]: { ...prev[id], comment }
             }));
             
-            console.log(`[SemanticAudit] Comentário sincronizado na tabela ${targetTable} para o termo ${id}`);
+            console.log(`[SemanticAudit] Observação sincronizada na tabela ${targetTable} para o termo ${id}`);
         } catch (error) {
             console.error('[Sync Error]:', error);
             message.error('Erro ao sincronizar comentário.');
@@ -523,9 +529,9 @@ export function SemanticAudit({
                                 {termToSearch}
                             </a>
                         </div>
-                        {record?.observacao && (
+                        {record?.palavra_chave && (
                             <span className="text-[11px] italic text-slate-600 dark:text-slate-400 mt-1 line-clamp-2 pl-6">
-                                {record.observacao}
+                                {record.palavra_chave}
                             </span>
                         )}
                     </div>
@@ -685,7 +691,7 @@ export function SemanticAudit({
                                 "text-[11px] bg-muted/30 border border-transparent dark:bg-slate-900 dark:border-slate-700 hover:bg-muted/50 focus:bg-muted/50 transition-all rounded-lg p-3 shadow-none text-foreground dark:text-slate-200",
                                 isSyncing && "ring-1 ring-primary/30"
                             )}
-                            defaultValue={record.auditor_comment || record.observacao || triageState[record.id]?.comment}
+                            defaultValue={record.observacao || triageState[record.id]?.comment}
                             onBlur={(e) => handleCommentSync(record.id, e.target.value)}
                         />
                         {isSyncing && (
