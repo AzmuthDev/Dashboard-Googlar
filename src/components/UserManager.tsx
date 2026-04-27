@@ -66,6 +66,7 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
 
             if (data) {
                 const mappedUsers: AuthorizedUser[] = data.map(p => ({
+                    id: p.id,
                     name: p.name,
                     email: p.email || '',
                     role: p.role,
@@ -270,17 +271,24 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         message.success('Senha atualizada com sucesso!')
     }
 
-    const handleDeleteUser = async (email: string) => {
+    const handleDeleteUser = async (user: AuthorizedUser) => {
         Modal.confirm({
             title: 'Remover Acesso',
-            content: `Tem certeza que deseja remover o acesso de ${email}? Ele não conseguirá mais entrar no painel.`,
+            content: `Tem certeza que deseja remover o acesso de ${user.name || user.email}? Ele não conseguirá mais entrar no painel.`,
             okText: 'Sim, Remover',
             okType: 'danger',
             cancelText: 'Cancelar',
             async onOk() {
                 try {
-                    // Remove do Profiles (O usuário ainda existirá no Auth, mas sem perfil não acessa o painel)
-                    const { error } = await supabase.from('profiles').delete().eq('email', email.toLowerCase())
+                    // Se tiver ID, deleta pelo ID de forma segura. Senão, tenta pelo email.
+                    let query = supabase.from('profiles').delete();
+                    if (user.id) {
+                        query = query.eq('id', user.id);
+                    } else {
+                        query = query.eq('email', user.email.toLowerCase());
+                    }
+                    
+                    const { error } = await query;
                     
                     if (error) throw error;
                     
@@ -472,7 +480,7 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
                                     handleEditUser(user);
                                 } : undefined}
                                 onDelete={(isAdmin && !isCardOfCurrentUser && !isRootAdmin) ? () => {
-                                    handleDeleteUser(user.email);
+                                    handleDeleteUser(user);
                                 } : undefined}
                             />
                         </div>

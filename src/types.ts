@@ -33,6 +33,7 @@ export interface Company {
 export type UserRole = 'admin' | 'standard';
 
 export interface AuthorizedUser {
+    id?: string;
     name: string;
     email: string;
     password?: string;
