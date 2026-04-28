@@ -322,14 +322,16 @@ export function SemanticAudit({
                 return oldData.map(t => t.id === termId ? { ...t, ...updatePayload } : t);
             });
             
+            const displayName = level === 1 ? 'TRG 2' : 'TRG 3';
             if (newValue) {
-                message.success(`QC${level} confirmado ✓`);
+                message.success(`${displayName} confirmado ✓`);
             } else {
-                message.info(`QC${level} desmarcado.`);
+                message.info(`${displayName} desmarcado.`);
             }
         } catch (error) {
-            console.error(`Erro ao alternar QC${level}:`, error);
-            message.error(`Erro ao alterar status do QC${level}.`);
+            const displayName = level === 1 ? 'TRG 2' : 'TRG 3';
+            console.error(`Erro ao alternar ${displayName}:`, error);
+            message.error(`Erro ao alterar status do ${displayName}.`);
         }
     };
 
@@ -460,7 +462,7 @@ export function SemanticAudit({
 
         if (readyToSend.length === 0) {
             const pendingQC = doubtTerms.length - readyToSend.length;
-            message.warning(`Nenhum termo pronto para envio. ${pendingQC > 0 ? `${pendingQC} dúvidas ainda aguardam triagem QC1/QC2.` : ""}`);
+            message.warning(`Nenhum termo pronto para envio. ${pendingQC > 0 ? `${pendingQC} dúvidas ainda aguardam triagem TRG 2/TRG 3.` : ""}`);
             return;
         }
 
@@ -652,7 +654,7 @@ export function SemanticAudit({
                                 >
                                     <CheckCircleOutlined className="text-[10px]" />
                                     <span className="text-[9px] font-bold tracking-tight uppercase">
-                                        QC1 OK
+                                        TRG 2 OK
                                     </span>
                                 </div>
                         ) : (
@@ -661,7 +663,7 @@ export function SemanticAudit({
                                     className="h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider border-border hover:border-foreground dark:text-slate-200 dark:hover:text-white transition-all font-mono bg-transparent"
                                     onClick={() => handleToggleQC(record.id, 1, false)}
                                 >
-                                    Confirmar QC1
+                                    Confirmar TRG 2
                                 </Button>
                         )}
 
@@ -676,7 +678,7 @@ export function SemanticAudit({
                                 >
                                     <ShieldCheck size={12} />
                                     <span className="text-[9px] font-bold tracking-tight uppercase">
-                                        QC2 OK
+                                        TRG 3 OK
                                     </span>
                                 </div>
                         ) : (
@@ -689,7 +691,7 @@ export function SemanticAudit({
                                     )}
                                     onClick={() => handleToggleQC(record.id, 2, false)}
                                 >
-                                    Confirmar QC2
+                                    Confirmar TRG 3
                                 </Button>
                         )}
                     </div>
