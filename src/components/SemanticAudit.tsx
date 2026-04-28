@@ -298,26 +298,38 @@ export function SemanticAudit({
         }
     };
 
-    const handleConfirmarQC = async (termId: string, level: 1 | 2) => {
+    const handleToggleQC = async (termId: string, level: 1 | 2, currentValue: boolean) => {
         if (!targetTable) return;
         const column = level === 1 ? 'triagem1' : 'triagem2';
+        const newValue = !currentValue;
         
+        // Se desmarcar QC1, força desmarcar QC2 também
+        const updatePayload: any = { [column]: newValue };
+        if (level === 1 && !newValue) {
+            updatePayload['triagem2'] = false;
+        }
+
         try {
             const { error } = await supabase
                 .from(targetTable)
-                .update({ [column]: true })
+                .update(updatePayload)
                 .eq('id', termId);
 
             if (error) throw error;
 
             queryClient.setQueryData(['campaign-terms', activeCompanyId, activeCompany?.tableName], (oldData: CampaignTerm[] | undefined) => {
                 if (!oldData) return [];
-                return oldData.map(t => t.id === termId ? { ...t, [column]: true } : t);
+                return oldData.map(t => t.id === termId ? { ...t, ...updatePayload } : t);
             });
-            message.success(`QC${level} confirmado ✓`);
+            
+            if (newValue) {
+                message.success(`QC${level} confirmado ✓`);
+            } else {
+                message.info(`QC${level} desmarcado.`);
+            }
         } catch (error) {
-            console.error(`Erro ao confirmar QC${level}:`, error);
-            message.error(`Erro ao confirmar QC${level}.`);
+            console.error(`Erro ao alternar QC${level}:`, error);
+            message.error(`Erro ao alterar status do QC${level}.`);
         }
     };
 
@@ -630,10 +642,14 @@ export function SemanticAudit({
                 return (
                     <div className="flex flex-col gap-1.5 min-w-[200px]">
                         {conf1 ? (
-                                <div className={cn(
-                                    "flex items-center gap-2 px-3 py-1 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border",
-                                    "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400"
-                                )}>
+                                <div 
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-1 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border cursor-pointer hover:opacity-80 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500",
+                                        "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                    )}
+                                    onClick={() => handleToggleQC(record.id, 1, true)}
+                                    title="Clique para desmarcar"
+                                >
                                     <CheckCircleOutlined className="text-[10px]" />
                                     <span className="text-[9px] font-bold tracking-tight uppercase">
                                         QC1 OK
@@ -643,17 +659,21 @@ export function SemanticAudit({
                                 <Button 
                                     size="small"
                                     className="h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider border-border hover:border-foreground dark:text-slate-200 dark:hover:text-white transition-all font-mono bg-transparent"
-                                    onClick={() => handleConfirmarQC(record.id, 1)}
+                                    onClick={() => handleToggleQC(record.id, 1, false)}
                                 >
                                     Confirmar QC1
                                 </Button>
                         )}
 
                         {conf2 ? (
-                                <div className={cn(
-                                    "flex items-center gap-2 px-3 py-1 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border",
-                                    "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400"
-                                )}>
+                                <div 
+                                    className={cn(
+                                        "flex items-center gap-2 px-3 py-1 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border cursor-pointer hover:opacity-80 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500",
+                                        "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                    )}
+                                    onClick={() => handleToggleQC(record.id, 2, true)}
+                                    title="Clique para desmarcar"
+                                >
                                     <ShieldCheck size={12} />
                                     <span className="text-[9px] font-bold tracking-tight uppercase">
                                         QC2 OK
@@ -667,7 +687,7 @@ export function SemanticAudit({
                                         "h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all font-mono",
                                         conf1 ? "border-border hover:border-foreground dark:text-slate-200 dark:hover:text-white bg-transparent" : "opacity-50 cursor-not-allowed"
                                     )}
-                                    onClick={() => handleConfirmarQC(record.id, 2)}
+                                    onClick={() => handleToggleQC(record.id, 2, false)}
                                 >
                                     Confirmar QC2
                                 </Button>
