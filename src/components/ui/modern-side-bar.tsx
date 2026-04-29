@@ -91,10 +91,9 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
         subscription: isAdmin ? "PRO" : "TEAM"
     };
 
-    // Dados para o ProfileDropdown — sempre existe se o usuário estiver autenticado
     const profileData = currentUser ?? {
-        name: fallbackName,
-        email: fallbackEmail,
+        name: user?.email?.split('@')[0] || 'Usuário',
+        email: user?.email || 'usuario@googlar.com',
         role: 'standard' as const,
         isAdmin: false,
         addedAt: '',
