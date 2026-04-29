@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { AuthorizedUser } from '../types'
@@ -20,9 +20,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<AuthorizedUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const profileFetchedRef = useRef(false)
 
   const fetchProfile = useCallback(async (userId: string, userEmail: string): Promise<AuthorizedUser | null> => {
-    // Retry logic: tenta até 3 vezes com delay progressivo
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         const { data, error } = await supabase
@@ -32,11 +32,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single()
 
         if (error || !data) {
-          console.warn(`[AuthContext] Tentativa ${attempt}/3 - Perfil não encontrado:`, error?.message)
-          if (attempt < 3) {
-            await new Promise(r => setTimeout(r, attempt * 500)) // 500ms, 1000ms
-            continue
-          }
+          console.warn(`[Auth] Perfil tentativa ${attempt}/3:`, error?.message)
+          if (attempt < 3) { await new Promise(r => setTimeout(r, attempt * 600)); continue }
           return null
         }
 
@@ -52,108 +49,60 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           jobTitle: data.job_title ?? undefined,
         }
       } catch (err) {
-        console.error(`[AuthContext] Tentativa ${attempt}/3 - Erro:`, err)
-        if (attempt < 3) {
-          await new Promise(r => setTimeout(r, attempt * 500))
-          continue
-        }
+        console.error(`[Auth] Perfil erro tentativa ${attempt}/3:`, err)
+        if (attempt < 3) { await new Promise(r => setTimeout(r, attempt * 600)); continue }
         return null
       }
     }
     return null
   }, [])
 
-  // --- Recuperação de sessão ao voltar para a aba ---
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        console.log('[AuthContext] Tab ficou visível — revalidando sessão...')
-        try {
-          const { data: { session: freshSession } } = await supabase.auth.getSession()
-          
-          if (freshSession?.user) {
-            setSession(freshSession)
-            setUser(freshSession.user)
-            
-            // Se o perfil não está carregado, tenta buscar de novo
-            if (!profile) {
-              const prof = await fetchProfile(freshSession.user.id, freshSession.user.email ?? '')
-              if (prof) setProfile(prof)
-            }
-          }
-        } catch (err) {
-          console.error('[AuthContext] Erro ao revalidar sessão:', err)
-        }
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [profile, fetchProfile])
-
-  // --- Inicialização ---
+  /**
+   * Fluxo único de inicialização.
+   * Usa APENAS onAuthStateChange — sem initAuth separado para evitar race conditions.
+   * Quando há sessão armazenada (F5), o Supabase emite INITIAL_SESSION.
+   * Forçamos um refreshSession() para garantir que o token está válido.
+   */
   useEffect(() => {
     let mounted = true
 
-    // Timeout de segurança: garante que o loading termina em até 8 segundos
     const safetyTimer = setTimeout(() => {
-      if (mounted) {
-        console.warn('[AuthContext] Timeout de segurança ativado.')
+      if (mounted && isLoading) {
+        console.warn('[Auth] Timeout de segurança — liberando UI.')
         setIsLoading(false)
       }
-    }, 8000)
-
-    const initAuth = async () => {
-      try {
-        // Primeiro tenta refreshar o token (garante validade após F5)
-        const { data: refreshData } = await supabase.auth.refreshSession()
-        const activeSession = refreshData?.session
-
-        // Se o refresh falhar, tenta getSession como fallback
-        const finalSession = activeSession || (await supabase.auth.getSession()).data.session
-
-        if (!mounted) return
-
-        if (!finalSession) {
-          console.log('[AuthContext] Nenhuma sessão ativa encontrada.')
-          return
-        }
-
-        setSession(finalSession)
-        setUser(finalSession.user)
-
-        if (finalSession.user) {
-          const prof = await fetchProfile(finalSession.user.id, finalSession.user.email ?? '')
-          if (mounted) setProfile(prof)
-        }
-      } catch (err) {
-        console.error('[AuthContext] Exceção inesperada:', err)
-      } finally {
-        if (mounted) {
-          clearTimeout(safetyTimer)
-          setIsLoading(false)
-        }
-      }
-    }
-
-    initAuth()
+    }, 10000)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, eventSession) => {
         if (!mounted) return
+        console.log(`[Auth] Evento: ${event}`)
 
-        setSession(session)
-        setUser(session?.user ?? null)
+        let activeSession = eventSession
 
-        if (session?.user) {
+        // No F5, o evento INITIAL_SESSION traz o token armazenado que pode estar expirado.
+        // Forçamos refresh para obter um token válido.
+        if (event === 'INITIAL_SESSION' && eventSession) {
           try {
-            const prof = await fetchProfile(session.user.id, session.user.email ?? '')
-            if (mounted) setProfile(prof)
-          } catch (err) {
-            console.error('[AuthContext] Erro no onAuthStateChange:', err)
+            const { data } = await supabase.auth.refreshSession()
+            if (data?.session) {
+              activeSession = data.session
+            }
+          } catch (e) {
+            console.warn('[Auth] Refresh falhou, usando sessão armazenada:', e)
           }
-        } else {
+        }
+
+        setSession(activeSession)
+        setUser(activeSession?.user ?? null)
+
+        if (activeSession?.user && !profileFetchedRef.current) {
+          profileFetchedRef.current = true
+          const prof = await fetchProfile(activeSession.user.id, activeSession.user.email ?? '')
+          if (mounted) setProfile(prof)
+        } else if (!activeSession) {
           setProfile(null)
+          profileFetchedRef.current = false
         }
 
         if (mounted) setIsLoading(false)
@@ -167,26 +116,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [fetchProfile])
 
+  // --- Recuperação ao voltar para a aba ---
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState !== 'visible') return
+      console.log('[Auth] Tab visível — revalidando...')
+      try {
+        const { data } = await supabase.auth.refreshSession()
+        if (data?.session) {
+          setSession(data.session)
+          setUser(data.session.user)
+          if (!profile && data.session.user) {
+            const prof = await fetchProfile(data.session.user.id, data.session.user.email ?? '')
+            if (prof) setProfile(prof)
+          }
+        }
+      } catch (e) {
+        console.error('[Auth] Revalidação falhou:', e)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [profile, fetchProfile])
+
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-
       if (error) {
-        if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
+        if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials'))
           return { error: 'E-mail ou senha incorretos. Tente novamente.' }
-        }
-        if (error.message.includes('Email not confirmed')) {
+        if (error.message.includes('Email not confirmed'))
           return { error: 'E-mail pendente de confirmação.' }
-        }
         return { error: error.message }
       }
-
-      // Sincroniza o perfil imediatamente após o login
       if (data?.user) {
+        profileFetchedRef.current = true
         const prof = await fetchProfile(data.user.id, data.user.email ?? '')
         if (prof) setProfile(prof)
       }
-
       return { error: null }
     } catch (err) {
       console.error('[Auth] Erro ao entrar:', err)
@@ -194,13 +161,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }
 
-
   const signOut = async () => {
     await supabase.auth.signOut()
-    // Limpa o estado diretamente — não espera pelo onAuthStateChange
     setSession(null)
     setUser(null)
     setProfile(null)
+    profileFetchedRef.current = false
     localStorage.removeItem('googlar_active_company')
   }
 
@@ -225,8 +191,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de um <AuthProvider>')
-  }
+  if (context === undefined) throw new Error('useAuth deve ser usado dentro de um <AuthProvider>')
   return context
 }
