@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Table, Button, message, Input, Select, Tooltip, Tabs } from 'antd';
+import { Table, Button, message, Input, Select, Tooltip, Tabs, Modal as AntModal } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import {
-    FileText, TrendingUp, User, ShieldCheck, Search, Send, Sparkles, Clock
+    FileText, TrendingUp, User, ShieldCheck, Search, Send, Sparkles, Clock, ClipboardPaste
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
@@ -74,6 +74,12 @@ export function SemanticAudit({
     const [isSendingDoubts, setIsSendingDoubts] = useState(false);
     const [syncingComments, setSyncingComments] = useState<Record<string, boolean>>({});
     const [isAutoTriaging, setIsAutoTriaging] = useState(false);
+
+    // Import Sheet state
+    const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+    const [importPasteData, setImportPasteData] = useState('');
+    const [importTriageLevel, setImportTriageLevel] = useState<'trg1' | 'trg2' | 'trg3'>('trg1');
+    const [isImporting, setIsImporting] = useState(false);
 
     // Refs
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -454,6 +460,91 @@ export function SemanticAudit({
             message.error({ content: 'Falha na triagem IA: ' + error.message, key: toastId });
         } finally {
             setIsAutoTriaging(false);
+        }
+    };
+
+    // --- Import Sheet Handler ---
+    const handleImportSheet = async () => {
+        if (!activeCompanyId || !targetTable) {
+            message.error('Selecione uma empresa válida antes de importar.');
+            return;
+        }
+        if (!importPasteData.trim()) {
+            message.warning('Cole os dados da planilha no campo de texto.');
+            return;
+        }
+        if (!(await ensureSession())) return;
+
+        setIsImporting(true);
+        const toastKey = 'import-sheet';
+        message.loading({ content: 'Processando dados colados...', key: toastKey });
+
+        try {
+            const lines = importPasteData.trim().split('\n').filter(l => l.trim());
+            if (lines.length === 0) throw new Error('Nenhuma linha encontrada.');
+
+            // Detectar e ignorar cabeçalho
+            const firstLineLower = lines[0].toLowerCase();
+            const hasHeader = firstLineLower.includes('campanha') || firstLineLower.includes('termo') || firstLineLower.includes('palavra');
+            const dataLines = hasHeader ? lines.slice(1) : lines;
+
+            if (dataLines.length === 0) throw new Error('Nenhum dado encontrado após o cabeçalho.');
+
+            // Mapear triagem
+            const triagem1 = importTriageLevel === 'trg2' || importTriageLevel === 'trg3';
+            const triagem2 = importTriageLevel === 'trg3';
+
+            const rows = dataLines.map(line => {
+                const cols = line.split('\t');
+                return {
+                    campanha: (cols[0] || '').trim(),
+                    grupo_de_anuncios: (cols[1] || '').trim(),
+                    palavra_chave: (cols[2] || '').trim(),
+                    termo_de_pesquisa: (cols[3] || '').trim(),
+                    observacao: (cols[4] || '').trim(),
+                    // Flags obrigatórias
+                    duvida: true,
+                    negativar: false,
+                    segmentar: false,
+                    teste_ab: false,
+                    manter: false,
+                    pode_enviar: false,
+                    enviado_para_grupo: false,
+                    respondido_cliente: false,
+                    triagem1,
+                    triagem2,
+                    // Métricas zeradas
+                    cliques: 0,
+                    impressoes: 0,
+                    custo: 0,
+                    conversoes: 0,
+                    ctr: 0,
+                    cpc_medio: 0,
+                    custo_conv: 0,
+                    taxa_conv: 0,
+                };
+            }).filter(r => r.termo_de_pesquisa); // Ignorar linhas sem termo
+
+            if (rows.length === 0) throw new Error('Nenhum termo válido encontrado. Verifique a ordem das colunas.');
+
+            const { error } = await supabase
+                .from(targetTable)
+                .insert(rows);
+
+            if (error) throw error;
+
+            // Refresh cache
+            queryClient.invalidateQueries({ queryKey: ['campaign-terms', activeCompanyId, activeCompany?.tableName] });
+
+            message.success({ content: `${rows.length} termos importados com sucesso!`, key: toastKey, duration: 4 });
+            setImportPasteData('');
+            setImportTriageLevel('trg1');
+            setIsImportModalVisible(false);
+        } catch (error: any) {
+            console.error('[Import Error]:', error);
+            message.error({ content: 'Erro na importação: ' + error.message, key: toastKey });
+        } finally {
+            setIsImporting(false);
         }
     };
     
@@ -849,6 +940,13 @@ export function SemanticAudit({
                         >
                             Auto-Triagem IA
                         </Button>
+                        <Button
+                            icon={<ClipboardPaste size={16} />}
+                            onClick={() => setIsImportModalVisible(true)}
+                            className="h-10 px-5 rounded-2xl font-bold bg-emerald-600 !text-white !border-none flex items-center justify-center hover:bg-emerald-700 transition-colors shadow-lg"
+                        >
+                            Importar Planilha
+                        </Button>
                     </div>
                 </div>
 
@@ -956,6 +1054,89 @@ export function SemanticAudit({
                     </p>
                 </div>
             )}
+            {/* Modal de Importação de Planilha */}
+            <AntModal
+                title={
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500/10 rounded-xl">
+                            <ClipboardPaste className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div>
+                            <span className="text-lg font-black uppercase tracking-tight dark:text-white">Importar Dúvidas da Planilha</span>
+                            <p className="text-[11px] text-muted-foreground font-normal mt-0.5">Cole os dados do Google Sheets abaixo. Cada linha será inserida como uma dúvida.</p>
+                        </div>
+                    </div>
+                }
+                open={isImportModalVisible}
+                onCancel={() => { setIsImportModalVisible(false); setImportPasteData(''); }}
+                footer={null}
+                width={700}
+                centered
+                className="luxury-modal"
+                destroyOnClose
+            >
+                <div className="mt-6 space-y-5">
+                    {/* Nível de Triagem */}
+                    <div>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Nível de Triagem</label>
+                        <Select
+                            value={importTriageLevel}
+                            onChange={setImportTriageLevel}
+                            className="w-full [&_.ant-select-selector]:!bg-slate-800 [&_.ant-select-selector]:!border-slate-600 [&_.ant-select-selection-item]:!text-slate-100"
+                            popupClassName="!bg-slate-800 !border !border-slate-700 [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-selected]:!bg-blue-600"
+                            options={[
+                                { value: 'trg1', label: 'TRG 1 — Pendente Analista (triagem1=false, triagem2=false)' },
+                                { value: 'trg2', label: 'TRG 2 — Confirmado Analista (triagem1=true, triagem2=false)' },
+                                { value: 'trg3', label: 'TRG 3 — Pronto para Envio (triagem1=true, triagem2=true)' },
+                            ]}
+                        />
+                    </div>
+
+                    {/* Área de Colagem */}
+                    <div>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Dados da Planilha (Cole aqui)</label>
+                        <Input.TextArea
+                            value={importPasteData}
+                            onChange={e => setImportPasteData(e.target.value)}
+                            placeholder={`Campanha\tGrupo\tPalavra-chave\tTermo de Pesquisa\tComentário\nLuxo Cuiabá\t#Sobrado\tsobrado luxo\tsobrado de luxo cuiabá\tVerificar com cliente`}
+                            autoSize={{ minRows: 8, maxRows: 16 }}
+                            className="!bg-slate-900 !border-slate-700 !text-slate-200 font-mono text-[11px] !placeholder-slate-600 rounded-xl p-4"
+                        />
+                        <p className="text-[9px] text-slate-500 mt-2 font-mono">
+                            Ordem das colunas: Campanha → Grupo → Palavra-chave → Termo de Pesquisa → Comentário (observação)
+                        </p>
+                    </div>
+
+                    {/* Preview */}
+                    {importPasteData.trim() && (() => {
+                        const previewLines = importPasteData.trim().split('\n').filter(l => l.trim());
+                        const firstLower = previewLines[0]?.toLowerCase() || '';
+                        const hasH = firstLower.includes('campanha') || firstLower.includes('termo') || firstLower.includes('palavra');
+                        const dataOnly = hasH ? previewLines.slice(1) : previewLines;
+                        const validCount = dataOnly.filter(l => (l.split('\t')[3] || '').trim()).length;
+                        return (
+                            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
+                                <CheckCircleOutlined className="text-emerald-500" />
+                                <span className="text-emerald-400 text-xs font-bold">
+                                    {validCount} termos detectados {hasH ? '(cabeçalho ignorado)' : ''}
+                                </span>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Botão de Ação */}
+                    <Button
+                        type="primary"
+                        onClick={handleImportSheet}
+                        loading={isImporting}
+                        disabled={!importPasteData.trim() || !activeCompanyId}
+                        className="w-full h-12 rounded-2xl font-black uppercase tracking-wider text-sm !bg-emerald-600 hover:!bg-emerald-700 !border-none shadow-lg"
+                        icon={<Send className="w-4 h-4" />}
+                    >
+                        Processar e Salvar
+                    </Button>
+                </div>
+            </AntModal>
         </div>
     );
 }
