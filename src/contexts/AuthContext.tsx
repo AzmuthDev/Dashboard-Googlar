@@ -40,7 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout na consulta')), 4000)
+        setTimeout(() => reject(new Error('Timeout na consulta')), 7000)
       );
 
       const { data, error } = await (Promise.race([profilePromise, timeoutPromise]) as any);
@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (error || !data) {
         console.warn(`[Auth] Perfil não encontrado no banco:`, error?.message);
         if (isMaster) {
-           return { name: 'Admin Master', email: userEmail, role: 'admin', isAdmin: true, addedAt: new Date().toISOString(), assignedCompanyIds: [] };
+           return { name: 'José Eduardo', email: userEmail, role: 'admin', isAdmin: true, addedAt: new Date().toISOString(), assignedCompanyIds: [] };
         }
         return null;
       }
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error(`[Auth] Erro ao buscar perfil:`, err);
       if (isMaster) {
-         return { name: 'Admin Master (Fallback)', email: userEmail, role: 'admin', isAdmin: true, addedAt: new Date().toISOString(), assignedCompanyIds: [] };
+         return { name: 'José Eduardo (Admin)', email: userEmail, role: 'admin', isAdmin: true, addedAt: new Date().toISOString(), assignedCompanyIds: [] };
       }
       return null;
     }
