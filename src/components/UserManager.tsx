@@ -209,20 +209,13 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         if (!editingUser) return
 
         try {
-            // 1. Buscar o ID do usuário pelo email (já que no profiles o ID é o UUID do Auth)
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('id')
-                .eq('email', editingUser.email.toLowerCase())
-                .single()
-
-            if (profileData) {
+            if (editingUser.id) {
                 await supabase.from('profiles').update({
                     name: editName.trim(),
                     role: editRole,
                     is_admin: editRole === 'admin',
                     assigned_company_ids: editCompanyIds
-                }).eq('id', profileData.id)
+                }).eq('id', editingUser.id)
             }
 
             // 2. Atualizar estado local
@@ -318,37 +311,39 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
     }
 
 
-    const handlePhotoChange = () => {
-        const updatedUsers = users.map(u => {
-            if (u.email.toLowerCase() === targetUserForPhoto.toLowerCase()) {
-                return { ...u, avatarUrl: pendingAvatarUrl }
+    const handlePhotoChange = async () => {
+        if (!targetUserForPhoto) return;
+
+        try {
+            const userLC = targetUserForPhoto.toLowerCase();
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', userLC)
+                .single();
+
+            if (profileData) {
+                await supabase.from('profiles')
+                    .update({ avatar_url: pendingAvatarUrl })
+                    .eq('id', profileData.id);
             }
-            return u
-        })
 
-        // Edge case: if root admin is changing their own photo and they aren't in the list
-        if (targetUserForPhoto.toLowerCase() === currentUser?.email.toLowerCase() && !users.find(u => u.email === targetUserForPhoto)) {
-            updatedUsers.push({
-                name: 'Administrador Principal',
-                email: currentUser.email.toLowerCase(),
-                role: 'admin',
-                isAdmin: true,
-                addedAt: new Date().toLocaleDateString('pt-BR'),
-                avatarUrl: pendingAvatarUrl
-            })
+            // Atualizar estado local
+            setUsers(prev => prev.map(u => 
+                u.email.toLowerCase() === userLC ? { ...u, avatarUrl: pendingAvatarUrl } : u
+            ));
+
+            if (userLC === currentUser?.email?.toLowerCase()) {
+                setCurrentUserDetails(prev => ({ ...prev, avatarUrl: pendingAvatarUrl }));
+            }
+
+            setIsPhotoModalVisible(false);
+            setPendingAvatarUrl('');
+            message.success('Foto de perfil atualizada no banco!');
+        } catch (err) {
+            console.error('Erro ao salvar foto:', err);
+            message.error('Erro ao salvar foto no banco.');
         }
-
-        localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-        setUsers(updatedUsers)
-
-        // Also update the currentUserDetails so the top card refreshes immediately
-        if (targetUserForPhoto.toLowerCase() === currentUser?.email.toLowerCase()) {
-            setCurrentUserDetails(prev => ({ ...prev, avatarUrl: pendingAvatarUrl }))
-        }
-
-        setIsPhotoModalVisible(false)
-        setPendingAvatarUrl('')
-        message.success('Foto de perfil atualizada!')
     }
 
     const openMyProfileConfig = () => {
@@ -359,43 +354,63 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         setIsMyProfileModalVisible(true)
     }
 
-    const handleSaveMyProfile = () => {
-        // Validate
+    const handleSaveMyProfile = async () => {
         if (!myProfileName.trim() || !myProfileEmail.trim()) {
             message.error("Nome e e-mail são obrigatórios.")
             return
         }
 
         const currentEmailLC = currentUser?.email.toLowerCase() || ''
-        const updatedUsers = users.map(u => {
-            if (u.email.toLowerCase() === currentEmailLC) {
-                const userClone = { ...u, name: myProfileName, email: myProfileEmail, avatarUrl: myProfileAvatar }
-                if (myProfilePassword.trim().length >= 4) {
-                    userClone.password = myProfilePassword
-                }
-                return userClone
+        
+        try {
+            // 1. Atualizar no Supabase
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('email', currentEmailLC)
+                .single()
+
+            if (profileData) {
+                const updateData: any = {
+                    name: myProfileName.trim(),
+                    avatar_url: myProfileAvatar
+                };
+                
+                await supabase.from('profiles')
+                    .update(updateData)
+                    .eq('id', profileData.id);
             }
-            return u
-        })
 
-        // Edge case: Root Admin modifying their own profile and not in the explicit list:
-        if (currentEmailLC === 'joseeduardorms29@gmail.com' && !users.find(u => u.email.toLowerCase() === currentEmailLC)) {
-            updatedUsers.push({
-                name: myProfileName,
-                email: myProfileEmail,
-                role: 'admin',
-                isAdmin: true,
-                addedAt: new Date().toLocaleDateString('pt-BR'),
-                avatarUrl: myProfileAvatar,
-                ...(myProfilePassword.trim().length >= 4 ? { password: myProfilePassword } : {})
-            })
+            // 2. Se a senha foi preenchida, atualizar no Supabase Auth
+            if (myProfilePassword.trim().length >= 6) {
+                const { error: pwdError } = await supabase.auth.updateUser({
+                    password: myProfilePassword.trim()
+                });
+                if (pwdError) throw pwdError;
+            }
+
+            // 3. Atualizar estados locais
+            setUsers(prev => prev.map(u => 
+                u.email.toLowerCase() === currentEmailLC 
+                ? { ...u, name: myProfileName, avatarUrl: myProfileAvatar }
+                : u
+            ))
+
+            setCurrentUserDetails(prev => ({ 
+                ...prev, 
+                name: myProfileName, 
+                avatarUrl: myProfileAvatar 
+            }))
+
+            setIsMyProfileModalVisible(false)
+            message.success('Seus dados foram salvos no banco de dados!')
+            
+            // Força um reload parcial ou notifica o usuário
+            setTimeout(() => window.location.reload(), 1000); 
+        } catch (err: any) {
+            console.error('Erro ao salvar perfil:', err);
+            message.error(`Erro ao salvar: ${err.message}`);
         }
-
-        localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-        setUsers(updatedUsers)
-        setCurrentUserDetails(prev => ({ ...prev, name: myProfileName, avatarUrl: myProfileAvatar }))
-        setIsMyProfileModalVisible(false)
-        message.success('Seus dados foram atualizados!')
     }
 
     // Inject root admin if not present in the list (so they can see their own profile)
