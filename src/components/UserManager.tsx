@@ -126,17 +126,12 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             return
         }
 
-        try {
-            // Criar um cliente temporário sem persistência para não deslogar o admin
-            const { createClient } = await import('@supabase/supabase-js')
-            const tempSupabase = createClient(
-                import.meta.env.VITE_SUPABASE_URL,
-                import.meta.env.VITE_SUPABASE_ANON_KEY,
-                { auth: { persistSession: false } }
-            )
+        const loadingKey = 'creating_user'
+        message.loading({ content: 'Autorizando usuário no Supabase...', key: loadingKey })
 
+        try {
             // 1. Create user in Supabase Auth
-            const { data: signUpData, error: signUpError } = await tempSupabase.auth.signUp({
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
                 email: newEmail.toLowerCase(),
                 password: password,
                 options: {
@@ -232,9 +227,9 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         }
     }
 
-    const handlePasswordChange = () => {
-        if (!newPassword || newPassword.length < 4) {
-            message.error('A senha deve ter pelo menos 4 caracteres.')
+    const handlePasswordChange = async () => {
+        if (!newPassword || newPassword.length < 6) {
+            message.error('A senha deve ter pelo menos 6 caracteres.')
             return
         }
         if (newPassword !== confirmNewPassword) {
@@ -242,26 +237,28 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             return
         }
 
-        const updatedUsers = users.map(u => {
-            if (u.email.toLowerCase() === targetUserEmail.toLowerCase()) {
-                return { ...u, password: newPassword }
+        try {
+            // Se for o próprio usuário, podemos usar auth.updateUser
+            if (targetUserEmail.toLowerCase() === currentUser?.email?.toLowerCase()) {
+                const { error } = await supabase.auth.updateUser({
+                    password: newPassword
+                })
+                if (error) throw error
+            } else {
+                // Se for outro usuário, na V4 sem Edge Functions, o Admin não consegue 
+                // trocar a senha de terceiros via client-side Auth sem service_role.
+                // Vamos sugerir que o usuário use o link de recuperação ou que o admin use o dashboard do Supabase.
+                message.warning('Por segurança (V4), apenas o próprio usuário pode trocar sua senha. O Admin pode resetar via painel Supabase.')
+                return
             }
-            return u
-        })
 
-        // Handle case where we're changing our own password but we're the root admin
-        // Note: Root admin isn't necessarily in the localStorage list.
-        if (targetUserEmail.toLowerCase() === currentUser?.email.toLowerCase() && !users.find(u => u.email === targetUserEmail)) {
-            // In a real app we'd update the separate admin entry, but here it's hardcoded in App.tsx
-            // For visibility in this mock, we'll just show success.
+            setIsPasswordModalVisible(false)
+            setNewPassword('')
+            setConfirmNewPassword('')
+            message.success('Senha atualizada com sucesso!')
+        } catch (err: any) {
+            message.error(`Erro ao atualizar senha: ${err.message}`)
         }
-
-        localStorage.setItem('googlar_authorized_users', JSON.stringify(updatedUsers))
-        setUsers(updatedUsers)
-        setIsPasswordModalVisible(false)
-        setNewPassword('')
-        setConfirmNewPassword('')
-        message.success('Senha atualizada com sucesso!')
     }
 
     const handleDeleteUser = async (user: AuthorizedUser) => {

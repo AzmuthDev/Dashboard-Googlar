@@ -68,7 +68,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
     const handleItemClick = (item: NavigationItem) => {
         if (!item.isClickable) return;
 
-        const isLockedView = (item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'keyword-planner') && currentUser?.role !== 'admin';
+        const isLockedView = (item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'keyword-planner') && !currentUser?.isAdmin;
 
         if (isLockedView) {
             message.warning('Acesso restrito ao administrador.');
@@ -174,7 +174,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
                             const Icon = item.icon;
                             const isActive = currentView === item.id;
                             const isBrief = !item.isClickable;
-                            const isLocked = (item.id === 'ferramenta' || item.id === 'semantic-audit') && currentUser?.role !== 'admin';
+                            const isLocked = (item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'keyword-planner') && !currentUser?.isAdmin;
 
                             return (
                                 <li key={item.id} className="relative">
