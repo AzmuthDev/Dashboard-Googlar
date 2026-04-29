@@ -224,9 +224,20 @@ export function SemanticAudit({
 
 
     // --- Handlers ---
+    // --- Verificação de sessão antes de mutações ---
+    const ensureSession = async (): Promise<boolean> => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+            message.error('Sessão expirada. Recarregue a página (F5) para continuar.');
+            return false;
+        }
+        return true;
+    };
+
     // --- Handlers de Mutação (Frontend ↔ Supabase) ---
     const handleCategoryChange = async (id: string, category: CategoryKey) => {
         if (!activeCompanyId || !targetTable) return;
+        if (!(await ensureSession())) return;
 
         // Optimistic UI update
         setTriageState(prev => ({
@@ -266,6 +277,7 @@ export function SemanticAudit({
 
     const handleCommentSync = async (id: string, comment: string) => {
         if (!activeCompanyId || !targetTable) return;
+        if (!(await ensureSession())) return;
         
         setSyncingComments(prev => ({ ...prev, [id]: true }));
         try {
@@ -300,6 +312,7 @@ export function SemanticAudit({
 
     const handleToggleQC = async (termId: string, level: 1 | 2, currentValue: boolean) => {
         if (!targetTable) return;
+        if (!(await ensureSession())) return;
         const column = level === 1 ? 'triagem1' : 'triagem2';
         const newValue = !currentValue;
         

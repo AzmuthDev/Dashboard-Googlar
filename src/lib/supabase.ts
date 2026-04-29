@@ -10,8 +10,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
-    persistSession: false, // Sempre exige login ao abrir o dashboard
+    persistSession: true, // Mantém sessão ativa entre trocas de aba e recarregamentos
     detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
   },
 })
 
