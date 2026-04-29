@@ -56,11 +56,11 @@ export function ProfileDropdown({
                         <button type="button" className="relative group focus:outline-none focus:ring-2 focus:ring-primary rounded-full">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 via-sky-400 to-cyan-300 p-0.5 shadow-sm transition-transform hover:scale-105">
                                 <div className="w-full h-full rounded-full overflow-hidden bg-zinc-900 flex items-center justify-center">
-                                    {data.avatar ? (
-                                        <img src={data.avatar} alt={data.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User className="size-5 text-zinc-400" />
-                                    )}
+                                    <img 
+                                        src={data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'User')}&background=0D8ABC&color=fff`} 
+                                        alt={data.name} 
+                                        className="w-full h-full object-cover" 
+                                    />
                                 </div>
                             </div>
                             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background" />
@@ -109,11 +109,11 @@ export function ProfileDropdown({
                                 <div className="relative shrink-0">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 via-sky-400 to-cyan-300 p-[2px]">
                                         <div className="w-full h-full rounded-full overflow-hidden bg-zinc-900 flex items-center justify-center">
-                                            {data.avatar ? (
-                                                <img src={data.avatar} alt={data.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <User className="size-5 text-zinc-400" />
-                                            )}
+                                            <img 
+                                                src={data.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || 'User')}&background=0D8ABC&color=fff`} 
+                                                alt={data.name} 
+                                                className="w-full h-full object-cover" 
+                                            />
                                         </div>
                                     </div>
                                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-background shadow-[0_0_8px_rgba(16,185,129,0.5)]" />

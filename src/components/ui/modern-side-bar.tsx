@@ -84,24 +84,10 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
         }
     };
 
-    // Dados do perfil com fallback para o user do Supabase Auth
-    const storedUsers = (() => {
-        try {
-            return JSON.parse(localStorage.getItem('googlar_authorized_users') || '[]');
-        } catch {
-            return [];
-        }
-    })();
-    const matchingUser = storedUsers.find((u: any) => u.email.toLowerCase() === currentUser?.email?.toLowerCase());
-
-    // Usa profile do Supabase ou dados brutos do Auth como fallback
-    const fallbackEmail = currentUser?.email || user?.email || 'usuario@googlar.com';
-    const fallbackName = matchingUser?.name || currentUser?.name || fallbackEmail.split('@')[0] || 'Usuário';
-
     const currentUserDetails = {
-        name: fallbackName,
-        email: fallbackEmail,
-        avatarUrl: matchingUser?.avatarUrl || "/owl-fallback.png",
+        name: currentUser?.name || user?.email?.split('@')[0] || 'Usuário',
+        email: currentUser?.email || user?.email || 'usuario@googlar.com',
+        avatarUrl: currentUser?.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser?.name || 'User')}&background=0D8ABC&color=fff`,
         subscription: isAdmin ? "PRO" : "TEAM"
     };
 

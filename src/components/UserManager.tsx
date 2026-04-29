@@ -437,7 +437,7 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
                     email={currentUser?.email || 'admin@googlar.com'}
                     role={currentUserDetails.role || (isAdmin ? 'Fundador / Admin' : 'Colaborador')}
                     accountLevel={isAdmin ? 'Conta Mestre' : 'Acesso Limitado'}
-                    avatarUrl={currentUserDetails.avatarUrl || '/owl-fallback.png'}
+                    avatarUrl={currentUserDetails.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserDetails.name || 'Admin')}&background=0D8ABC&color=fff`}
                     isCollapsed={false}
                     isCurrentUser={true}
                     isAdminUser={isAdmin}
@@ -757,7 +757,7 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
                         >
                             <div className="relative inline-block group cursor-pointer">
                                 <img
-                                    src={myProfileAvatar || "/owl-fallback.png"}
+                                    src={myProfileAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(myProfileName || 'User')}&background=0D8ABC&color=fff`}
                                     alt="My Avatar"
                                     className="w-24 h-24 object-cover rounded-full border-2 border-primary/50 shadow-md group-hover:opacity-75 transition-opacity bg-background"
                                 />

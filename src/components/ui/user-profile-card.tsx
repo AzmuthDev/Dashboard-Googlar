@@ -33,7 +33,7 @@ export const UserProfileCard = ({
             <div className="flex justify-center p-4">
                 <div className="relative">
                     <img
-                        src={avatarUrl || "/owl-fallback.png"}
+                        src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff`}
                         alt={name}
                         className="size-10 rounded-full border border-border object-cover bg-card"
                     />
@@ -62,7 +62,7 @@ export const UserProfileCard = ({
                 <div className="flex items-center gap-3">
                     <div className="relative group cursor-pointer" onClick={onEditPhoto}>
                         <img
-                            src={avatarUrl || "/owl-fallback.png"}
+                            src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff`}
                             alt={name}
                             className="size-11 rounded-full border border-border object-cover bg-background transition-opacity group-hover:opacity-75"
                         />
