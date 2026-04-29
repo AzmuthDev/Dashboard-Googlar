@@ -232,8 +232,8 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                             <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-foreground/10 text-xs font-bold">{selectedRows.size}</span>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => handleBulkAction('approve')} className="px-4 py-2 bg-primary-foreground text-primary rounded-xl text-sm font-bold">Aprovar</button>
-                            <button onClick={() => handleBulkAction('reject')} className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold">Negativar</button>
+                            <button onClick={() => handleBulkAction('approve')} className="px-4 py-2 bg-primary-foreground text-primary rounded-xl text-sm font-bold table-action-btn">Aprovar</button>
+                            <button onClick={() => handleBulkAction('reject')} className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold table-action-btn">Negativar</button>
                             <button onClick={() => setSelectedRows(new Set())} className="p-2 text-primary-foreground/50 hover:text-primary-foreground"><Trash2 size={20} /></button>
                         </div>
                     </motion.div>
@@ -254,11 +254,11 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                                 </div>
                             </div>
                             <TabsList className="bg-muted p-1 rounded-xl h-auto w-full max-w-sm">
-                                <TabsTrigger value="all" className="rounded-lg text-xs py-1.5 flex-1">Todos</TabsTrigger>
-                                <TabsTrigger value="negative" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2">🚫 {counts.negative}</TabsTrigger>
-                                <TabsTrigger value="doubts" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 text-amber-500">❓ {counts.doubts}</TabsTrigger>
-                                <TabsTrigger value="segmented" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 text-emerald-500">🎯 {counts.segmented}</TabsTrigger>
-                                <TabsTrigger value="ab_test" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 text-blue-500">🔬 {counts.ab_test}</TabsTrigger>
+                                <TabsTrigger value="all" className="rounded-lg text-xs py-1.5 flex-1 tabs-trigger">Todos</TabsTrigger>
+                                <TabsTrigger value="negative" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 tabs-trigger">🚫 {counts.negative}</TabsTrigger>
+                                <TabsTrigger value="doubts" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 text-amber-500 tabs-trigger">❓ {counts.doubts}</TabsTrigger>
+                                <TabsTrigger value="segmented" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 text-emerald-500 tabs-trigger">🎯 {counts.segmented}</TabsTrigger>
+                                <TabsTrigger value="ab_test" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 text-blue-500 tabs-trigger">🔬 {counts.ab_test}</TabsTrigger>
                             </TabsList>
                         </div>
                     </div>

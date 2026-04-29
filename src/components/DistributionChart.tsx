@@ -44,7 +44,7 @@ export function DistributionChart({ data, isDark = false }: DistributionChartPro
         { name: 'Aprovadas',         value: aprovadasCount,  color: '#2B730D' },
         { name: 'Teste A/B',         value: testeABCount,    color: '#F88F22' },
         { name: 'Respostas Cliente', value: respostasCount,  color: '#AB3DF5' },
-        { name: 'Geral',             value: geralCount,      color: '#475569' },
+        { name: 'Geral',             value: geralCount,      color: isDark ? '#94a3b8' : '#475569' },
     ]
 
     const pieData = chartData.filter(item => item.value > 0)
@@ -63,7 +63,7 @@ export function DistributionChart({ data, isDark = false }: DistributionChartPro
     }
 
     return (
-        <div className={`w-full h-full p-6 flex flex-col transition-all duration-500 ${isDark ? 'rounded-[20px] bg-black border border-white/10 shadow-2xl' : 'rounded-[24px] bg-white border border-zinc-100 shadow-sm'}`}>
+        <div className={`p-6 border h-full transition-colors duration-300 w-full flex flex-col card ${isDark ? 'bg-[#0a0a0b] border-white/10' : 'bg-white border-zinc-100'}`}>
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-zinc-500">
                     Distribuição de Termos

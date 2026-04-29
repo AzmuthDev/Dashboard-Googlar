@@ -28,7 +28,7 @@ export function TermsChart({ data, isDark }: TermsChartProps) {
         : 'bg-white border-transparent shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-[24px]';
 
     return (
-        <div className={`p-6 border h-full transition-colors duration-300 w-full flex flex-col ${bgClass}`}>
+        <div className={`p-6 border h-full transition-colors duration-300 w-full flex flex-col card ${bgClass}`}>
             <div className="flex justify-between items-start mb-8">
                 <h2 className={`text-lg font-semibold tracking-tight text-zinc-900 dark:text-white`}>
                     Termos de Maior Custo

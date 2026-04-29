@@ -66,7 +66,7 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                 <Input
                     placeholder="Buscar Termo..."
                     prefix={<SearchOutlined className="text-white" />}
-                    className="w-64 rounded-xl border-zinc-800 bg-[#111111] text-white placeholder-zinc-500 hover:border-white focus:border-white shadow-xl px-4 py-2 transition-all"
+                    className="w-64 rounded-xl border-zinc-800 bg-[#111111] text-white placeholder-zinc-300 hover:border-white focus:border-white shadow-xl px-4 py-2 transition-all"
                 />
 
                 <div className="relative cursor-pointer hover:bg-muted dark:hover:bg-white/10 p-2 rounded-full transition-colors flex items-center justify-center">
@@ -104,7 +104,7 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                 <div className="flex items-center gap-2 bg-[#111111] p-1.5 rounded-xl border border-zinc-800 shadow-xl transition-all hover:border-zinc-700">
                     <DatabaseOutlined className="text-white ml-2 opacity-70" />
                     <Select
-                        placeholder={(<span className="text-zinc-500 font-bold uppercase text-[10px] tracking-widest">Selecionar Empresa</span>)}
+                        placeholder={(<span className="text-zinc-300 font-bold uppercase text-[10px] tracking-widest">Selecionar Empresa</span>)}
                         value={activeCompanyId || undefined}
                         onChange={onSelectCompany}
                         style={{ width: 220 }}

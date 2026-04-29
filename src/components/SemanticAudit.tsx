@@ -764,7 +764,7 @@ export function SemanticAudit({
                         ) : (
                                 <Button 
                                     size="small"
-                                    className="h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider border-border hover:border-foreground dark:text-slate-200 dark:hover:text-white transition-all font-mono bg-transparent"
+                                    className="h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider border-border hover:border-foreground dark:text-slate-200 dark:hover:text-white transition-all font-mono bg-transparent triagem-btn"
                                     onClick={() => handleToggleQC(record.id, 1, false)}
                                 >
                                     Confirmar TRG 2
@@ -790,7 +790,7 @@ export function SemanticAudit({
                                     size="small"
                                     disabled={!conf1}
                                     className={cn(
-                                        "h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all font-mono",
+                                        "h-7 rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all font-mono triagem-btn",
                                         conf1 ? "border-border hover:border-foreground dark:text-slate-200 dark:hover:text-white bg-transparent" : "opacity-50 cursor-not-allowed"
                                     )}
                                     onClick={() => handleToggleQC(record.id, 2, false)}
@@ -896,8 +896,8 @@ export function SemanticAudit({
                         <Select
                             showSearch
                             placeholder="Campanha..."
-                            className="w-[200px] [&_.ant-select-selector]:!bg-slate-800 [&_.ant-select-selector]:!border-slate-600 [&_.ant-select-selection-item]:!text-slate-100 [&_.ant-select-selection-placeholder]:!text-slate-400 [&_.ant-select-arrow]:!text-slate-400"
-                            popupClassName="!bg-slate-800 !border !border-slate-700 !shadow-[0_10px_30px_rgba(0,0,0,0.8)] [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-active]:!text-white [&_.ant-select-item-option-selected]:!bg-blue-600 [&_.ant-select-item-option-selected]:!text-white [&_.ant-select-item-option-content]:!text-inherit"
+                            className="w-[200px] [&_.ant-select-selector]:!bg-slate-900 [&_.ant-select-selector]:!border-slate-700 [&_.ant-select-selection-item]:!text-white [&_.ant-select-selection-placeholder]:!text-slate-300 [&_.ant-select-arrow]:!text-white"
+                            popupClassName="!bg-slate-900 !border !border-slate-700 !shadow-[0_10px_30px_rgba(0,0,0,0.8)] [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-active]:!text-white [&_.ant-select-item-option-selected]:!bg-blue-600 [&_.ant-select-item-option-selected]:!text-white [&_.ant-select-item-option-content]:!text-inherit"
                             value={selectedCampaign}
                             onChange={val => setSelectedCampaign(val)}
                             options={campaignList.map(c => ({ label: c, value: c }))}
@@ -906,8 +906,8 @@ export function SemanticAudit({
                             showSearch
                             disabled={!selectedCampaign}
                             placeholder="Grupo..."
-                            className="w-[200px] [&_.ant-select-selector]:!bg-slate-800 [&_.ant-select-selector]:!border-slate-600 [&_.ant-select-selection-item]:!text-slate-100 [&_.ant-select-selection-placeholder]:!text-slate-400 [&_.ant-select-arrow]:!text-slate-400"
-                            popupClassName="!bg-slate-800 !border !border-slate-700 !shadow-[0_10px_30px_rgba(0,0,0,0.8)] [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-active]:!text-white [&_.ant-select-item-option-selected]:!bg-blue-600 [&_.ant-select-item-option-selected]:!text-white [&_.ant-select-item-option-content]:!text-inherit"
+                            className="w-[200px] [&_.ant-select-selector]:!bg-slate-900 [&_.ant-select-selector]:!border-slate-700 [&_.ant-select-selection-item]:!text-white [&_.ant-select-selection-placeholder]:!text-slate-300 [&_.ant-select-arrow]:!text-white"
+                            popupClassName="!bg-slate-900 !border !border-slate-700 !shadow-[0_10px_30px_rgba(0,0,0,0.8)] [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-active]:!text-white [&_.ant-select-item-option-selected]:!bg-blue-600 [&_.ant-select-item-option-selected]:!text-white [&_.ant-select-item-option-content]:!text-inherit"
                             value={selectedAdGroup}
                             onChange={val => setSelectedAdGroup(val)}
                             options={adGroupList.map(g => ({ label: g, value: g }))}
@@ -936,14 +936,14 @@ export function SemanticAudit({
                             icon={<Sparkles size={16} />}
                             onClick={handleAutoTriage}
                             loading={isAutoTriaging}
-                            className="h-10 px-5 rounded-2xl font-bold bg-zinc-900 !text-white dark:bg-slate-800 dark:border dark:border-slate-700 dark:!text-white flex items-center justify-center hover:bg-zinc-800 dark:hover:bg-slate-700 transition-colors"
+                            className="h-10 px-5 rounded-2xl font-bold bg-zinc-900 !text-white dark:bg-slate-800 dark:border dark:border-slate-700 dark:!text-white flex items-center justify-center hover:bg-zinc-800 dark:hover:bg-slate-700 transition-colors table-action-btn"
                         >
                             Auto-Triagem IA
                         </Button>
                         <Button
                             icon={<ClipboardPaste size={16} />}
                             onClick={() => setIsImportModalVisible(true)}
-                            className="h-10 px-5 rounded-2xl font-bold bg-emerald-600 !text-white !border-none flex items-center justify-center hover:bg-emerald-700 transition-colors shadow-lg"
+                            className="h-10 px-5 rounded-2xl font-bold bg-emerald-600 !text-white !border-none flex items-center justify-center hover:bg-emerald-700 transition-colors shadow-lg table-action-btn"
                         >
                             Importar Planilha
                         </Button>

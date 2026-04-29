@@ -100,8 +100,19 @@ function App() {
         components: { Layout: { siderBg: '#ffffff', headerBg: 'transparent' } }
     }
     const darkTheme = {
-        token: { colorPrimary: '#fafafa', colorBgBase: '#09090b', fontFamily: 'Geist, sans-serif' },
-        components: { Layout: { siderBg: '#09090b', headerBg: 'transparent' } }
+        token: { 
+            colorPrimary: '#fafafa', 
+            colorBgBase: '#000000', 
+            colorText: '#ffffff',
+            colorTextHeading: '#ffffff',
+            colorTextPlaceholder: 'rgba(255, 255, 255, 0.45)',
+            fontFamily: 'Geist, sans-serif' 
+        },
+        components: { 
+            Layout: { siderBg: '#09090b', headerBg: 'transparent' },
+            Input: { colorText: '#ffffff', colorPlaceholder: 'rgba(255, 255, 255, 0.45)', colorBgContainer: '#111111' },
+            Select: { colorText: '#ffffff', colorPlaceholder: 'rgba(255, 255, 255, 0.45)', colorBgContainer: '#111111' }
+        }
     }
 
     if (isLoading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>

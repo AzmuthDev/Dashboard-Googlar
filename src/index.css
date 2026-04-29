@@ -32,9 +32,9 @@
 .dark {
   --background: #000000;
   --foreground: #fafafa;
-  --card: #000000;
+  --card: #0a0a0b; /* Separa os cards do fundo Vantablack */
   --card-foreground: #fafafa;
-  --popover: #000000;
+  --popover: #0a0a0b;
   --popover-foreground: #fafafa;
   --primary: #fafafa;
   --primary-foreground: #09090b;
@@ -46,7 +46,7 @@
   --accent-foreground: #fafafa;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: rgba(255, 255, 255, 0.1); /* Sutil metal border fallback */
+  --border: rgba(255, 255, 255, 0.25); /* Borda visível */
   --input: #18181b;
   --ring: #d4d4d8;
   
@@ -59,6 +59,12 @@
   /* Premium Glass Utilities Dark */
   --glass-bg: rgba(0, 0, 0, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
+
+  /* Elevation Variables */
+  --bg-page: #000000;
+  --bg-card: #0a0a0b;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
 }
 
 @theme inline {
@@ -400,32 +406,154 @@
   --bw-border: #27272a;
 }
 
+/* ═══════════════════════════════════════════════════════
+   B&W Premium / Vantablack Refresh
+═══════════════════════════════════════════════════════ */
+
+/* 1. Correção Final do Texto dos Botões */
+.dark button, 
+.dark .ant-btn, 
+.dark .btn,
+.dark [type="button"],
+.dark .table-action-btn,
+.dark button[class*="triagem"],
+.dark .ant-select-selection-item,
+.dark .ant-select-selection-placeholder,
+.dark .ant-input,
+.dark input {
+  color: #ffffff !important; 
+  border-color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Fix específico da classe .btn-bw-inverse (O botão de assinatura) */
 .btn-bw-inverse {
   transition: all 0.2s ease-in-out;
-  border: 1px solid var(--bw-black) !important;
-}
-
-/* Light Mode: White Background -> Black Text */
-.btn-bw-inverse {
-  background-color: var(--bw-white) !important;
-  color: var(--bw-black) !important;
-}
-
-/* Hover/Active: Invert to Black Background -> White Text */
-.btn-bw-inverse:hover, .btn-bw-inverse:active, .btn-bw-inverse.active {
-  background-color: var(--bw-black) !important;
-  color: var(--bw-white) !important;
+  border-radius: 12px;
+  font-weight: 500;
 }
 
 .dark .btn-bw-inverse {
-  border: 1px solid var(--bw-white) !important;
-  background-color: var(--bw-black) !important;
-  color: var(--bw-white) !important;
+  background-color: #000000 !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #ffffff !important;
 }
 
-.dark .btn-bw-inverse:hover, .dark .btn-bw-inverse:active, .dark .btn-bw-inverse.active {
-  background-color: var(--bw-white) !important;
-  color: var(--bw-black) !important;
+.dark .btn-bw-inverse:hover {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.light .btn-bw-inverse,
+:not(.dark) .btn-bw-inverse {
+  background-color: #ffffff !important;
+  border: 1px solid #09090b !important;
+  color: #09090b !important;
+}
+
+.light .btn-bw-inverse:hover,
+:not(.dark) .btn-bw-inverse:hover {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+}
+
+/* 2. Integração dos Gráficos ao Tema Dark */
+.dark .card,
+.dark .modal-content,
+.dark [class*="chart-container"], 
+.dark [class*="recharts"] {
+  background-color: #0a0a0b !important; 
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Ajuste de Texto do Gráfico */
+.dark .recharts-label-list text, 
+.dark .recharts-legend-item-text,
+.dark .recharts-cartesian-axis text,
+.dark .recharts-text {
+  fill: #fafafa !important;
+  color: #fafafa !important;
+}
+
+/* Ajuste de Eixos e Linhas de Grade */
+.dark .recharts-cartesian-axis line, 
+.dark .recharts-cartesian-grid line {
+  stroke: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* 3. Fix de Inputs, Selects e Barra de Busca */
+.dark input,
+.dark select,
+.dark .ant-select-selector {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border-radius: 12px;
+}
+
+/* Forçar cor de texto clara em botões Radix/Shadcn no modo dark */
+.dark button.inline-flex, 
+.dark button[data-state],
+.dark .tabs-trigger[data-state],
+.dark .ant-btn span,
+.dark button span {
+  color: #ffffff !important;
+}
+
+.dark input::placeholder,
+.dark .ant-select-selection-placeholder,
+.dark .ant-input::placeholder {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.dark .ant-select-arrow,
+.dark .ant-select-clear {
+  color: #ffffff !important;
+}
+
+.dark input:focus,
+.dark select:focus {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1) !important;
+  outline: none;
+}
+
+/* 4. Fix dos Botões da Tabela de Triagem (TRG 2 e Categorias) */
+.dark .table-action-btn,
+.dark button[class*="triagem"],
+.dark .ant-btn,
+.dark .tabs-trigger {
+  background-color: #1a1a1c !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #f8fafc !important; /* Força branco em vez de preto */
+}
+
+.dark .table-action-btn:hover,
+.dark button[class*="triagem"]:hover,
+.dark .ant-btn:hover,
+.dark .tabs-trigger:hover {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  background-color: #1e1e21 !important;
+  color: #ffffff !important;
+}
+
+/* Força cor de texto clara em botões Radix/Shadcn no modo dark */
+.dark button.inline-flex, 
+.dark button[data-state],
+.dark .tabs-trigger[data-state] {
+  color: #f8fafc !important;
+}
+.dark .tabs-trigger[data-state="active"] {
+  color: #000000 !important; /* No estado ativo o fundo é branco, então o texto deve ser preto */
+}
+
+.dark .card, 
+.dark .modal-content,
+.dark .ant-modal-content {
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Ant Design Select Inversion Overrides */

@@ -17,9 +17,9 @@ interface IntentDistributionChartProps {
 }
 
 const COLORS = {
-    validated: 'url(#silverGradient)', // Metal Silver
-    review: '#f59e0b',   // Metallic Orange
-    irrelevant: '#ef4444' // Metallic Red
+    validated: '#D1D5DB', // Silver
+    review: '#f59e0b',    // Orange
+    irrelevant: '#ef4444'  // Red
 }
 
 const CustomTooltip = ({ active, payload, isDark }: any) => {
@@ -81,9 +81,9 @@ export function IntentDistributionChart({ data, isDark }: IntentDistributionChar
 
     return (
         <div className={cn(
-            "p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500 h-full",
+            "p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500 h-full card",
             isDark 
-                ? "bg-black metal-border shadow-2xl" 
+                ? "bg-[#0a0a0b] metal-border shadow-2xl" 
                 : "bg-white border-zinc-100 shadow-xl"
         )}>
             <div className="flex flex-col gap-1 mb-8">
