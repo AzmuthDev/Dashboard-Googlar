@@ -272,6 +272,25 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
     }
 
     const handleDeleteUser = async (user: AuthorizedUser) => {
+        // TRAVA 1: Impedir exclusão do Admin Master
+        const ROOT_ADMIN = 'joseeduardorms29@gmail.com';
+        if (user.email?.toLowerCase() === ROOT_ADMIN) {
+            message.error('O Sócio Administrador não pode ser removido.');
+            return;
+        }
+
+        // TRAVA 2: Impedir auto-exclusão
+        if (user.email?.toLowerCase() === currentUser?.email?.toLowerCase()) {
+            message.error('Você não pode remover seu próprio acesso.');
+            return;
+        }
+
+        // TRAVA 3: Exigir ID válido para evitar deleção em massa por email nulo
+        if (!user.id) {
+            message.error('Este usuário não possui ID no banco. Remoção manual necessária via Supabase.');
+            return;
+        }
+
         Modal.confirm({
             title: 'Remover Acesso',
             content: `Tem certeza que deseja remover o acesso de ${user.name || user.email}? Ele não conseguirá mais entrar no painel.`,
@@ -280,15 +299,10 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
             cancelText: 'Cancelar',
             async onOk() {
                 try {
-                    // Se tiver ID, deleta pelo ID de forma segura. Senão, tenta pelo email.
-                    let query = supabase.from('profiles').delete();
-                    if (user.id) {
-                        query = query.eq('id', user.id);
-                    } else {
-                        query = query.eq('email', user.email.toLowerCase());
-                    }
-                    
-                    const { error } = await query;
+                    const { error } = await supabase
+                        .from('profiles')
+                        .delete()
+                        .eq('id', user.id);
                     
                     if (error) throw error;
                     
