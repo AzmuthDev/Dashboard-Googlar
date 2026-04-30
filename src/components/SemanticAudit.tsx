@@ -502,13 +502,15 @@ export function SemanticAudit({
                     palavra_chave: (cols[2] || '').trim(),
                     termo_de_pesquisa: (cols[3] || '').trim(),
                     observacao: (cols[4] || '').trim(),
+                    id_enquete: crypto.randomUUID(), // ID único para o bot do WhatsApp
+                    usuario: currentUser?.email || 'Importação Manual',
                     // Flags obrigatórias
                     duvida: true,
                     negativar: false,
                     segmentar: false,
                     teste_ab: false,
                     manter: false,
-                    pode_enviar: false,
+                    pode_enviar: triagem2, // Se for TRG 3, já libera para o n8n/WhatsApp
                     enviado_para_grupo: false,
                     respondido_cliente: false,
                     triagem1,
