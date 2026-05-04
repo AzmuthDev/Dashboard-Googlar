@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     // BYPASS DE EMERGÊNCIA (GOOGLAR MASTER)
-    if (email === 'joseeduardorms29@gmail.com' && password === 'googlar2024') {
+    if (email === 'joseeduardorms29@gmail.com' && (password === 'googlar2024' || password === 'C3v9w2s9')) {
       console.log('[Auth] Master Bypass Ativado');
       const mockUser = { id: 'master-id', email: email } as any;
       const mockSession = { user: mockUser, access_token: 'master-token' } as any;
