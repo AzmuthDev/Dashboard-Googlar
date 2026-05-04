@@ -115,7 +115,11 @@ function App() {
         }
     }
 
-    if (isLoading) return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin" /></div>
+    if (isLoading) return (
+        <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="loader" />
+        </div>
+    )
 
     return (
         <ConfigProvider theme={isDarkMode ? darkTheme : lightTheme}>

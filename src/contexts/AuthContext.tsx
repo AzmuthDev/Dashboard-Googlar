@@ -125,18 +125,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [fetchProfile, user]);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    // BYPASS DE EMERGÊNCIA (GOOGLAR MASTER)
+    if (email === 'joseeduardorms29@gmail.com' && password === 'googlar2024') {
+      console.log('[Auth] Master Bypass Ativado');
+      const mockUser = { id: 'master-id', email: email } as any;
+      const mockSession = { user: mockUser, access_token: 'master-token' } as any;
+      
+      setUser(mockUser);
+      setSession(mockSession);
+      const prof = await fetchProfile(mockUser.id, email);
+      setProfile(prof);
+      setIsLoading(false);
+      return { error: null };
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
-      if (error) return { error: error.message };
+      if (error) {
+        console.warn('[Auth] Login falhou no Supabase:', error.message);
+        return { error: error.message };
+      }
       return { error: null };
     } catch (err) {
-      return { error: 'Erro de conexão.' };
+      console.error('[Auth] Erro crítico de conexão:', err);
+      return { error: 'Erro de conexão com o servidor.' };
     }
   }
 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      // Limpamos manualmente os estados para garantir que o bypass também seja encerrado
+      setUser(null);
+      setSession(null);
+      setProfile(null);
       localStorage.removeItem('googlar_active_company');
     } catch (err) {
       console.error('[Auth] Erro ao sair:', err);

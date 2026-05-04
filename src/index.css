@@ -1198,4 +1198,72 @@ body:not(.dark) {
 }
 .dark .ant-pagination-item-active a {
   color: #FFFFFF !important;
-}
+}
+
+/* ─── Custom Premium Loader (Uiverse.io by mobinkakei) ─── */
+.loader {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  background: #a19dad;
+  transform: rotateX(65deg) rotate(45deg);
+  color: #fff;
+  animation: layers1 1s linear infinite alternate;
+}
+.loader:after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  animation: layerTr 1s linear infinite alternate;
+}
+
+@keyframes layers1 {
+  0% {
+    box-shadow: 0px 0px 0 0px;
+  }
+  90%,
+  100% {
+    box-shadow: 20px 20px 0 -4px;
+  }
+}
+@keyframes layerTr {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(-25px, -25px) scale(1);
+  }
+}
+
+/* ─── Luxury Modal UI Refinements ─── */
+.luxury-search-input .ant-input {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+  border-radius: 12px !important;
+  padding: 10px 16px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+}
+
+.dark .luxury-search-input .ant-input:focus {
+  border-color: #fff !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.05) !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+

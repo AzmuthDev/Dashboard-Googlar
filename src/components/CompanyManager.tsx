@@ -41,6 +41,7 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
     const [newCompanyLogo, setNewCompanyLogo] = useState<string | undefined>()
     const [newCompanyCover, setNewCompanyCover] = useState<string | undefined>()
     const [activeCompanyEdits, setActiveCompanyEdits] = useState<string | null>(null)
+    const [userSearchQuery, setUserSearchQuery] = useState('')
     const [activeCompanyLink, setActiveCompanyLink] = useState<string | null>(null)
     const [provisioningStep, setProvisioningStep] = useState<string>('')
     const queryClient = useQueryClient()
@@ -177,18 +178,22 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
 
 
 
-    const handleSetUserRole = (companyId: string, email: string, role: 'admin' | 'editor' | 'viewer' | null) => {
-        const updated = companies.map(c => {
-            if (c.id === companyId) {
-                const filteredUsers = c.users.filter((u: any) => u.email !== email)
-                const newUsers = role ? [...filteredUsers, { email, role }] : filteredUsers
-                return { ...c, users: newUsers }
-            }
-            return c
-        })
+    const handleSetUserRole = async (companyId: string, email: string, role: 'admin' | 'editor' | 'viewer' | null) => {
+        const company = companies.find(c => c.id === companyId)
+        if (!company) return
 
-        localStorage.setItem('googlar_companies', JSON.stringify(updated))
-        setCompanies(updated)
+        const filteredUsers = (company.users || []).filter((u: any) => u.email !== email)
+        const newUsers = role ? [...filteredUsers, { email, role }] : filteredUsers
+
+        try {
+            const { error } = await updateCompany(companyId, { users: newUsers })
+            if (error) throw error
+            
+            setCompanies(prev => prev.map(c => c.id === companyId ? { ...c, users: newUsers } : c))
+            message.success(`Acesso atualizado para ${email}`)
+        } catch (err: any) {
+            message.error("Erro ao atualizar acesso: " + err.message)
+        }
     }
 
     const activeCompanyForUsers = companies.find(c => c.id === activeCompanyEdits)
@@ -438,12 +443,26 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 width={500}
             >
                 <div className="mt-4">
-                    <Text className="text-zinc-500 block mb-4">
+                    <Text className="text-zinc-500 block mb-6">
                         Selecione quais usuários podem interagir com esta base de dados. Administradores sempre acessam tudo caso precisem.
                     </Text>
 
+                    <div className="mb-6">
+                        <Input.Search
+                            placeholder="Buscar usuário por nome ou e-mail..."
+                            allowClear
+                            value={userSearchQuery}
+                            onChange={(e) => setUserSearchQuery(e.target.value)}
+                            className="luxury-search-input"
+                        />
+                    </div>
+
                     <List
-                        dataSource={users}
+                        className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar"
+                        dataSource={users.filter(u => 
+                            u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) || 
+                            u.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+                        )}
                         renderItem={user => {
                             const userAccess = activeCompanyForUsers?.users.find((u: any) => u.email.toLowerCase() === user.email.toLowerCase());
                             const hasAccess = !!userAccess;
