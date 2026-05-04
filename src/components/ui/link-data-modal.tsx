@@ -185,35 +185,35 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                         initial="hidden"
                         animate="visible"
                         exit="exit"
-                        className="relative w-full max-w-lg bg-zinc-950 border border-zinc-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] rounded-2xl overflow-hidden flex flex-col"
+                        className="relative w-full max-w-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] rounded-2xl overflow-hidden flex flex-col"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="px-6 py-5 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/50">
+                        <div className="px-6 py-5 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900/50">
                             <div>
-                                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
                                     <Link2 className="w-5 h-5 text-emerald-500" />
                                     Vincular Fonte de Dados
                                 </h3>
-                                <p className="text-sm text-zinc-400 mt-1">
-                                    Conectando dados para: <strong className="text-white">{companyName}</strong>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                                    Conectando dados para: <strong className="text-zinc-900 dark:text-white">{companyName}</strong>
                                 </p>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-2 -mr-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-full transition-colors"
+                                className="p-2 -mr-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* Tabs */}
-                        <div className="flex border-b border-zinc-800/80 bg-zinc-900/30">
+                        <div className="flex border-b border-zinc-200 dark:border-zinc-800/80 bg-zinc-100/50 dark:bg-zinc-900/30">
                             <button
                                 onClick={() => setActiveTab('sheets')}
                                 className={cn(
                                     "flex-1 py-3.5 text-sm font-medium transition-all flex items-center justify-center gap-2 relative",
-                                    activeTab === 'sheets' ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"
+                                    activeTab === 'sheets' ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                                 )}
                             >
                                 <Link2 className="w-4 h-4" />
@@ -226,7 +226,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                 onClick={() => setActiveTab('local')}
                                 className={cn(
                                     "flex-1 py-3.5 text-sm font-medium transition-all flex items-center justify-center gap-2 relative",
-                                    activeTab === 'local' ? "text-emerald-400" : "text-zinc-500 hover:text-zinc-300"
+                                    activeTab === 'local' ? "text-emerald-600 dark:text-emerald-400" : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                                 )}
                             >
                                 <FileSpreadsheet className="w-4 h-4" />
@@ -250,7 +250,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                         className="space-y-4"
                                     >
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium text-zinc-300">URL Pública da Planilha</label>
+                                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">URL Pública da Planilha</label>
                                             <div className="relative">
                                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                                     <Link2 className="h-4 w-4 text-zinc-500" />
@@ -260,19 +260,19 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                                     value={sheetsUrl}
                                                     onChange={(e) => setSheetsUrl(e.target.value)}
                                                     placeholder="https://docs.google.com/spreadsheets/d/..."
-                                                    className="w-full bg-zinc-900 border border-zinc-800 text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-zinc-600"
+                                                    className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 text-zinc-900 dark:text-white rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500 transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600"
                                                 />
                                             </div>
-                                            <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-zinc-900/50 border border-zinc-800">
+                                            <div className="flex items-start gap-2 mt-2 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800">
                                                 <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                                                <p className="text-xs text-zinc-400 leading-relaxed">
+                                                <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
                                                     A planilha Google deve estar configurada com acesso <strong>"Qualquer pessoa com o link"</strong> para que o painel consiga ler os dados via CSV.
                                                 </p>
                                             </div>
                                         </div>
                                         {isUploading && activeTab === 'sheets' && (
                                             <div className="mt-4 space-y-2">
-                                                <div className="flex items-center justify-between text-xs text-zinc-400">
+                                                <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-400">
                                                     <span>
                                                         {syncStatus === 'fetching' && '🔄 Buscando dados da planilha...'}
                                                         {syncStatus === 'syncing' && '☁️ Sincronizando com o banco...'}
@@ -280,7 +280,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                                     </span>
                                                     <span>{uploadProgress}%</span>
                                                 </div>
-                                                <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                                                     <motion.div
                                                         className="h-full bg-emerald-500"
                                                         initial={{ width: 0 }}
@@ -293,7 +293,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                             <button
                                                 onClick={onClose}
                                                 disabled={isUploading}
-                                                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors disabled:opacity-40"
+                                                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors disabled:opacity-40"
                                             >
                                                 Cancelar
                                             </button>
@@ -321,7 +321,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                         className="space-y-4"
                                     >
                                         <div 
-                                            className="border-2 border-dashed border-zinc-800 hover:border-emerald-500/50 bg-zinc-900/30 hover:bg-zinc-900/50 rounded-xl p-8 transition-all flex flex-col items-center justify-center text-center cursor-pointer group relative overflow-hidden"
+                                            className="border-2 border-dashed border-zinc-300 dark:border-zinc-800 hover:border-emerald-500/50 bg-zinc-50/50 dark:bg-zinc-900/30 hover:bg-zinc-100 dark:hover:bg-zinc-900/50 rounded-xl p-8 transition-all flex flex-col items-center justify-center text-center cursor-pointer group relative overflow-hidden"
                                             onClick={() => !isUploading && fileInputRef.current?.click()}
                                         >
                                             <input
@@ -335,16 +335,16 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                             {isUploading ? (
                                                 <div className="flex flex-col items-center w-full max-w-[240px]">
                                                     {syncStatus === 'done' ? (
-                                                        <CheckCircle2 className="w-10 h-10 text-emerald-400 mb-3" />
+                                                        <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-3" />
                                                     ) : (
-                                                        <div className="w-12 h-12 rounded-full border-4 border-zinc-800 border-t-emerald-500 animate-spin mb-4" />
+                                                        <div className="w-12 h-12 rounded-full border-4 border-zinc-200 dark:border-zinc-800 border-t-emerald-500 animate-spin mb-4" />
                                                     )}
-                                                    <p className="text-sm font-medium text-zinc-300 mb-2">
+                                                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                                                         {syncStatus === 'fetching' && 'Lendo arquivo...'}
                                                         {syncStatus === 'syncing' && 'Sincronizando com banco...'}
                                                         {syncStatus === 'done' && 'Concluído!'}
                                                     </p>
-                                                    <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                                                    <div className="w-full h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
                                                         <motion.div 
                                                             className="h-full bg-emerald-500"
                                                             initial={{ width: 0 }}
@@ -355,10 +355,10 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="w-12 h-12 rounded-full bg-zinc-800/50 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-emerald-500/10 transition-all duration-300">
-                                                        <UploadCloud className="w-6 h-6 text-zinc-400 group-hover:text-emerald-400" />
+                                                    <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800/50 flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-emerald-500/10 transition-all duration-300">
+                                                        <UploadCloud className="w-6 h-6 text-zinc-400 group-hover:text-emerald-500" />
                                                     </div>
-                                                    <p className="text-sm font-medium text-zinc-200 mb-1">
+                                                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 mb-1">
                                                         Clique ou arraste um arquivo
                                                     </p>
                                                     <p className="text-xs text-zinc-500">
@@ -371,7 +371,7 @@ export function LinkDataModal({ isOpen, onClose, companyId, companyName, company
                                             <button
                                                 onClick={onClose}
                                                 disabled={isUploading}
-                                                className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+                                                className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors disabled:opacity-50"
                                             >
                                                 Cancelar
                                             </button>

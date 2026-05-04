@@ -332,10 +332,10 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 {isProvisioning ? (
                     <div className="py-20 flex flex-col items-center justify-center animate-in fade-in duration-500">
                         <div className="relative w-24 h-24 mb-6">
-                            <div className="absolute inset-0 bg-white/20 blur-[30px] rounded-full animate-pulse" />
-                            <Spin indicator={<LoadingOutlined style={{ fontSize: 48, color: '#FFFFFF' }} spin />} />
+                            <div className="absolute inset-0 bg-zinc-400/20 dark:bg-white/20 blur-[30px] rounded-full animate-pulse" />
+                            <Spin indicator={<LoadingOutlined style={{ fontSize: 48 }} className="text-zinc-900 dark:text-white" spin />} />
                         </div>
-                        <Text className="text-white text-sm font-black uppercase tracking-[0.2em] text-center">
+                        <Text className="text-zinc-900 dark:text-white text-sm font-black uppercase tracking-[0.2em] text-center">
                             Provisionando Base de Dados de Auditoria...
                         </Text>
                         <Text className="text-zinc-500 text-[10px] uppercase font-bold mt-2">Versão 4.0 Supabase Infra</Text>
@@ -343,41 +343,41 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 ) : (
                     <div className="mt-4 flex flex-col gap-6">
                     <div>
-                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Nome da Empresa / Cliente</label>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">Nome da Empresa / Cliente</label>
                         <Input
                             placeholder="Ex: Acme Corp."
                             value={newCompanyName}
                             onChange={(e) => setNewCompanyName(e.target.value)}
-                            className="!bg-slate-800 !border-slate-600 hover:!border-slate-400 focus:!border-white !text-white px-4 py-2.5 rounded-xl transition-all"
+                            className="!bg-white dark:!bg-slate-800 !border-zinc-300 dark:!border-slate-600 hover:!border-zinc-400 dark:hover:!border-slate-400 focus:!border-zinc-900 dark:focus:!border-white !text-zinc-900 dark:!text-white px-4 py-2.5 rounded-xl transition-all"
                         />
                     </div>
                     <div>
-                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Público Link do Google Sheets (Opcional)</label>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">Público Link do Google Sheets (Opcional)</label>
                         <Input
                             placeholder="https://docs.google.com/spreadsheets/d/..."
                             value={newCompanySheetsUrl}
                             onChange={(e) => setNewCompanySheetsUrl(e.target.value)}
-                            className="!bg-slate-800 !border-slate-600 hover:!border-slate-400 focus:!border-white !text-slate-200 px-4 py-2.5 rounded-xl font-mono text-[11px] transition-all"
+                            className="!bg-white dark:!bg-slate-800 !border-zinc-300 dark:!border-slate-600 hover:!border-zinc-400 dark:hover:!border-slate-400 focus:!border-zinc-900 dark:focus:!border-white !text-zinc-900 dark:!text-slate-200 px-4 py-2.5 rounded-xl font-mono text-[11px] transition-all"
                         />
-                        <p className="text-slate-400 block mt-2 text-[10px] font-medium leading-tight">
+                        <p className="text-zinc-500 dark:text-slate-400 block mt-2 text-[10px] font-medium leading-tight">
                             A planilha deve estar com acesso &quot;Qualquer pessoa com o link&quot; ou compartilhada.
                         </p>
                     </div>
                     {/* Logo upload — using native input to avoid Ant Design dark mode CSS conflicts */}
                     <div>
-                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Logo da Empresa (Opcional)</label>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">Logo da Empresa (Opcional)</label>
                         <div className="flex items-center gap-4">
                             {newCompanyLogo && (
-                                <img src={newCompanyLogo} alt="Logo Preview" className="w-16 h-16 object-cover rounded-xl border border-slate-600 shadow-2xl shrink-0" />
+                                <img src={newCompanyLogo} alt="Logo Preview" className="w-16 h-16 object-cover rounded-xl border border-zinc-200 dark:border-slate-600 shadow-xl shrink-0" />
                             )}
                             <label
-                                className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer rounded-2xl border-2 border-dashed border-slate-600 hover:border-slate-400 bg-slate-800/50 hover:bg-slate-700/50 transition-all py-5 px-4"
+                                className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 dark:border-slate-600 hover:border-zinc-500 dark:hover:border-slate-400 bg-zinc-50 dark:bg-slate-800/50 hover:bg-zinc-100 dark:hover:bg-slate-700/50 transition-all py-5 px-4"
                             >
-                                <InboxOutlined className="text-2xl text-slate-400" />
-                                <span className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">
+                                <InboxOutlined className="text-2xl text-zinc-400 dark:text-slate-400" />
+                                <span className="text-zinc-700 dark:text-slate-300 text-[10px] font-bold uppercase tracking-widest">
                                     {newCompanyLogo ? 'Trocar Logo' : 'Selecionar Logo'}
                                 </span>
-                                <span className="text-slate-500 text-[9px]">JPG, PNG, WEBP</span>
+                                <span className="text-zinc-500 dark:text-slate-500 text-[9px]">JPG, PNG, WEBP</span>
                                 <input
                                     type="file"
                                     accept="image/*"
@@ -395,19 +395,19 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                     </div>
                     {/* Cover upload — same approach */}
                     <div>
-                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-slate-300">Imagem de Capa (Opcional)</label>
+                        <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">Imagem de Capa (Opcional)</label>
                         <div className="flex items-center gap-4">
                             {newCompanyCover && (
-                                <img src={newCompanyCover} alt="Cover Preview" className="w-[120px] h-16 object-cover rounded-xl border border-slate-600 shadow-2xl shrink-0" />
+                                <img src={newCompanyCover} alt="Cover Preview" className="w-[120px] h-16 object-cover rounded-xl border border-zinc-200 dark:border-slate-600 shadow-xl shrink-0" />
                             )}
                             <label
-                                className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer rounded-2xl border-2 border-dashed border-slate-600 hover:border-slate-400 bg-slate-800/50 hover:bg-slate-700/50 transition-all py-5 px-4"
+                                className="flex-1 flex flex-col items-center justify-center gap-2 cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 dark:border-slate-600 hover:border-zinc-500 dark:hover:border-slate-400 bg-zinc-50 dark:bg-slate-800/50 hover:bg-zinc-100 dark:hover:bg-slate-700/50 transition-all py-5 px-4"
                             >
-                                <InboxOutlined className="text-2xl text-slate-400" />
-                                <span className="text-slate-300 text-[10px] font-bold uppercase tracking-widest">
+                                <InboxOutlined className="text-2xl text-zinc-400 dark:text-slate-400" />
+                                <span className="text-zinc-700 dark:text-slate-300 text-[10px] font-bold uppercase tracking-widest">
                                     {newCompanyCover ? 'Trocar Capa' : 'Selecionar Capa'}
                                 </span>
-                                <span className="text-slate-500 text-[9px]">JPG, PNG, WEBP — Proporção 16:9 recomendada</span>
+                                <span className="text-zinc-500 dark:text-slate-500 text-[9px]">JPG, PNG, WEBP — Proporção 16:9 recomendada</span>
                                 <input
                                     type="file"
                                     accept="image/*"
