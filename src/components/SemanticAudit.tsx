@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { useCampaignTerms, useCompanies } from '../hooks/useCampaignData';
 import { type CampaignTerm, type Company } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Types ---
 type CategoryKey = 'negativar' | 'duvida' | 'segmentar' | 'teste_ab' | 'manter' | null;
@@ -43,6 +44,8 @@ export function SemanticAudit({
     activeCompanyId: string | null;
     currentUser: { email: string; isAdmin: boolean } | null;
 }) {
+    const { user } = useAuth();
+
     // Audit logs for Senior Debug
     useEffect(() => {
         const hasGeminiKey = !!import.meta.env.VITE_GEMINI_API_KEY;
@@ -232,6 +235,7 @@ export function SemanticAudit({
     // --- Handlers ---
     // --- Verificação de sessão antes de mutações ---
     const ensureSession = async (): Promise<boolean> => {
+        if (currentUser || user) return true; // Allows bypass mode and regular users without profile to work
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
             message.error('Sessão expirada. Recarregue a página (F5) para continuar.');
