@@ -39,10 +39,14 @@ const fmt = {
 
 export function SemanticAudit({
     activeCompanyId,
-    currentUser
+    currentUser,
+    auditNavParams,
+    clearNavParams
 }: {
     activeCompanyId: string | null;
     currentUser: { email: string; isAdmin: boolean } | null;
+    auditNavParams?: { campanha: string; grupo: string; termo?: string } | null;
+    clearNavParams?: () => void;
 }) {
     const { user } = useAuth();
 
@@ -98,6 +102,19 @@ export function SemanticAudit({
             console.error('[SemanticAudit] Error resetting state:', e);
         }
     }, [activeCompanyId]);
+
+    // --- Auto-navigation from Dashboard ---
+    useEffect(() => {
+        if (auditNavParams) {
+            setSelectedCampaign(auditNavParams.campanha);
+            setSelectedAdGroup(auditNavParams.grupo);
+            setActiveTab('all');
+
+            if (clearNavParams) {
+                setTimeout(() => clearNavParams(), 100);
+            }
+        }
+    }, [auditNavParams, clearNavParams]);
 
     // --- Sync Logic (Auto-trigger) ---
     const handleSync = useCallback(async (forcedPayload?: any) => {

@@ -37,6 +37,7 @@ function App() {
     const [currentView, setCurrentView] = useState<'dashboard' | 'users' | 'companies' | 'ferramenta' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner'>('companies')
     const [activeTab, setActiveTab] = useState('all')
     const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
+    const [auditNavParams, setAuditNavParams] = useState<{ campanha: string, grupo: string, termo?: string } | null>(null)
     const [isDarkMode, setIsDarkMode] = useState(false)
     const dashboardGridRef = useRef<HTMLDivElement>(null)
 
@@ -228,6 +229,13 @@ function App() {
                                                 isLoading={isTermsLoading || isLocalLoading} 
                                                 activeTab={activeTab} 
                                                 setActiveTab={setActiveTab} 
+                                                activeCompanyId={activeCompanyId}
+                                                targetTable={activeCompany?.tableName || (activeCompanyId ? `data_company_${activeCompanyId}` : null)}
+                                                onRefresh={refetch}
+                                                onNavigateToAudit={(c, g, t) => {
+                                                    setAuditNavParams({ campanha: c, grupo: g, termo: t })
+                                                    setCurrentView('semantic-audit')
+                                                }}
                                             />
                                         </div>
                                     )}
@@ -235,7 +243,7 @@ function App() {
                                 </>
                             )}
                             {currentView === 'ferramenta' && <AutomationConsole isAdmin={profile?.isAdmin ?? false} activeCompanyId={activeCompanyId} isDarkMode={isDarkMode} onSelectCompany={setActiveCompanyId} />}
-                            {currentView === 'semantic-audit' && <SemanticAudit activeCompanyId={activeCompanyId} currentUser={profile} />}
+                            {currentView === 'semantic-audit' && <SemanticAudit activeCompanyId={activeCompanyId} currentUser={profile} auditNavParams={auditNavParams} clearNavParams={() => setAuditNavParams(null)} />}
                             {currentView === 'keyword-planner' && <KeywordPlanner activeCompanyId={activeCompanyId} />}
                             {currentView === 'users' && <UserManager currentUser={profile} />}
                             {currentView === 'companies' && <CompanyManager currentUser={profile} onAccessCompany={handleAccessCompany} onSelectCompany={setActiveCompanyId} />}

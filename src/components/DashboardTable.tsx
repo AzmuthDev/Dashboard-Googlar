@@ -23,6 +23,7 @@ import { WasteAudit } from './WasteAudit'
 import { CriticalCostBarChart } from './CriticalCostBarChart'
 import { IntentDistributionChart } from './IntentDistributionChart'
 import { ChartExplicationTooltip } from './ChartExplicationTooltip'
+import { supabase } from '../lib/supabase'
 
 const { Title, Text } = Typography
 
@@ -33,9 +34,13 @@ interface DashboardTableProps {
     activeTab: string
     setActiveTab: (tab: string) => void
     isLabMode?: boolean
+    activeCompanyId?: string | null
+    targetTable?: string | null
+    onRefresh?: () => void
+    onNavigateToAudit?: (campanha: string, grupo: string, termo?: string) => void
 }
 
-export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveTab, isLabMode }: DashboardTableProps) {
+export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveTab, isLabMode, activeCompanyId, targetTable, onRefresh, onNavigateToAudit }: DashboardTableProps) {
     const [hiddenRows, setHiddenRows] = useState<Set<string>>(new Set())
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -106,11 +111,36 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
         setSelectedRows(next)
     }
 
-    const handleBulkAction = (action: 'approve' | 'reject') => {
+    const handleBulkAction = async (action: 'approve' | 'reject' | 'doubt_trg2' | 'doubt_trg3') => {
         const count = selectedRows.size
         if (count === 0) return
-        toast.promise(new Promise(resolve => setTimeout(resolve, 800)), {
-            loading: action === 'approve' ? 'Aprovando itens...' : 'Rejeitando itens...',
+
+        let payload: any = {}
+        if (action === 'approve') {
+            payload = { segmentar: true, negativar: false, duvida: false, status_granularidade: '✅ OK', suggestion_status: 'approved' }
+        } else if (action === 'reject') {
+            payload = { negativar: true, segmentar: false, duvida: false, status_granularidade: '❌ Negativar', suggestion_status: 'rejected' }
+        } else if (action === 'doubt_trg2') {
+            payload = { duvida: true, negativar: false, segmentar: false, status_granularidade: '❓ TRG 2', suggestion_status: 'doubt_trg2' }
+        } else if (action === 'doubt_trg3') {
+            payload = { duvida: true, negativar: false, segmentar: false, status_granularidade: '❓ TRG 3', suggestion_status: 'doubt_trg3' }
+        }
+
+        const actionName = action === 'approve' ? 'Aprovando' : action === 'reject' ? 'Negativando' : 'Marcando como dúvida';
+        
+        const updatePromise = async () => {
+            if (activeCompanyId && targetTable) {
+                const ids = Array.from(selectedRows);
+                for (const id of ids) {
+                    await supabase.from(targetTable).update(payload).eq('id', id);
+                }
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+        };
+
+        toast.promise(updatePromise(), {
+            loading: `${actionName} itens...`,
             success: () => {
                 setHiddenRows(prev => {
                     const next = new Set(prev)
@@ -118,6 +148,7 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                     return next
                 })
                 setSelectedRows(new Set())
+                if (onRefresh && activeCompanyId) setTimeout(onRefresh, 1000);
                 return `${count} itens processados.`
             },
             error: 'Erro no processamento.'
@@ -177,7 +208,13 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                 <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
                     <div className="col-span-1">
                         <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold truncate text-foreground">{item.termo_de_pesquisa}</h3>
+                            <h3 
+                                className="text-sm font-bold truncate text-primary hover:underline cursor-pointer transition-colors"
+                                onClick={() => onNavigateToAudit?.(item.campanha, item.grupo_de_anuncios, item.termo_de_pesquisa)}
+                                title="Visualizar na Auditoria Semântica"
+                            >
+                                {item.termo_de_pesquisa}
+                            </h3>
                             <HoverCard content={item.observacao || "IA: Nenhuma observação adicional."}>
                                 <div className="cursor-help">
                                     {isNeg && <Ban className="w-3.5 h-3.5 text-red-500" />}
@@ -234,6 +271,8 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                         <div className="flex items-center gap-3">
                             <button onClick={() => handleBulkAction('approve')} className="px-4 py-2 bg-primary-foreground text-primary rounded-xl text-sm font-bold table-action-btn">Aprovar</button>
                             <button onClick={() => handleBulkAction('reject')} className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold table-action-btn">Negativar</button>
+                            <button onClick={() => handleBulkAction('doubt_trg2')} className="px-4 py-2 bg-amber-500/20 text-amber-500 border border-amber-500/50 hover:bg-amber-500/30 rounded-xl text-sm font-bold table-action-btn">Dúvida TRG 2</button>
+                            <button onClick={() => handleBulkAction('doubt_trg3')} className="px-4 py-2 bg-amber-500/20 text-amber-500 border border-amber-500/50 hover:bg-amber-500/30 rounded-xl text-sm font-bold table-action-btn">Dúvida TRG 3</button>
                             <button onClick={() => setSelectedRows(new Set())} className="p-2 text-primary-foreground/50 hover:text-primary-foreground"><Trash2 size={20} /></button>
                         </div>
                     </motion.div>
