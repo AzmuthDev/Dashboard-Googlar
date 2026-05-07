@@ -20,6 +20,9 @@ import { type CampaignTerm } from './types'
 import { carregarDados } from './utils/dataIngestion'
 import { fetchTermsFromTable, insertCampaignTermsBatch, provisionCompanyTable } from './lib/supabaseProvider'
 import { FeaturesDetail } from './components/ui/features-detail'
+import { WasteAudit } from './components/WasteAudit'
+import { CriticalCostBarChart } from './components/CriticalCostBarChart'
+import { IntentDistributionChart } from './components/IntentDistributionChart'
 import { SemanticAudit } from './components/SemanticAudit'
 import { EvervaultCard } from './components/ui/evervault-card'
 import { Toaster, toast } from 'sonner'
@@ -219,31 +222,38 @@ function App() {
                                                 </div>
                                             </div>
 
-                                            <div className="mb-6">
-                                                <Input.Search placeholder="Buscar termo específico nas campanhas..." size="large" className="custom-search shadow-2xl" />
+
+                                            <div className="mb-8 space-y-8">
+                                                <WasteAudit data={effectiveData as any} onNegativar={() => refetch()} />
+                                                <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                                                    <div className="xl:col-span-8"><CriticalCostBarChart data={effectiveData as any} /></div>
+                                                    <div className="xl:col-span-4"><IntentDistributionChart data={effectiveData as any} /></div>
+                                                </div>
                                             </div>
-                                            
-                                            <DashboardTable 
-                                                data={effectiveData as any} 
-                                                isEmpty={false} 
-                                                isLoading={isTermsLoading || isLocalLoading} 
-                                                activeTab={activeTab} 
-                                                setActiveTab={setActiveTab} 
-                                                activeCompanyId={activeCompanyId}
-                                                targetTable={activeCompany?.tableName || (activeCompanyId ? `data_company_${activeCompanyId}` : null)}
-                                                onRefresh={refetch}
-                                                onNavigateToAudit={(c, g, t) => {
-                                                    setAuditNavParams({ campanha: c, grupo: g, termo: t })
-                                                    setCurrentView('semantic-audit')
-                                                }}
-                                            />
                                         </div>
                                     )}
                                     <FeaturesDetail />
                                 </>
                             )}
                             {currentView === 'ferramenta' && <AutomationConsole isAdmin={profile?.isAdmin ?? false} activeCompanyId={activeCompanyId} isDarkMode={isDarkMode} onSelectCompany={setActiveCompanyId} />}
-                            {currentView === 'semantic-audit' && <SemanticAudit activeCompanyId={activeCompanyId} currentUser={profile} auditNavParams={auditNavParams} clearNavParams={() => setAuditNavParams(null)} />}
+                             {currentView === 'semantic-audit' && (
+                                 <div className="flex flex-col gap-8">
+                                     <SemanticAudit activeCompanyId={activeCompanyId} currentUser={profile} auditNavParams={auditNavParams} clearNavParams={() => setAuditNavParams(null)} />
+                                     <DashboardTable 
+                                         data={effectiveData as any} 
+                                         isEmpty={!isValidArray} 
+                                         isLoading={isTermsLoading || isLocalLoading} 
+                                         activeTab={activeTab} 
+                                         setActiveTab={setActiveTab} 
+                                         activeCompanyId={activeCompanyId}
+                                         targetTable={activeCompany?.tableName || (activeCompanyId ? `data_company_${activeCompanyId}` : null)}
+                                         onRefresh={refetch}
+                                         onNavigateToAudit={(c, g, t) => {
+                                             setAuditNavParams({ campanha: c, grupo: g, termo: t })
+                                         }}
+                                     />
+                                 </div>
+                             )}
                             {currentView === 'keyword-planner' && <KeywordPlanner activeCompanyId={activeCompanyId} />}
                             {currentView === 'users' && <UserManager currentUser={profile} />}
                             {currentView === 'companies' && <CompanyManager currentUser={profile} onAccessCompany={handleAccessCompany} onSelectCompany={setActiveCompanyId} />}

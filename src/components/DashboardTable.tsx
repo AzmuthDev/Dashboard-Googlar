@@ -224,6 +224,11 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                             </HoverCard>
                         </div>
                         <p className="text-[11px] text-muted-foreground truncate mt-0.5">{item.campanha}</p>
+                        {item.palavra_chave && (
+                            <p className="text-[10px] text-primary/70 font-mono mt-1 flex items-center gap-1">
+                                <span className="opacity-50">KW:</span> {item.palavra_chave}
+                            </p>
+                        )}
                     </div>
                     <div className="hidden md:block col-span-1 text-muted-foreground text-xs leading-none">{item.grupo_de_anuncios || '—'}</div>
                     <div className="col-span-1 md:text-center">
@@ -245,7 +250,7 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
             <div className="rounded-[24px] border border-border bg-card p-20 text-center shadow-sm">
                 <PackageOpen size={48} className="mx-auto text-muted-foreground opacity-20 mb-4" />
                 <Title level={4}>Sem dados no Funil</Title>
-                <Text className="text-muted-foreground">Conecte uma planilha para iniciar a triagem tripartite.</Text>
+                <Text className="text-muted-foreground">Conecte uma planilha para iniciar a triagem de especialistas.</Text>
             </div>
         )
     }
@@ -254,13 +259,7 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
 
     return (
         <div className="relative w-full">
-            <div className="mb-20">
-                <WasteAudit data={data} onNegativar={(id) => setHiddenRows(prev => new Set(prev).add(id))} />
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
-                    <div className="xl:col-span-8"><CriticalCostBarChart data={data} /></div>
-                    <div className="xl:col-span-4"><IntentDistributionChart data={data} /></div>
-                </div>
-            </div>
+
 
             <AnimatePresence>
                 {selectedRows.size > 0 && (
@@ -284,7 +283,7 @@ export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveT
                     <div className="p-6 pb-0">
                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
                             <div className="flex items-center gap-3">
-                                <Title level={4} className="!m-0 !text-foreground">Triagem Tripartite</Title>
+                                <Title level={4} className="!m-0 !text-foreground">Triagem de Especialistas</Title>
                                 <ChartExplicationTooltip content="Visão detalhada de todos os termos triados." />
                             </div>
                             <div className="flex flex-col gap-2">

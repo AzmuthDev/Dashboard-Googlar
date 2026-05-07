@@ -38,7 +38,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
     const navigationItems: NavigationItem[] = [
         { id: "dashboard", name: "Dashboard", icon: LayoutDashboard, isClickable: true },
         { id: "companies", name: "Empresas", icon: Briefcase, isClickable: true },
-        { id: "semantic-audit", name: "Auditoria Semântica", icon: FileText, isClickable: true },
+        { id: "semantic-audit", name: "Triagem de Especialistas", icon: FileText, isClickable: true },
         { id: "keyword-planner", name: "Planejador", icon: Wand2, isClickable: true },
         { id: "ferramenta", name: "Ferramenta", icon: Zap, isClickable: true },
         { id: "laboratorio-ab", name: "Laboratório A/B", icon: FlaskConical, isClickable: true },

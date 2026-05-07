@@ -160,7 +160,7 @@ export function SemanticAudit({
             const filtered = termsArray.filter((t: CampaignTerm) => 
                 t && 
                 t?.campanha === selectedCampaign && 
-                t?.grupo_de_anuncios === selectedAdGroup
+                (!selectedAdGroup || t?.grupo_de_anuncios === selectedAdGroup)
             );
 
             return { campaignList: campaigns, adGroupList: adGroups, baseFilteredTerms: filtered };
@@ -910,7 +910,7 @@ export function SemanticAudit({
                             <FileText className="text-foreground w-6 h-6" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-foreground">Auditoria Premium</h1>
+                            <h1 className="text-2xl font-bold tracking-tight text-foreground">Auditoria</h1>
                             <p className="text-muted-foreground text-sm">Dashboard de triagem estratégica e workflow colaborativo.</p>
                         </div>
                     </div>
@@ -986,7 +986,7 @@ export function SemanticAudit({
                 )}
             </div>
 
-            {selectedCampaign && selectedAdGroup ? (
+            {selectedCampaign ? (
                 <div 
                     ref={tableContainerRef} 
                     className="rounded-3xl border shadow-xl overflow-hidden transition-all duration-300 bg-card border-border"
@@ -1073,7 +1073,7 @@ export function SemanticAudit({
                     <TrendingUp className="w-12 h-12 text-[#60A5FA] mb-4 opacity-80" />
                     <h2 className="text-xl font-semibold text-[#FFFFFF]">Aguardando Seleção</h2>
                     <p className="text-[#9CA3AF] max-w-xs mt-2">
-                        Selecione Campanha e Grupo para restaurar o fluxo.
+                        Selecione uma Campanha para visualizar os termos.
                     </p>
                 </div>
             )}
