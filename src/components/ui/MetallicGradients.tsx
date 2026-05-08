@@ -23,6 +23,13 @@ export function MetallicGradients() {
           <stop offset="100%" stopColor="#1F2937" stopOpacity={0.6} />
         </linearGradient>
 
+        {/* Metallic Black Gradient (Hero / Primary Data - Light Mode) */}
+        <linearGradient id="metallicBlackGradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#18181b" stopOpacity={1} />
+          <stop offset="50%" stopColor="#27272a" stopOpacity={1} />
+          <stop offset="100%" stopColor="#000000" stopOpacity={1} />
+        </linearGradient>
+
         {/* Chrome Shine (Accents) */}
         <linearGradient id="chromeGradient" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#ffffff" stopOpacity={0.2} />

@@ -226,8 +226,8 @@ function App() {
                                             <div className="mb-8 space-y-8">
                                                 <WasteAudit data={effectiveData as any} onNegativar={() => refetch()} />
                                                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-                                                    <div className="xl:col-span-8"><CriticalCostBarChart data={effectiveData as any} /></div>
-                                                    <div className="xl:col-span-4"><IntentDistributionChart data={effectiveData as any} /></div>
+                                                    <div className="xl:col-span-8"><CriticalCostBarChart data={effectiveData as any} isDark={isDarkMode} /></div>
+                                                    <div className="xl:col-span-4"><IntentDistributionChart data={effectiveData as any} isDark={isDarkMode} /></div>
                                                 </div>
                                             </div>
                                         </div>

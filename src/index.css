@@ -421,7 +421,7 @@
 .dark .ant-select-selection-placeholder,
 .dark .ant-input,
 .dark input {
-  color: #ffffff !important; 
+  color: #ffffff; 
   border-color: rgba(255, 255, 255, 0.4) !important;
 }
 
@@ -498,7 +498,7 @@
 .dark .tabs-trigger[data-state],
 .dark .ant-btn span,
 .dark button span {
-  color: #ffffff !important;
+  color: #ffffff; 
 }
 
 .dark input::placeholder,
@@ -526,7 +526,7 @@
 .dark .tabs-trigger {
   background-color: #1a1a1c !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #f8fafc !important; /* Força branco em vez de preto */
+  color: #f8fafc; 
 }
 
 .dark .table-action-btn:hover,
@@ -542,7 +542,7 @@
 .dark button.inline-flex, 
 .dark button[data-state],
 .dark .tabs-trigger[data-state] {
-  color: #f8fafc !important;
+  color: #f8fafc;
 }
 .dark .tabs-trigger[data-state="active"] {
   color: #000000 !important; /* No estado ativo o fundo é branco, então o texto deve ser preto */

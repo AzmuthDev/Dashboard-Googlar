@@ -97,6 +97,18 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
                         margin={{ top: 5, right: 30, left: 15, bottom: 5 }}
                         barSize={24}
                     >
+                        <defs>
+                            <linearGradient id="metallicBlackGradientLocal" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#18181b" stopOpacity={1} />
+                                <stop offset="50%" stopColor="#3f3f46" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#000000" stopOpacity={1} />
+                            </linearGradient>
+                            <linearGradient id="silverGradientLocal" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="#E5E7EB" stopOpacity={1} />
+                                <stop offset="50%" stopColor="#F9FAFB" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#D1D5DB" stopOpacity={1} />
+                            </linearGradient>
+                        </defs>
                         <CartesianGrid 
                             strokeDasharray="3 3" 
                             stroke={isDark ? "#27272a" : "#f4f4f5"} 
@@ -131,7 +143,7 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
                             {chartData.map((entry, index) => (
                                 <Cell 
                                     key={`cell-${index}`} 
-                                    fill={entry.isCritical ? '#ef4444' : (isDark ? 'url(#silverGradient)' : '#52525b')} 
+                                    fill={entry.isCritical ? '#ef4444' : (isDark ? 'url(#silverGradientLocal)' : 'url(#metallicBlackGradientLocal)')} 
                                 />
                             ))}
                             <LabelList 

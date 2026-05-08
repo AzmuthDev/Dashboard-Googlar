@@ -41,6 +41,18 @@ export function TermsChart({ data, isDark }: TermsChartProps) {
             <div className="flex-1 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={topTerms} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="metallicBlackGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#18181b" stopOpacity={1} />
+                                <stop offset="50%" stopColor="#3f3f46" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#000000" stopOpacity={1} />
+                            </linearGradient>
+                            <linearGradient id="silverGradientChart" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#E5E7EB" stopOpacity={1} />
+                                <stop offset="50%" stopColor="#F9FAFB" stopOpacity={1} />
+                                <stop offset="100%" stopColor="#D1D5DB" stopOpacity={1} />
+                            </linearGradient>
+                        </defs>
                         <XAxis
                             dataKey="name"
                             axisLine={false}
@@ -76,13 +88,13 @@ export function TermsChart({ data, isDark }: TermsChartProps) {
                             dataKey="cost"
                             radius={[6, 6, 0, 0]}
                             barSize={36}
-                            fill="url(#silverGradient)"
+                            fill={isDark ? "url(#silverGradientChart)" : "url(#metallicBlackGradient)"}
                         >
                             {topTerms.map((_, index) => (
                                 <Cell
                                     key={`cell-${index}`}
                                     className="transition-all duration-500 hover:opacity-80"
-                                    opacity={1 - (index * 0.1)}
+                                    fill={isDark ? "url(#silverGradientChart)" : "url(#metallicBlackGradient)"}
                                 />
                             ))}
                         </Bar>
