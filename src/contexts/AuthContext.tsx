@@ -1,0 +1,180 @@
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
+import type { Session, User } from '@supabase/supabase-js'
+import { supabase } from '../lib/supabase'
+import type { AuthorizedUser } from '../types'
+
+interface AuthContextType {
+  session: Session | null
+  user: User | null
+  profile: AuthorizedUser | null
+  isLoading: boolean
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const MASTER_ADMINS = ['joseeduardorms29@gmail.com'];
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [session, setSession] = useState<Session | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [profile, setProfile] = useState<AuthorizedUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const initialized = useRef(false)
+
+  const fetchProfile = useCallback(async (userId: string, userEmail: string): Promise<AuthorizedUser | null> => {
+    console.log(`[Auth] Buscando perfil: ${userEmail}`);
+    const isMaster = MASTER_ADMINS.includes(userEmail.toLowerCase());
+    
+    const fallbackAdmin: AuthorizedUser = { 
+      name: 'José Eduardo', 
+      email: userEmail, 
+      role: 'admin', 
+      isAdmin: true, 
+      addedAt: new Date().toISOString(), 
+      assignedCompanyIds: [] 
+    };
+
+    try {
+      // Usamos um timeout manual de 5s para não travar o carregamento inicial
+      const profilePromise = supabase.from('profiles').select('*').eq('id', userId).single();
+      const timeoutPromise = new Promise((_, r) => setTimeout(() => r('timeout'), 5000));
+
+      const result = await Promise.race([profilePromise, timeoutPromise]);
+
+      if (result === 'timeout') {
+        console.warn('[Auth] Timeout na busca do perfil.');
+        return isMaster ? fallbackAdmin : null;
+      }
+
+      const { data, error } = result as any;
+
+      if (error || !data) {
+        console.warn(`[Auth] Perfil não encontrado: ${error?.message}`);
+        return isMaster ? fallbackAdmin : null;
+      }
+
+      return {
+        id: data.id,
+        name: data.name,
+        email: userEmail,
+        role: data.role as 'admin' | 'standard',
+        isAdmin: data.is_admin || isMaster,
+        addedAt: data.created_at,
+        assignedCompanyIds: data.assigned_company_ids ?? [],
+        avatarUrl: data.avatar_url ?? undefined,
+        jobTitle: data.job_title ?? undefined,
+      };
+    } catch (err) {
+      console.error(`[Auth] Erro na busca de perfil:`, err);
+      return isMaster ? fallbackAdmin : null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
+
+    console.log('[Auth] Inicializando AuthProvider...');
+
+    // Safety timeout — nunca ficar preso em loading mais de 8s
+    const safetyTimer = setTimeout(() => {
+      setIsLoading(false);
+      console.warn('[Auth] Safety timeout — forçando saída do loading.');
+    }, 8000);
+
+    // Escuta mudanças de estado
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      console.log(`[Auth] Evento: ${event}`);
+      
+      if (currentSession) {
+        setSession(currentSession);
+        setUser(currentSession.user);
+        
+        // Defer para evitar deadlock com getSession()
+        setTimeout(async () => {
+          const prof = await fetchProfile(currentSession.user.id, currentSession.user.email ?? '');
+          setProfile(prof);
+          setIsLoading(false);
+          clearTimeout(safetyTimer);
+        }, 0);
+      } else {
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setIsLoading(false);
+        clearTimeout(safetyTimer);
+      }
+    });
+
+    // Verificação inicial
+    supabase.auth.getSession().then(async ({ data: { session: initialSession } }) => {
+      if (initialSession) {
+        console.log('[Auth] Sessão inicial encontrada');
+        setSession(initialSession);
+        setUser(initialSession.user);
+        const prof = await fetchProfile(initialSession.user.id, initialSession.user.email ?? '');
+        setProfile(prof);
+      }
+      setIsLoading(false);
+      clearTimeout(safetyTimer);
+    }).catch(err => {
+      console.error('[Auth] Erro ao checar sessão inicial:', err);
+      setIsLoading(false);
+      clearTimeout(safetyTimer);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimer);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (error) {
+        console.warn('[Auth] Login falhou no Supabase:', error.message);
+        return { error: error.message };
+      }
+      return { error: null };
+    } catch (err) {
+      console.error('[Auth] Erro crítico de conexão:', err);
+      return { error: 'Erro de conexão com o servidor.' };
+    }
+  }
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      // Limpamos manualmente os estados para garantir que o bypass também seja encerrado
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      localStorage.removeItem('googlar_active_company');
+    } catch (err) {
+      console.error('[Auth] Erro ao sair:', err);
+    }
+  }
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
+    return { error: error ? error.message : null };
+  }
+
+  return (
+    <AuthContext.Provider value={{ session, user, profile, isLoading, signIn, signOut, resetPassword }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  return context;
+}

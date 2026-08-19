@@ -1,0 +1,335 @@
+import { Typography } from 'antd'
+import { 
+    PackageOpen, 
+    Ban, 
+    HelpCircle, 
+    CheckCircle2, 
+    Trash2,
+    ChevronRight, 
+    ChevronDown, 
+} from 'lucide-react'
+import type { CampaignTerm } from '../types'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+import Loader from './ui/loader-15'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { gsap } from 'gsap'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Checkbox } from './ui/checkbox'
+import { HoverCard } from './ui/hover-card'
+import { toast } from 'sonner'
+import { cn } from '../lib/utils'
+import { WasteAudit } from './WasteAudit'
+import { CriticalCostBarChart } from './CriticalCostBarChart'
+import { IntentDistributionChart } from './IntentDistributionChart'
+import { ChartExplicationTooltip } from './ChartExplicationTooltip'
+import { supabase } from '../lib/supabase'
+
+const { Title, Text } = Typography
+
+interface DashboardTableProps {
+    data: CampaignTerm[]
+    isEmpty: boolean
+    isLoading: boolean
+    activeTab: string
+    setActiveTab: (tab: string) => void
+    isLabMode?: boolean
+    activeCompanyId?: string | null
+    targetTable?: string | null
+    onRefresh?: () => void
+    onNavigateToAudit?: (campanha: string, grupo: string, termo?: string) => void
+}
+
+export function DashboardTable({ data, isEmpty, isLoading, activeTab, setActiveTab, isLabMode, activeCompanyId, targetTable, onRefresh, onNavigateToAudit }: DashboardTableProps) {
+    const [hiddenRows, setHiddenRows] = useState<Set<string>>(new Set())
+    const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set())
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+    const [searchTerm, setSearchTerm] = useState('')
+    const tableRef = useRef<HTMLDivElement>(null)
+
+    const visibleData = data.filter(item => !hiddenRows.has(item.id))
+    const visibleDataCount = visibleData.length
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            ScrollTrigger.refresh()
+            if (tableRef.current) {
+                const rows = tableRef.current.querySelectorAll('.table-row-item')
+                gsap.fromTo(rows, 
+                    { opacity: 0, x: -10 }, 
+                    { opacity: 1, x: 0, duration: 0.4, stagger: 0.05, ease: "power2.out", overwrite: true }
+                )
+            }
+        }, 150)
+        return () => clearTimeout(timer)
+    }, [activeTab, visibleDataCount, expandedGroups.size, hiddenRows.size])
+
+    const isNegativar = (row: CampaignTerm) => {
+        return row.negativar === true || String(row.negativar || '').includes('❌');
+    }
+
+    const isDuvida = (row: CampaignTerm) => {
+        return row.duvida === true || String(row.duvida || '').includes('❓');
+    }
+
+    const isSegmentarAtiva = (val: any) => val === true || String(val || '').includes('✅')
+    const isSegmentarAlerta = (val: any) => String(val || '').includes('⚠️') || String(val || '').includes('❓')
+
+    const isSegmentado = (row: CampaignTerm) => {
+        return isSegmentarAtiva(row.segmentar) || isSegmentarAlerta(row.segmentar)
+    }
+
+    const isTesteAB = (row: CampaignTerm) => {
+        return row.teste_ab === true || String(row.teste_ab || '').includes('⚠️');
+    }
+
+    const filteredData = useMemo(() => {
+        let base = visibleData;
+        if (isLabMode) base = base.filter(r => String(r.teste_ab || '').includes('⚠️') || (r.status_granularidade || '').includes('⚠️'))
+        if (searchTerm) base = base.filter(r => (r.termo_de_pesquisa || '').toLowerCase().includes(searchTerm.toLowerCase()))
+
+        switch (activeTab) {
+            case 'negative': return base.filter(isNegativar)
+            case 'doubts': return base.filter(isDuvida)
+            case 'segmented': return base.filter(isSegmentado)
+            case 'ab_test': return base.filter(isTesteAB)
+            default: return base
+        }
+    }, [visibleData, activeTab, searchTerm, isLabMode])
+
+    const counts = useMemo(() => ({
+        negative: visibleData.filter(isNegativar).length,
+        doubts: visibleData.filter(isDuvida).length,
+        segmented: visibleData.filter(isSegmentado).length,
+        ab_test: visibleData.filter(isTesteAB).length
+    }), [visibleData])
+
+    const toggleSelectRow = (id: string) => {
+        const next = new Set(selectedRows)
+        if (next.has(id)) next.delete(id)
+        else next.add(id)
+        setSelectedRows(next)
+    }
+
+    const handleBulkAction = async (action: 'approve' | 'reject' | 'doubt_trg2' | 'doubt_trg3') => {
+        const count = selectedRows.size
+        if (count === 0) return
+
+        let payload: any = {}
+        if (action === 'approve') {
+            payload = { segmentar: true, negativar: false, duvida: false, status_granularidade: '✅ OK', suggestion_status: 'approved' }
+        } else if (action === 'reject') {
+            payload = { negativar: true, segmentar: false, duvida: false, status_granularidade: '❌ Negativar', suggestion_status: 'rejected' }
+        } else if (action === 'doubt_trg2') {
+            payload = { duvida: true, negativar: false, segmentar: false, status_granularidade: '❓ TRG 2', suggestion_status: 'doubt_trg2' }
+        } else if (action === 'doubt_trg3') {
+            payload = { duvida: true, negativar: false, segmentar: false, status_granularidade: '❓ TRG 3', suggestion_status: 'doubt_trg3' }
+        }
+
+        const actionName = action === 'approve' ? 'Aprovando' : action === 'reject' ? 'Negativando' : 'Marcando como dúvida';
+        
+        const updatePromise = async () => {
+            if (activeCompanyId && targetTable) {
+                const ids = Array.from(selectedRows);
+                for (const id of ids) {
+                    await supabase.from(targetTable).update(payload).eq('id', id);
+                }
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
+        };
+
+        toast.promise(updatePromise(), {
+            loading: `${actionName} itens...`,
+            success: () => {
+                setHiddenRows(prev => {
+                    const next = new Set(prev)
+                    selectedRows.forEach(id => next.add(id))
+                    return next
+                })
+                setSelectedRows(new Set())
+                if (onRefresh && activeCompanyId) setTimeout(onRefresh, 1000);
+                return `${count} itens processados.`
+            },
+            error: 'Erro no processamento.'
+        })
+    }
+
+    const segmentedGroups = useMemo(() => {
+        const groups: Record<string, CampaignTerm[]> = {}
+        filteredData.filter(isSegmentado).forEach(item => {
+            const groupName = item.sugestao_grupo || 'Sem Grupo Sugerido'
+            if (!groups[groupName]) groups[groupName] = []
+            groups[groupName].push(item)
+        })
+        return groups
+    }, [filteredData])
+
+    const toggleGroup = (group: string) => {
+        const next = new Set(expandedGroups)
+        if (next.has(group)) next.delete(group)
+        else next.add(group)
+        setExpandedGroups(next)
+    }
+
+    const renderEmpty = (message: string) => (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 text-muted-foreground rounded-[24px] border border-dashed border-border bg-muted/20">
+            <PackageOpen className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <p className="text-base">{message}</p>
+        </motion.div>
+    )
+
+    const renderRow = (item: CampaignTerm, isSelected: boolean) => {
+        const isNeg = isNegativar(item)
+        const isDuv = isDuvida(item)
+        const statusVal = (item.status_granularidade || '').trim() || 'Pendente'
+        
+        let statusGlow = "bg-muted text-muted-foreground"
+        if (statusVal.includes('OK') || isSegmentarAtiva(item.segmentar)) statusGlow = "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm"
+        if (isDuv || isSegmentarAlerta(item.segmentar)) statusGlow = "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+        if (isNeg) statusGlow = "bg-red-500/10 text-red-500 border border-red-500/20"
+
+        return (
+            <motion.div
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                key={item.id}
+                className={cn(
+                    "group relative flex items-center gap-4 py-4 px-4 transition-all border-b border-border hover:bg-muted/50 table-row-item",
+                    isSelected && "bg-muted/60"
+                )}
+            >
+                <div className="flex items-center">
+                    <Checkbox checked={isSelected} onChange={() => toggleSelectRow(item.id)} className="border-border" />
+                </div>
+
+                <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                    <div className="col-span-1">
+                        <div className="flex items-center gap-2">
+                            <h3 
+                                className="text-sm font-bold truncate text-primary hover:underline cursor-pointer transition-colors"
+                                onClick={() => onNavigateToAudit?.(item.campanha, item.grupo_de_anuncios, item.termo_de_pesquisa)}
+                                title="Visualizar na Auditoria Semântica"
+                            >
+                                {item.termo_de_pesquisa}
+                            </h3>
+                            <HoverCard content={item.observacao || "IA: Nenhuma observação adicional."}>
+                                <div className="cursor-help">
+                                    {isNeg && <Ban className="w-3.5 h-3.5 text-red-500" />}
+                                    {isDuv && <HelpCircle className="w-3.5 h-3.5 text-amber-500" />}
+                                    {!isNeg && !isDuv && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+                                </div>
+                            </HoverCard>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{item.campanha}</p>
+                        {item.palavra_chave && (
+                            <p className="text-[10px] text-primary/70 font-mono mt-1 flex items-center gap-1">
+                                <span className="opacity-50">KW:</span> {item.palavra_chave}
+                            </p>
+                        )}
+                    </div>
+                    <div className="hidden md:block col-span-1 text-muted-foreground text-xs leading-none">{item.grupo_de_anuncios || '—'}</div>
+                    <div className="col-span-1 md:text-center">
+                        <span className="text-sm font-semibold text-foreground">R$ {Number(item.custo || 0).toFixed(2).replace('.', ',')}</span>
+                        <p className="text-[10px] text-muted-foreground">{item.cliques} cli</p>
+                    </div>
+                    <div className="col-span-1 flex justify-end">
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full", statusGlow)}>
+                            {statusVal}
+                        </span>
+                    </div>
+                </div>
+            </motion.div>
+        )
+    }
+
+    if (isEmpty && !isLoading) {
+        return (
+            <div className="rounded-[24px] border border-border bg-card p-20 text-center shadow-sm">
+                <PackageOpen size={48} className="mx-auto text-muted-foreground opacity-20 mb-4" />
+                <Title level={4}>Sem dados no Funil</Title>
+                <Text className="text-muted-foreground">Conecte uma planilha para iniciar a triagem de especialistas.</Text>
+            </div>
+        )
+    }
+
+    if (isLoading) return <div className="py-20 flex justify-center"><Loader /></div>
+
+    return (
+        <div className="relative w-full">
+
+
+            <AnimatePresence>
+                {selectedRows.size > 0 && (
+                    <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-6 px-6 py-4 bg-primary text-primary-foreground rounded-2xl shadow-2xl border border-border">
+                        <div className="flex items-center gap-2 pr-4 border-r border-primary-foreground/20">
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary-foreground/10 text-xs font-bold">{selectedRows.size}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <button onClick={() => handleBulkAction('approve')} className="px-4 py-2 bg-primary-foreground text-primary rounded-xl text-sm font-bold table-action-btn">Aprovar</button>
+                            <button onClick={() => handleBulkAction('reject')} className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold table-action-btn">Negativar</button>
+                            <button onClick={() => handleBulkAction('doubt_trg2')} className="px-4 py-2 bg-amber-500/20 text-amber-500 border border-amber-500/50 hover:bg-amber-500/30 rounded-xl text-sm font-bold table-action-btn">Dúvida TRG 2</button>
+                            <button onClick={() => handleBulkAction('doubt_trg3')} className="px-4 py-2 bg-amber-500/20 text-amber-500 border border-amber-500/50 hover:bg-amber-500/30 rounded-xl text-sm font-bold table-action-btn">Dúvida TRG 3</button>
+                            <button onClick={() => setSelectedRows(new Set())} className="p-2 text-primary-foreground/50 hover:text-primary-foreground"><Trash2 size={20} /></button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <div className="w-full rounded-[24px] transition-all duration-500 ease-in-out border border-border bg-card shadow-xl overflow-hidden backdrop-blur-md">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <div className="p-6 pb-0">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+                            <div className="flex items-center gap-3">
+                                <Title level={4} className="!m-0 !text-foreground">Triagem de Especialistas</Title>
+                                <ChartExplicationTooltip content="Visão detalhada de todos os termos triados." />
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <div className="relative">
+                                    <input type="text" placeholder="Pesquisar termo..." className="w-full bg-muted border border-border rounded-xl py-2 px-4 text-sm focus:outline-none text-foreground placeholder-slate-500 dark:placeholder-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                </div>
+                            </div>
+                            <TabsList className="bg-muted p-1 rounded-xl h-auto w-full max-w-sm">
+                                <TabsTrigger value="all" className="rounded-lg text-xs py-1.5 flex-1 font-semibold text-slate-700 dark:text-slate-300 data-[state=active]:text-foreground">Todos</TabsTrigger>
+                                <TabsTrigger value="negative" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 font-semibold text-slate-700 dark:text-slate-300 data-[state=active]:text-foreground">🚫 {counts.negative}</TabsTrigger>
+                                <TabsTrigger value="doubts" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 font-semibold text-amber-600 dark:text-amber-500">❓ {counts.doubts}</TabsTrigger>
+                                <TabsTrigger value="segmented" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 font-semibold text-emerald-600 dark:text-emerald-500">🎯 {counts.segmented}</TabsTrigger>
+                                <TabsTrigger value="ab_test" className="rounded-lg text-xs py-1.5 flex-1 flex gap-2 font-semibold text-blue-600 dark:text-blue-500">🔬 {counts.ab_test}</TabsTrigger>
+                            </TabsList>
+                        </div>
+                    </div>
+
+                    <div className="min-h-[400px] overflow-x-hidden" ref={tableRef}>
+                        <TabsContent value="segmented" className="m-0 outline-none">
+                            {Object.entries(segmentedGroups).length > 0 ? Object.entries(segmentedGroups).map(([group, terms]) => (
+                                <div key={group} className="border-b last:border-0 border-border">
+                                    <button onClick={() => toggleGroup(group)} className="w-full flex items-center justify-between p-4 hover:bg-muted/50">
+                                        <div className="flex items-center gap-3">
+                                            {expandedGroups.has(group) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                                            <span className="text-xs font-black uppercase text-muted-foreground">{group}</span>
+                                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">{terms.length}</span>
+                                        </div>
+                                    </button>
+                                    <AnimatePresence>{expandedGroups.has(group) && (
+                                        <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden bg-muted/10">
+                                            {terms.map((item) => renderRow(item, selectedRows.has(item.id)))}
+                                        </motion.div>
+                                    )}</AnimatePresence>
+                                </div>
+                            )) : renderEmpty("Nenhuma segmentação encontrada.")}
+                        </TabsContent>
+                        {['all', 'negative', 'doubts', 'ab_test'].map(tab => (
+                            <TabsContent key={tab} value={tab} className="m-0 outline-none">
+                                {filteredData.length > 0 ? (
+                                    filteredData.map((item) => renderRow(item, selectedRows.has(item.id)))
+                                ) : renderEmpty("Nenhum dado encontrado.")}
+                            </TabsContent>
+                        ))}
+                    </div>
+                </Tabs>
+            </div>
+        </div>
+    )
+}
