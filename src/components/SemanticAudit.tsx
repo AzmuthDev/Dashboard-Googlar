@@ -217,12 +217,18 @@ export function SemanticAudit({
                     const dateB = new Date(b.data_resposta || b.data_envio_enquete || 0).getTime();
                     return dateB - dateA;
                 }
+                // Ordenação baseada no progresso da triagem (UI box 2 = triagem1, UI box 3 = triagem2)
+                const getTriageScore = (t: CampaignTerm) => {
+                    if (t.triagem1 && t.triagem2) return 2;
+                    if (t.triagem1) return 1;
+                    return 0;
+                };
                 
-                // Ordenar por segunda triagem (triagem2 === true vem primeiro)
-                const aTrg2 = a.triagem2 ? 1 : 0;
-                const bTrg2 = b.triagem2 ? 1 : 0;
-                if (bTrg2 !== aTrg2) {
-                    return bTrg2 - aTrg2;
+                const scoreA = getTriageScore(a);
+                const scoreB = getTriageScore(b);
+                
+                if (scoreB !== scoreA) {
+                    return scoreB - scoreA;
                 }
                 
                 return 0; // Mantém ordem original para as demais
