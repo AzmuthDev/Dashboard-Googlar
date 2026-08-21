@@ -41,7 +41,6 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
         { id: "semantic-audit", name: "Triagem de Especialistas", icon: FileText, isClickable: true },
         { id: "keyword-planner", name: "Planejador", icon: Wand2, isClickable: true },
         { id: "ferramenta", name: "Ferramenta", icon: Zap, isClickable: true },
-        { id: "laboratorio-ab", name: "Laboratório A/B", icon: FlaskConical, isClickable: true },
         { id: "auditoria-lsa", name: "Áudios LSA", icon: Mic, isClickable: true },
 
         { id: "users", name: isAdmin ? "Gerenciar Acessos" : "Meu Perfil", icon: Users, isClickable: true },

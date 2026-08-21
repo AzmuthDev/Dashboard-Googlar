@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Table, Button, message, Input, Select, Tooltip, Tabs, Modal as AntModal } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import {
-    FileText, TrendingUp, User, ShieldCheck, Search, Send, Sparkles, Clock, ClipboardPaste
+    FileText, TrendingUp, User, ShieldCheck, Search, Send, Sparkles, Clock, ClipboardPaste,
+    Megaphone, Layers, Download
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
@@ -87,6 +88,15 @@ export function SemanticAudit({
     const [importPasteData, setImportPasteData] = useState('');
     const [importTriageLevel, setImportTriageLevel] = useState<'trg1' | 'trg2' | 'trg3'>('trg1');
     const [isImporting, setIsImporting] = useState(false);
+
+    // Negativar Modal State
+    const [isNegativarModalVisible, setIsNegativarModalVisible] = useState(false);
+    const [negativarData, setNegativarData] = useState<{ id: string; matchType: string } | null>(null);
+
+    // Export Modal State
+    const [isExportModalVisible, setIsExportModalVisible] = useState(false);
+    const [exportText, setExportText] = useState('');
+    const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
     // Refs
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -181,21 +191,41 @@ export function SemanticAudit({
     // --- Secondary filtering by Tabs ---
     const filteredTerms = useMemo(() => {
         try {
-            if (activeTab === 'all') return baseFilteredTerms || [];
-            return (baseFilteredTerms || []).filter((t: CampaignTerm) => {
-                if (activeTab === 'negativas') return isNeg(t);
-                if (activeTab === 'duvidas')    return isDuv(t);
-                if (activeTab === 'aprovadas')  return isSeg(t);
-                if (activeTab === 'ab_test')    return isTst(t);
-                if (activeTab === 'responses')  return t.enviado_para_grupo === true;
-                return true;
-            }).sort((a, b) => {
+            let result = baseFilteredTerms || [];
+            
+            // Se não for a aba "Todos", aplica os filtros
+            if (activeTab !== 'all') {
+                result = result.filter((t: CampaignTerm) => {
+                    // Aba Respostas: apenas os enviados
+                    if (activeTab === 'responses') return t.enviado_para_grupo === true;
+                    
+                    // Para as outras abas específicas, oculta os que já foram enviados
+                    if (t.enviado_para_grupo === true) return false;
+                    
+                    if (activeTab === 'negativas') return isNeg(t);
+                    if (activeTab === 'duvidas')    return isDuv(t);
+                    if (activeTab === 'aprovadas')  return isSeg(t);
+                    if (activeTab === 'ab_test')    return isTst(t);
+                    return true;
+                });
+            }
+
+            // Aplica a ordenação
+            return result.sort((a: CampaignTerm, b: CampaignTerm) => {
                 if (activeTab === 'responses') {
                     const dateA = new Date(a.data_resposta || a.data_envio_enquete || 0).getTime();
                     const dateB = new Date(b.data_resposta || b.data_envio_enquete || 0).getTime();
                     return dateB - dateA;
                 }
-                return 0; // Mantém ordem original para outras abas
+                
+                // Ordenar por segunda triagem (triagem2 === true vem primeiro)
+                const aTrg2 = a.triagem2 ? 1 : 0;
+                const bTrg2 = b.triagem2 ? 1 : 0;
+                if (bTrg2 !== aTrg2) {
+                    return bTrg2 - aTrg2;
+                }
+                
+                return 0; // Mantém ordem original para as demais
             });
         } catch (e) {
             console.error('[Tab Filter Error]:', e);
@@ -207,11 +237,14 @@ export function SemanticAudit({
     const counts = useMemo(() => {
         const c = { all: baseFilteredTerms.length, negativas: 0, duvidas: 0, aprovadas: 0, ab_test: 0, responses: 0 };
         baseFilteredTerms.forEach((t: CampaignTerm) => {
-            if (isNeg(t)) c.negativas++;
-            if (isDuv(t)) c.duvidas++;
-            if (isSeg(t)) c.aprovadas++;
-            if (isTst(t)) c.ab_test++;
-            if (t.enviado_para_grupo === true) c.responses++;
+            if (t.enviado_para_grupo === true) {
+                c.responses++;
+            } else {
+                if (isNeg(t)) c.negativas++;
+                if (isDuv(t)) c.duvidas++;
+                if (isSeg(t)) c.aprovadas++;
+                if (isTst(t)) c.ab_test++;
+            }
         });
         return c;
     }, [baseFilteredTerms]);
@@ -262,7 +295,7 @@ export function SemanticAudit({
     };
 
     // --- Handlers de Mutação (Frontend ↔ Supabase) ---
-    const handleCategoryChange = async (id: string, category: CategoryKey) => {
+    const handleCategoryChange = async (id: string, category: CategoryKey, matchType?: string) => {
         if (!activeCompanyId || !targetTable) return;
         if (!(await ensureSession())) return;
 
@@ -274,13 +307,16 @@ export function SemanticAudit({
 
         try {
             // Mapeamento de categorias para colunas booleanas
-            const updatePayload = {
+            const updatePayload: any = {
                 negativar: category === 'negativar',
                 duvida:    category === 'duvida',
                 segmentar: category === 'segmentar',
                 teste_ab:  category === 'teste_ab',
                 manter:    category === 'manter'
             };
+            if (category === 'negativar' && matchType) {
+                updatePayload.tipo_corresp = matchType;
+            }
 
             const { error } = await supabase
                 .from(targetTable)
@@ -662,13 +698,13 @@ export function SemanticAudit({
             dataIndex: 'termo_de_pesquisa',
             key: 'termo_de_pesquisa',
             fixed: 'left' as const,
-            width: 250,
+            width: 280,
             render: (text: string, record: CampaignTerm) => {
                 const termToSearch = text || record?.termo_de_pesquisa || '—';
                 const isSearching = record?.id ? searchingTerms.has(record.id) : false;
                 
                 return (
-                    <div className="flex flex-col py-1 overflow-hidden">
+                    <div className="flex flex-col py-1.5 overflow-hidden">
                         <div className="flex items-center gap-2 group">
                             <Search 
                                 size={14} 
@@ -695,6 +731,20 @@ export function SemanticAudit({
                                 {record.palavra_chave}
                             </span>
                         )}
+                        <div className="flex flex-col gap-1 pl-6 mt-2">
+                            {record?.campanha && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded w-fit border border-slate-200 dark:border-slate-700/50">
+                                    <Megaphone size={10} className="text-indigo-500" />
+                                    <span className="truncate max-w-[220px]" title={record.campanha}>{record.campanha}</span>
+                                </div>
+                            )}
+                            {record?.grupo_de_anuncios && (
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded w-fit border border-slate-200 dark:border-slate-700/50">
+                                    <Layers size={10} className="text-purple-500" />
+                                    <span className="truncate max-w-[220px]" title={record.grupo_de_anuncios}>{record.grupo_de_anuncios}</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 );
             }
@@ -797,24 +847,38 @@ export function SemanticAudit({
                 const userTrg1 = record.user_triagem1 || metadata.user_triagem1;
                 const userTrg2 = record.user_triagem2 || metadata.user_triagem2;
 
+                const currentCat = triageState[record.id]?.category || (
+                    isNeg(record) ? 'negativar' :
+                    isDuv(record) ? 'duvida' :
+                    isSeg(record) ? 'segmentar' :
+                    isTst(record) ? 'teste_ab' :
+                    isMnt(record) ? 'manter' : null
+                );
+                const isDoubt = currentCat === 'duvida';
+
                 return (
                     <div className="flex flex-row items-center justify-center gap-3">
                         {conf1 ? (
                                 <div 
                                     className={cn(
-                                        "flex items-center justify-center w-8 h-8 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border cursor-pointer hover:opacity-80 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500",
+                                        "flex items-center justify-center w-8 h-8 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border",
+                                        isDoubt ? "cursor-pointer hover:opacity-80 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "cursor-not-allowed opacity-50",
                                         "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400"
                                     )}
-                                    onClick={() => handleToggleQC(record.id, 1, true)}
-                                    title={userTrg1 ? `Confirmado por: ${userTrg1}\n(Clique para desmarcar)` : "Clique para desmarcar"}
+                                    onClick={() => isDoubt && handleToggleQC(record.id, 1, true)}
+                                    title={!isDoubt ? "Apenas termos marcados como 'Dúvida' podem receber triagem" : userTrg1 ? `Confirmado por: ${userTrg1}\n(Clique para desmarcar)` : "Clique para desmarcar"}
                                 >
                                     <CheckCircleOutlined className="text-sm" />
                                 </div>
                         ) : (
                                 <Button 
                                     size="small"
-                                    title="Confirmar TRG 2"
-                                    className="w-8 h-8 rounded-lg text-sm font-black border-border hover:border-foreground dark:text-slate-400 dark:hover:text-white transition-all font-mono bg-transparent flex items-center justify-center p-0 triagem-btn"
+                                    title={!isDoubt ? "Apenas termos marcados como 'Dúvida' podem receber triagem" : "Confirmar TRG 2"}
+                                    disabled={!isDoubt}
+                                    className={cn(
+                                        "w-8 h-8 rounded-lg text-sm font-black flex items-center justify-center p-0 transition-all font-mono triagem-btn",
+                                        isDoubt ? "border-border hover:border-foreground dark:text-slate-400 dark:hover:text-white bg-transparent" : "opacity-30 border-transparent text-slate-500 bg-transparent"
+                                    )}
                                     onClick={() => handleToggleQC(record.id, 1, false)}
                                 >
                                     2
@@ -824,22 +888,23 @@ export function SemanticAudit({
                         {conf2 ? (
                                 <div 
                                     className={cn(
-                                        "flex items-center justify-center w-8 h-8 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border cursor-pointer hover:opacity-80 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500",
+                                        "flex items-center justify-center w-8 h-8 rounded-lg shadow-sm transition-all animate-in fade-in zoom-in duration-300 border",
+                                        isDoubt && conf1 ? "cursor-pointer hover:opacity-80 hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500" : "cursor-not-allowed opacity-50",
                                         "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400"
                                     )}
-                                    onClick={() => handleToggleQC(record.id, 2, true)}
-                                    title={userTrg2 ? `Confirmado por: ${userTrg2}\n(Clique para desmarcar)` : "Clique para desmarcar"}
+                                    onClick={() => isDoubt && conf1 && handleToggleQC(record.id, 2, true)}
+                                    title={!isDoubt ? "Apenas termos marcados como 'Dúvida' podem receber triagem" : userTrg2 ? `Confirmado por: ${userTrg2}\n(Clique para desmarcar)` : "Clique para desmarcar"}
                                 >
                                     <ShieldCheck size={16} />
                                 </div>
                         ) : (
                                 <Button 
                                     size="small"
-                                    title="Confirmar TRG 3"
-                                    disabled={!conf1}
+                                    title={!isDoubt ? "Apenas termos marcados como 'Dúvida' podem receber triagem" : "Confirmar TRG 3"}
+                                    disabled={!isDoubt || !conf1}
                                     className={cn(
                                         "w-8 h-8 rounded-lg text-sm font-black flex items-center justify-center p-0 transition-all font-mono triagem-btn",
-                                        conf1 ? "border-border hover:border-foreground dark:text-slate-400 dark:hover:text-white bg-transparent" : "opacity-50 cursor-not-allowed border-transparent text-slate-600"
+                                        (isDoubt && conf1) ? "border-border hover:border-foreground dark:text-slate-400 dark:hover:text-white bg-transparent" : "opacity-30 cursor-not-allowed border-transparent text-slate-500 bg-transparent"
                                     )}
                                     onClick={() => handleToggleQC(record.id, 2, false)}
                                 >
@@ -901,7 +966,14 @@ export function SemanticAudit({
                             value={currentCat}
                             placeholder="Categoria..."
                             className="w-full min-w-[160px] custom-select-v3-action"
-                            onChange={(val) => handleCategoryChange(record.id, val)}
+                            onChange={(val) => {
+                                if (val === 'negativar') {
+                                    setNegativarData({ id: record.id, matchType: 'exata' });
+                                    setIsNegativarModalVisible(true);
+                                } else {
+                                    handleCategoryChange(record.id, val as CategoryKey);
+                                }
+                            }}
                             options={CATEGORY_OPTIONS}
                             size="middle"
                             popupMatchSelectWidth={false}
@@ -1009,7 +1081,7 @@ export function SemanticAudit({
                     className="rounded-3xl border shadow-xl overflow-hidden transition-all duration-300 bg-card border-border"
                 >
                     {/* Tabs filtering */}
-                    <div className="px-6 pt-4 border-b border-border flex justify-between items-end">
+                    <div className="px-6 pt-4 border-b border-border flex justify-between items-center">
                         <Tabs
                             activeKey={activeTab}
                             onChange={setActiveTab}
@@ -1023,6 +1095,38 @@ export function SemanticAudit({
                                 { key: 'responses', label: `📩 Respostas Cliente (${counts.responses})` },
                             ]}
                         />
+                        {(activeTab === 'aprovadas' || activeTab === 'negativas' || activeTab === 'responses') && (
+                            <Button 
+                                type="primary"
+                                icon={<Download className="w-4 h-4" />}
+                                onClick={() => {
+                                    const termsToExport = selectedRowKeys.length > 0 
+                                        ? filteredTerms.filter(t => selectedRowKeys.includes(t.id))
+                                        : filteredTerms;
+                                    
+                                    let text = "Campaign\tAd Group\tKeyword\n";
+                                    termsToExport.forEach(t => {
+                                        let kw = t.termo_de_pesquisa;
+                                        const currentCat = triageState[t.id]?.category || t.acao; // Fallback to client action
+                                        
+                                        if (activeTab === 'negativas' || currentCat === 'negativar') {
+                                            const mt = t.tipo_corresp || 'exata';
+                                            if (mt === 'exata') kw = `[${kw}]`;
+                                            else if (mt === 'frase') kw = `"${kw}"`;
+                                        } else if (activeTab === 'aprovadas' || currentCat === 'segmentar') {
+                                            kw = `[${kw}]`; // Segmentar como exata por padrão
+                                        }
+                                        
+                                        text += `${t.campanha}\t${t.grupo_de_anuncios}\t${kw}\n`;
+                                    });
+                                    setExportText(text);
+                                    setIsExportModalVisible(true);
+                                }}
+                                className="h-10 px-5 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 text-white border-none shadow-lg mb-4"
+                            >
+                                Exportar Termos
+                            </Button>
+                        )}
                     </div>
 
                     <Table
@@ -1030,6 +1134,10 @@ export function SemanticAudit({
                         dataSource={filteredTerms}
                         columns={columns}
                         rowKey="id"
+                        rowSelection={{
+                            selectedRowKeys,
+                            onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys)
+                        }}
                         pagination={{ 
                             pageSize: 20, 
                             showTotal: (total) => `${total} encontrados`,
@@ -1159,25 +1267,115 @@ export function SemanticAudit({
                             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-3">
                                 <CheckCircleOutlined className="text-emerald-500" />
                                 <span className="text-emerald-400 text-xs font-bold">
-                                    {validCount} termos detectados {hasH ? '(cabeçalho ignorado)' : ''}
+                                    {validCount} termos prontos para importar
                                 </span>
                             </div>
                         );
                     })()}
 
-                    {/* Botão de Ação */}
-                    <Button
-                        type="primary"
+                    <Button 
+                        type="primary" 
                         onClick={handleImportSheet}
                         loading={isImporting}
-                        disabled={!importPasteData.trim() || !activeCompanyId}
-                        className="w-full h-12 rounded-2xl font-black uppercase tracking-wider text-sm !bg-emerald-600 hover:!bg-emerald-700 !border-none shadow-lg"
-                        icon={<Send className="w-4 h-4" />}
+                        className="w-full font-bold h-10 rounded-xl !bg-emerald-600 hover:!bg-emerald-700 !border-none mt-4"
                     >
-                        Processar e Salvar
+                        Processar e Importar
+                    </Button>
+                </div>
+            </AntModal>
+
+            {/* Modal de Nível de Negativação */}
+            <AntModal
+                title={
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-500/10 rounded-xl">
+                            <span className="text-xl">❌</span>
+                        </div>
+                        <div>
+                            <span className="text-lg font-black uppercase tracking-tight dark:text-white">Nível de Negativação</span>
+                            <p className="text-[11px] text-muted-foreground font-normal mt-0.5">Selecione o nível de correspondência no Google Ads.</p>
+                        </div>
+                    </div>
+                }
+                open={isNegativarModalVisible}
+                onCancel={() => setIsNegativarModalVisible(false)}
+                footer={null}
+                width={400}
+                centered
+                className="luxury-modal"
+                destroyOnClose
+            >
+                <div className="mt-6 space-y-4">
+                    <Select
+                        value={negativarData?.matchType}
+                        onChange={(val) => setNegativarData(prev => prev ? { ...prev, matchType: val } : null)}
+                        className="w-full [&_.ant-select-selector]:!bg-slate-800 [&_.ant-select-selector]:!border-slate-600 [&_.ant-select-selection-item]:!text-slate-100"
+                        popupClassName="!bg-slate-800 !border !border-slate-700 [&_.ant-select-item]:!text-slate-200 [&_.ant-select-item-option-active]:!bg-blue-500 [&_.ant-select-item-option-selected]:!bg-blue-600"
+                        options={[
+                            { value: 'exata', label: 'Exata [termo]' },
+                            { value: 'frase', label: 'Frase "termo"' },
+                            { value: 'ampla', label: 'Ampla (termo)' },
+                        ]}
+                    />
+                    <Button 
+                        type="primary" 
+                        danger
+                        className="w-full font-bold h-10 rounded-xl mt-4"
+                        onClick={() => {
+                            if (negativarData) {
+                                handleCategoryChange(negativarData.id, 'negativar', negativarData.matchType);
+                                setIsNegativarModalVisible(false);
+                            }
+                        }}
+                    >
+                        Confirmar Negativação
+                    </Button>
+                </div>
+            </AntModal>
+
+            {/* Modal de Exportação para Ads Editor */}
+            <AntModal
+                title={
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-500/10 rounded-xl">
+                            <Download className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                            <span className="text-lg font-black uppercase tracking-tight dark:text-white">Exportar para Google Ads Editor</span>
+                            <p className="text-[11px] text-muted-foreground font-normal mt-0.5">Copie os termos abaixo e cole diretamente no Google Ads Editor.</p>
+                        </div>
+                    </div>
+                }
+                open={isExportModalVisible}
+                onCancel={() => setIsExportModalVisible(false)}
+                footer={null}
+                width={600}
+                centered
+                className="luxury-modal"
+                destroyOnClose
+            >
+                <div className="mt-6 space-y-4">
+                    <Input.TextArea
+                        value={exportText}
+                        readOnly
+                        autoSize={{ minRows: 10, maxRows: 20 }}
+                        className="!bg-slate-900 !border-slate-700 !text-slate-200 font-mono text-[11px] rounded-xl p-4 w-full whitespace-pre"
+                        onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                    />
+                    <Button 
+                        type="primary" 
+                        className="w-full font-bold h-10 rounded-xl mt-4 bg-blue-600 hover:bg-blue-700 border-none"
+                        onClick={() => {
+                            navigator.clipboard.writeText(exportText);
+                            message.success("Termos copiados para a área de transferência!");
+                            setIsExportModalVisible(false);
+                        }}
+                    >
+                        Copiar para Área de Transferência
                     </Button>
                 </div>
             </AntModal>
         </div>
     );
 }
+

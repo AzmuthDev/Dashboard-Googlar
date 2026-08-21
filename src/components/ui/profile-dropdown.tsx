@@ -35,18 +35,7 @@ export function ProfileDropdown({
     const [, setIsOpen] = React.useState(false);
 
     // We mock menu items based on the context of Googlar Dashboard
-    const menuItems: MenuItem[] = [
-        {
-            label: isAdmin ? "Configurações" : "Meu Perfil",
-            icon: <User className="w-4 h-4" />,
-            onClick: () => { window.location.hash = isAdmin ? '#gerenciar-acessos' : '#meu-perfil' }
-        },
-        {
-            label: isAdmin ? "Administrador" : "Usuário Padrão",
-            value: isAdmin ? "PRO" : "TEAM",
-            icon: <Settings className="w-4 h-4" />
-        }
-    ];
+    const menuItems: MenuItem[] = [];
 
     if (isCollapsed) {
         return (
