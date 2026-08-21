@@ -1295,11 +1295,11 @@ body:not(.dark) {
 
 /* ─── Checkbox Visibility Fixes ─── */
 .ant-checkbox .ant-checkbox-inner {
-  border: 2px solid #71717a !important; /* zinc-500 for light mode */
+  border: 2px solid #3b82f6 !important; /* blue-500 for better visibility */
   background-color: transparent !important;
 }
 .ant-checkbox:hover .ant-checkbox-inner {
-  border-color: #3b82f6 !important; /* blue-500 */
+  border-color: #2563eb !important; /* blue-600 */
 }
 .ant-checkbox-checked .ant-checkbox-inner {
   background-color: #3b82f6 !important;
@@ -1311,7 +1311,7 @@ body:not(.dark) {
 
 /* Dark mode overrides for checkbox */
 .dark .ant-checkbox .ant-checkbox-inner {
-  border: 2px solid #a1a1aa !important; /* zinc-400 for dark mode */
+  border: 2px solid #3b82f6 !important; /* blue-500 for dark mode */
   background-color: rgba(0, 0, 0, 0.2) !important;
 }
 .dark .ant-checkbox:hover .ant-checkbox-inner {

@@ -102,7 +102,10 @@ function App() {
 
     const lightTheme = {
         token: { colorPrimary: '#18181b', colorBgBase: '#ffffff', fontFamily: 'Geist, sans-serif' },
-        components: { Layout: { siderBg: '#ffffff', headerBg: 'transparent' } }
+        components: { 
+            Layout: { siderBg: '#ffffff', headerBg: 'transparent' },
+            Checkbox: { colorBorder: '#3b82f6', colorPrimary: '#3b82f6' }
+        }
     }
     const darkTheme = {
         token: { 
@@ -116,7 +119,8 @@ function App() {
         components: { 
             Layout: { siderBg: '#09090b', headerBg: 'transparent' },
             Input: { colorText: '#ffffff', colorPlaceholder: 'rgba(255, 255, 255, 0.45)', colorBgContainer: '#111111' },
-            Select: { colorText: '#ffffff', colorPlaceholder: 'rgba(255, 255, 255, 0.45)', colorBgContainer: '#111111' }
+            Select: { colorText: '#ffffff', colorPlaceholder: 'rgba(255, 255, 255, 0.45)', colorBgContainer: '#111111' },
+            Checkbox: { colorBorder: '#3b82f6', colorPrimary: '#3b82f6' }
         }
     }
 

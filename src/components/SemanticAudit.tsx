@@ -733,14 +733,14 @@ export function SemanticAudit({
                         )}
                         <div className="flex flex-col gap-1 pl-6 mt-2">
                             {record?.campanha && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded w-fit border border-slate-200 dark:border-slate-700/50">
-                                    <Megaphone size={10} className="text-indigo-500" />
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded w-fit border border-indigo-200 dark:border-indigo-500/20">
+                                    <Megaphone size={10} className="text-indigo-500 dark:text-indigo-400" />
                                     <span className="truncate max-w-[220px]" title={record.campanha}>{record.campanha}</span>
                                 </div>
                             )}
                             {record?.grupo_de_anuncios && (
-                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded w-fit border border-slate-200 dark:border-slate-700/50">
-                                    <Layers size={10} className="text-purple-500" />
+                                <div className="flex items-center gap-1.5 text-[10px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-500/10 px-1.5 py-0.5 rounded w-fit border border-purple-200 dark:border-purple-500/20">
+                                    <Layers size={10} className="text-purple-500 dark:text-purple-400" />
                                     <span className="truncate max-w-[220px]" title={record.grupo_de_anuncios}>{record.grupo_de_anuncios}</span>
                                 </div>
                             )}
