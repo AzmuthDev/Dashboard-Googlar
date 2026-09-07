@@ -12,7 +12,7 @@ export function Tooltip({ children, content, className }: TooltipProps) {
     <div className="group relative inline-block">
       {children}
       <div className={cn(
-        "absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-xs -translate-x-1/2 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 dark:bg-zinc-100 dark:text-zinc-900 pointer-events-none",
+        "absolute bottom-full left-1/2 z-50 mb-2 w-max max-w-xs -translate-x-1/2 rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100 dark:bg-zinc-100 dark:text-zinc-900 pointer-events-none group-hover:pointer-events-auto",
         className
       )}>
         {content}

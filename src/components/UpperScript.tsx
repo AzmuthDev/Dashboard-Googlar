@@ -141,23 +141,72 @@ export function UpperScript({
         }
     }, [auditResult]);
 
-    // Handlers do Tooltip Flutuante
+    // Timer e Handlers do Tooltip Flutuante Interativo
+    const tooltipTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const clearTooltipTimer = () => {
+        if (tooltipTimeoutRef.current) {
+            clearTimeout(tooltipTimeoutRef.current);
+            tooltipTimeoutRef.current = null;
+        }
+    };
+
     const showTooltip = (termKey: string, targetEl: HTMLElement) => {
         if (!targetEl) return;
+        clearTooltipTimer();
+
         const rect = targetEl.getBoundingClientRect();
-        const placement = rect.top > 140 ? 'top' : 'bottom';
+        const placement = rect.top > 160 ? 'top' : 'bottom';
+        
+        // Garante que o tooltip fique bem centralizado e dentro dos limites seguros da tela
+        const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+        const rawX = rect.left + rect.width / 2;
+        const clampedX = Math.max(160, Math.min(windowWidth - 160, rawX));
+
         setTooltip({
             visible: true,
             termKey,
-            x: rect.left + rect.width / 2,
-            y: placement === 'top' ? rect.top - 8 : rect.bottom + 8,
+            x: clampedX,
+            y: placement === 'top' ? rect.top - 4 : rect.bottom + 4,
             placement
         });
     };
 
-    const hideTooltip = () => {
-        setTooltip(prev => ({ ...prev, visible: false }));
+    const hideTooltip = (delayMs: number = 220) => {
+        clearTooltipTimer();
+        tooltipTimeoutRef.current = setTimeout(() => {
+            setTooltip(prev => ({ ...prev, visible: false, termKey: null }));
+        }, delayMs);
     };
+
+    const immediateHideTooltip = () => {
+        clearTooltipTimer();
+        setTooltip(prev => ({ ...prev, visible: false, termKey: null }));
+    };
+
+    // Fecha o tooltip imediatamente caso o usuário role a tela, redimensione a janela ou aperte ESC
+    useEffect(() => {
+        if (!tooltip.visible) return;
+
+        const handleDismiss = () => {
+            immediateHideTooltip();
+        };
+
+        window.addEventListener('scroll', handleDismiss, { passive: true, capture: true });
+        window.addEventListener('resize', handleDismiss, { passive: true });
+        
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') handleDismiss();
+        };
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('scroll', handleDismiss, { capture: true });
+            window.removeEventListener('resize', handleDismiss);
+            document.removeEventListener('keydown', handleKeyDown);
+            clearTooltipTimer();
+        };
+    }, [tooltip.visible]);
 
     // Alternância de Multi-Seleção de Regiões
     const toggleRegion = (region: string) => {
@@ -379,7 +428,7 @@ export function UpperScript({
         <span
             className={`inline-flex items-center gap-1 cursor-help group select-none ${className}`}
             onMouseEnter={(e) => showTooltip(termKey, e.currentTarget)}
-            onMouseLeave={hideTooltip}
+            onMouseLeave={() => hideTooltip(200)}
         >
             <span className="underline decoration-dotted decoration-cyan-500/80 underline-offset-4 group-hover:text-amber-400 transition-colors">
                 {label || termKey}
@@ -1844,7 +1893,7 @@ export function UpperScript({
                 </div>
             </Modal>
 
-            {/* TOOLTIP FLUTUANTE GLOBAL */}
+            {/* TOOLTIP FLUTUANTE GLOBAL INTERATIVO */}
             {tooltip.visible && activeTooltipData && (
                 <div
                     style={{
@@ -1854,14 +1903,26 @@ export function UpperScript({
                         transform: tooltip.placement === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
                         zIndex: 9999
                     }}
-                    className="pointer-events-none transition-all duration-150"
+                    className="pointer-events-auto transition-all duration-150 py-1.5"
+                    onMouseEnter={clearTooltipTimer}
+                    onMouseLeave={() => hideTooltip(150)}
                 >
-                    <div className="bg-slate-950 border border-slate-700 p-3 rounded-xl shadow-2xl max-w-xs text-left animate-fadeIn">
-                        <div className="text-[11px] font-bold text-cyan-400 mb-0.5">{activeTooltipData.term}</div>
-                        <p className="text-[10px] text-slate-200 mb-1 leading-snug">{activeTooltipData.meaning}</p>
-                        <span className="text-[9px] text-amber-300 font-mono block border-t border-slate-800 pt-1">
-                            {activeTooltipData.purpose}
-                        </span>
+                    <div className="bg-slate-950/95 border border-slate-700/90 p-3.5 rounded-xl shadow-2xl max-w-xs text-left backdrop-blur-md animate-fadeIn select-text relative">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-xs font-bold text-cyan-400 font-mono">{activeTooltipData.term}</span>
+                            <button
+                                onClick={immediateHideTooltip}
+                                className="text-slate-500 hover:text-slate-300 p-0.5 rounded transition-colors text-[10px] cursor-pointer"
+                                title="Fechar explicação"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                        <p className="text-[11px] text-slate-200 mb-1.5 leading-snug">{activeTooltipData.meaning}</p>
+                        <div className="text-[10px] text-amber-300 font-mono border-t border-slate-800/80 pt-1.5 flex items-start gap-1">
+                            <span className="text-amber-400 shrink-0">💡</span>
+                            <span>{activeTooltipData.purpose}</span>
+                        </div>
                     </div>
                 </div>
             )}
