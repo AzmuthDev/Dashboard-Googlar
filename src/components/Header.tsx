@@ -2,7 +2,7 @@ import { Layout, Button, Input, Select, Typography, Tooltip } from 'antd'
 import { SyncOutlined, BellOutlined, SearchOutlined, DatabaseOutlined } from '@ant-design/icons'
 import { useEffect, useState } from 'react'
 import type { Company, CampaignTerm } from '../types'
-import { Sparkles, Bot } from 'lucide-react'
+import { Sparkles, Bot, Upload } from 'lucide-react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet'
 import { SemanticCopilot } from './SemanticCopilot'
 import { fetchCompanies } from '../lib/supabaseProvider'
@@ -62,7 +62,7 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                 </h1>
             </div>
 
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
                 {currentView === 'semantic-audit' && (
                     <Input
                         placeholder="Buscar Termo..."
@@ -71,40 +71,54 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                     />
                 )}
 
-                <div className="flex items-center gap-2 bg-[#111111] p-1.5 rounded-xl border border-zinc-800 shadow-xl transition-all hover:border-zinc-700">
-                    <DatabaseOutlined className="text-white ml-2 opacity-70" />
-                    <Select
-                        placeholder={(<span className="text-zinc-300 font-bold uppercase text-[10px] tracking-widest">Selecionar Empresa</span>)}
-                        value={activeCompanyId || undefined}
-                        onChange={onSelectCompany}
-                        style={{ width: 220 }}
-                        variant="borderless"
-                        className="font-bold dark-selector luxury-select"
-                        options={linkedCompanies.map(c => ({
-                            value: c.id,
-                            label: (
-                                <div className="flex items-center gap-2 text-white">
-                                    <span className="truncate uppercase text-[11px] tracking-tight">{c.name}</span>
-                                    {c.dataSourceType === 'local' && <span className="text-[9px] border border-white/20 px-1.5 py-0.5 rounded uppercase font-black">CSV</span>}
-                                </div>
-                            )
-                        }))}
-                        notFoundContent={<Typography.Text className="p-2 block text-xs text-zinc-500 uppercase font-black">Nenhuma base vinculada.</Typography.Text>}
-                        popupClassName="dark-dropdown luxury-dropdown"
-                    />
-                    
-                    <Tooltip title="Sincronizar dados">
-                        <Button
-                            disabled={!activeCompanyId || isLoading}
-                            loading={isLoading}
-                            onClick={onRefresh}
-                            type="text"
-                            icon={<SyncOutlined className="text-inherit dark:text-white" />}
-                            className="text-inherit hover:opacity-80 flex items-center justify-center p-2"
-                        />
-                    </Tooltip>
-                </div>
+                {(currentView === 'upperscript' || currentView === 'ferramenta') && (
+                    <button
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent('upperscript_trigger_upload'));
+                        }}
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold tracking-wide uppercase transition-all duration-200 bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/20 border border-amber-400 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                        title="Fazer Upload de Planilha (.xlsx, .xls, .csv)"
+                    >
+                        <Upload className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                        <span>Upload Planilha</span>
+                    </button>
+                )}
 
+                {currentView !== 'upperscript' && currentView !== 'ferramenta' && (
+                    <div className="flex items-center gap-2 bg-[#111111] p-1.5 rounded-xl border border-zinc-800 shadow-xl transition-all hover:border-zinc-700">
+                        <DatabaseOutlined className="text-white ml-2 opacity-70" />
+                        <Select
+                            placeholder={(<span className="text-zinc-300 font-bold uppercase text-[10px] tracking-widest">Selecionar Empresa</span>)}
+                            value={activeCompanyId || undefined}
+                            onChange={onSelectCompany}
+                            style={{ width: 220 }}
+                            variant="borderless"
+                            className="font-bold dark-selector luxury-select"
+                            options={linkedCompanies.map(c => ({
+                                value: c.id,
+                                label: (
+                                    <div className="flex items-center gap-2 text-white">
+                                        <span className="truncate uppercase text-[11px] tracking-tight">{c.name}</span>
+                                        {c.dataSourceType === 'local' && <span className="text-[9px] border border-white/20 px-1.5 py-0.5 rounded uppercase font-black">CSV</span>}
+                                    </div>
+                                )
+                            }))}
+                            notFoundContent={<Typography.Text className="p-2 block text-xs text-zinc-500 uppercase font-black">Nenhuma base vinculada.</Typography.Text>}
+                            popupClassName="dark-dropdown luxury-dropdown"
+                        />
+                        
+                        <Tooltip title="Sincronizar dados">
+                            <Button
+                                disabled={!activeCompanyId || isLoading}
+                                loading={isLoading}
+                                onClick={onRefresh}
+                                type="text"
+                                icon={<SyncOutlined className="text-inherit dark:text-white" />}
+                                className="text-inherit hover:opacity-80 flex items-center justify-center p-2"
+                            />
+                        </Tooltip>
+                    </div>
+                )}
             </div>
         </AntHeader>
     )

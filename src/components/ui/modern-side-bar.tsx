@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import {
-    LayoutDashboard, Users, FileText, Bell, ChevronLeft, ChevronRight, Sun, Moon, Briefcase, Menu, X, Zap, Lock, FlaskConical, Wand2, Mic, Sparkles
+    LayoutDashboard, Users, FileText, Bell, ChevronLeft, ChevronRight, Sun, Moon, Briefcase, Menu, X, Zap, Lock, FlaskConical, Wand2, Mic, Sparkles, Search
 } from 'lucide-react';
 import { ProfileDropdown } from './profile-dropdown';
 import { Switch } from './switch-button';
@@ -40,7 +40,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
         { id: "companies", name: "Empresas", icon: Briefcase, isClickable: true },
         { id: "semantic-audit", name: "Triagem de Especialistas", icon: FileText, isClickable: true },
         { id: "keyword-planner", name: "Planejador", icon: Wand2, isClickable: true },
-        { id: "upperscript", name: "Upper Script", icon: Sparkles, isClickable: true },
+        { id: "upperscript", name: "Upper Script", icon: Search, isClickable: true },
         { id: "auditoria-lsa", name: "Áudios LSA", icon: Mic, isClickable: true },
 
         { id: "users", name: isAdmin ? "Gerenciar Acessos" : "Meu Perfil", icon: Users, isClickable: true },

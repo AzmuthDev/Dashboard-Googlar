@@ -90,6 +90,18 @@ export function UpperScript({
         direction: 'desc'
     });
 
+    // Estado e Refs para a Barra de Rolagem Superior e Arraste da Tabela (Modelo 2)
+    const tableScrollRef = useRef<HTMLDivElement>(null);
+    const topScrollRef = useRef<HTMLDivElement>(null);
+    const [tableScrollWidth, setTableScrollWidth] = useState<number>(0);
+    const [isDraggingTable, setIsDraggingTable] = useState<boolean>(false);
+    const isMouseDownRef = useRef<boolean>(false);
+    const isDraggingRef = useRef<boolean>(false);
+    const startXRef = useRef<number>(0);
+    const startScrollLeftRef = useRef<number>(0);
+    const justDraggedRef = useRef<boolean>(false);
+    const isSyncingScrollRef = useRef<boolean>(false);
+
     // Modal do Glossário Geral
     const [showGlossaryModal, setShowGlossaryModal] = useState(false);
 
@@ -208,6 +220,15 @@ export function UpperScript({
         };
     }, [tooltip.visible]);
 
+    // Disparo de upload vindo do botão do cabeçalho superior (Header.tsx)
+    useEffect(() => {
+        const handleTrigger = () => {
+            fileInputRef.current?.click();
+        };
+        window.addEventListener('upperscript_trigger_upload', handleTrigger);
+        return () => window.removeEventListener('upperscript_trigger_upload', handleTrigger);
+    }, []);
+
     // Alternância de Multi-Seleção de Regiões
     const toggleRegion = (region: string) => {
         const allAvailable = auditResult.allRegions;
@@ -229,6 +250,8 @@ export function UpperScript({
 
     // Ordenação das Colunas da Tabela do Modelo 2
     const handleSort = (key: string) => {
+        // Ignora o clique se acabou de realizar um arrasto de tela
+        if (justDraggedRef.current) return;
         setSortConfig(prev => {
             if (prev.key === key) {
                 return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
@@ -256,6 +279,157 @@ export function UpperScript({
             return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
         });
     }, [auditResult, selectedRegions, sortConfig]);
+
+    // Totais Consolidados dos Termos Filtrados (para o rodapé da tabela)
+    const filteredTotals = useMemo(() => {
+        let impr = 0;
+        let cliques = 0;
+        let custo = 0;
+        let conv = 0;
+        let receita = 0;
+        let somaNotas = 0;
+
+        filteredTerms.forEach((t: any) => {
+            impr += t.impr || 0;
+            cliques += t.cliques || 0;
+            custo += t.custo || 0;
+            conv += t.conv || 0;
+            somaNotas += t.nota || 0;
+            receita += (t.custo || 0) * (t.roas || 0);
+        });
+
+        const cpa = conv > 0 ? custo / conv : 0;
+        const roas = custo > 0 ? receita / custo : 0;
+        const notaMedia = filteredTerms.length > 0 ? somaNotas / filteredTerms.length : 0;
+
+        return {
+            impr,
+            cliques,
+            custo,
+            conv,
+            cpa,
+            roas,
+            notaMedia
+        };
+    }, [filteredTerms]);
+
+    // Sincronização entre a barra de rolagem superior e a tabela
+    const handleTopScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        if (isSyncingScrollRef.current) return;
+        if (tableScrollRef.current) {
+            if (Math.abs(tableScrollRef.current.scrollLeft - e.currentTarget.scrollLeft) > 1) {
+                isSyncingScrollRef.current = true;
+                tableScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                requestAnimationFrame(() => {
+                    isSyncingScrollRef.current = false;
+                });
+            }
+        }
+    };
+
+    const handleTableScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        if (isSyncingScrollRef.current) return;
+        if (topScrollRef.current) {
+            if (Math.abs(topScrollRef.current.scrollLeft - e.currentTarget.scrollLeft) > 1) {
+                isSyncingScrollRef.current = true;
+                topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+                requestAnimationFrame(() => {
+                    isSyncingScrollRef.current = false;
+                });
+            }
+        }
+    };
+
+    // Mede a largura total da tabela para sincronizar a barra de rolagem superior
+    useEffect(() => {
+        const tableEl = tableScrollRef.current;
+        if (!tableEl) return;
+
+        const updateWidth = () => {
+            if (tableScrollRef.current) {
+                setTableScrollWidth(tableScrollRef.current.scrollWidth);
+            }
+        };
+
+        updateWidth();
+
+        const resizeObserver = new ResizeObserver(() => {
+            updateWidth();
+        });
+
+        resizeObserver.observe(tableEl);
+        const innerTable = tableEl.querySelector('table');
+        if (innerTable) {
+            resizeObserver.observe(innerTable);
+        }
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [filteredTerms, activeTab]);
+
+    // Arraste com o botão esquerdo para rolagem horizontal (Drag-to-Scroll)
+    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.button !== 0) return; // Apenas botão esquerdo
+        const target = e.target as HTMLElement;
+        if (target.closest('button') || target.closest('a') || target.closest('input') || target.closest('select')) {
+            return;
+        }
+        if (!tableScrollRef.current) return;
+
+        isMouseDownRef.current = true;
+        isDraggingRef.current = false;
+        startXRef.current = e.pageX;
+        startScrollLeftRef.current = tableScrollRef.current.scrollLeft;
+    };
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isMouseDownRef.current || !tableScrollRef.current) return;
+
+            const deltaX = e.pageX - startXRef.current;
+
+            // Limiar de 5px para diferenciar clique de arrasto
+            if (!isDraggingRef.current && Math.abs(deltaX) > 5) {
+                isDraggingRef.current = true;
+                setIsDraggingTable(true);
+                window.getSelection()?.removeAllRanges();
+                clearTooltipTimer();
+                setTooltip(prev => ({ ...prev, visible: false, termKey: null }));
+            }
+
+            if (isDraggingRef.current) {
+                e.preventDefault();
+                tableScrollRef.current.scrollLeft = startScrollLeftRef.current - deltaX;
+                if (topScrollRef.current) {
+                    topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+                }
+            }
+        };
+
+        const handleMouseUp = () => {
+            if (isMouseDownRef.current) {
+                isMouseDownRef.current = false;
+                if (isDraggingRef.current) {
+                    isDraggingRef.current = false;
+                    setIsDraggingTable(false);
+                    justDraggedRef.current = true;
+                    setTimeout(() => {
+                        justDraggedRef.current = false;
+                    }, 80);
+                }
+            }
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, []);
+
 
     // Cálculos do Simulador de Orçamento
     const simulador = useMemo(() => {
@@ -478,7 +652,7 @@ export function UpperScript({
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 pr-3 border-r border-slate-800">
                         <div className="w-8 h-8 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400">
-                            <Sparkles className="w-4 h-4" />
+                            <Search className="w-4 h-4" />
                         </div>
                         <div>
                             <span className="text-[10px] font-mono uppercase text-slate-400 font-bold block">Upper Script</span>
@@ -488,37 +662,7 @@ export function UpperScript({
 
                     {/* SELETOR DE FONTE DE DADOS */}
                     <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
-                        <button
-                            onClick={() => setDataSourceMode('demo')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                dataSourceMode === 'demo'
-                                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
-                                    : 'text-slate-400 hover:text-white'
-                            }`}
-                        >
-                            <span>📊</span>
-                            <span>Caso Demonstrativo</span>
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                if (campaignTerms && campaignTerms.length > 0) {
-                                    setDataSourceMode('company');
-                                } else {
-                                    message.warning("Nenhum termo de pesquisa encontrado para a empresa selecionada.");
-                                }
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                                dataSourceMode === 'company'
-                                    ? 'bg-cyan-600 text-white shadow-md'
-                                    : 'text-slate-400 hover:text-white'
-                            }`}
-                            disabled={!campaignTerms || campaignTerms.length === 0}
-                        >
-                            <span>🏢</span>
-                            <span>Empresa Ativa ({campaignTerms?.length || 0})</span>
-                        </button>
-
+                        {/* 1º - Upload Planilha (Destaque Principal) */}
                         <button
                             onClick={() => {
                                 if (uploadedData && uploadedData.length > 0) {
@@ -527,13 +671,14 @@ export function UpperScript({
                                     fileInputRef.current?.click();
                                 }
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                                 dataSourceMode === 'upload'
-                                    ? 'bg-emerald-600 text-white shadow-md'
-                                    : 'text-slate-400 hover:text-white'
+                                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-md font-black'
+                                    : 'bg-amber-500/15 text-amber-300 border border-amber-500/40 hover:bg-amber-500 hover:text-slate-950 font-bold'
                             }`}
+                            title="Carregar planilha de termos de pesquisa (.xlsx, .xls, .csv)"
                         >
-                            <span>📁</span>
+                            <Upload className={`w-3.5 h-3.5 ${dataSourceMode === 'upload' ? 'text-slate-950' : 'text-amber-400'}`} />
                             <span>{uploadedFileName ? (uploadedFileName.length > 18 ? uploadedFileName.slice(0, 18) + '...' : uploadedFileName) : 'Upload Planilha'}</span>
                         </button>
 
@@ -543,10 +688,43 @@ export function UpperScript({
                                 title="Carregar outro arquivo"
                                 className="px-2 py-1.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center gap-1 cursor-pointer"
                             >
-                                <Upload className="w-3 h-3 text-emerald-400" />
-                                <span className="hidden sm:inline text-[11px]">Novo</span>
+                                <Upload className="w-3 h-3 text-amber-400" />
+                                <span className="hidden sm:inline text-[11px]">Trocar</span>
                             </button>
                         )}
+
+                        {/* 2º - Caso Demonstrativo */}
+                        <button
+                            onClick={() => setDataSourceMode('demo')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                dataSourceMode === 'demo'
+                                    ? 'bg-slate-800 text-cyan-300 border border-cyan-500/50 shadow-md font-bold'
+                                    : 'text-slate-400 hover:text-white'
+                            }`}
+                        >
+                            <span>📊</span>
+                            <span>Caso Demonstrativo</span>
+                        </button>
+
+                        {/* 3º - Empresa Ativa */}
+                        <button
+                            onClick={() => {
+                                if (campaignTerms && campaignTerms.length > 0) {
+                                    setDataSourceMode('company');
+                                } else {
+                                    message.warning("Nenhum termo de pesquisa encontrado para a empresa selecionada.");
+                                }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                dataSourceMode === 'company'
+                                    ? 'bg-slate-800 text-cyan-300 border border-cyan-500/50 shadow-md font-bold'
+                                    : 'text-slate-400 hover:text-white'
+                            }`}
+                            disabled={!campaignTerms || campaignTerms.length === 0}
+                        >
+                            <span>🏢</span>
+                            <span>Empresa Ativa ({campaignTerms?.length || 0})</span>
+                        </button>
 
                         <input
                             ref={fileInputRef}
@@ -983,18 +1161,43 @@ export function UpperScript({
                             </div>
                         </div>
 
-                        {/* INSTRUÇÃO DE INTERATIVIDADE / ORDENAÇÃO */}
-                        <div className="flex items-center justify-between text-[11px] text-slate-400 mb-2">
-                            <span className="flex items-center gap-1">
-                                <span>💡</span>
-                                <span><strong>Dica:</strong> Clique nos títulos das colunas para ordenar (ascendente/descendente).</span>
-                            </span>
+                        {/* INSTRUÇÃO DE INTERATIVIDADE / ORDENAÇÃO E NAVEGAÇÃO */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-400 mb-2 gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="flex items-center gap-1">
+                                    <span>💡</span>
+                                    <span><strong>Dica:</strong> Clique nos títulos para ordenar.</span>
+                                </span>
+                                <span className="text-slate-600 hidden sm:inline">|</span>
+                                <span className="flex items-center gap-1 text-cyan-400 font-medium">
+                                    <span>↔️</span>
+                                    <span><strong>Navegação:</strong> Clique com o botão esquerdo e arraste para os lados para navegar pelas colunas.</span>
+                                </span>
+                            </div>
                             <span className="font-mono text-xs text-amber-400 font-bold">
                                 Ordenado por: <strong className="uppercase">{sortConfig.key}</strong> ({sortConfig.direction === 'asc' ? 'Crescente ▲' : 'Decrescente ▼'})
                             </span>
                         </div>
 
-                        <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        {/* BARRA DE ROLAGEM HORIZONTAL SUPERIOR */}
+                        <div
+                            ref={topScrollRef}
+                            onScroll={handleTopScroll}
+                            className="overflow-x-auto overflow-y-hidden rounded-t-xl border border-b-0 border-slate-800 bg-slate-950/90 custom-horizontal-scrollbar"
+                            style={{ height: '14px' }}
+                            title="Barra de rolagem horizontal superior"
+                        >
+                            <div style={{ width: `${tableScrollWidth || 1200}px`, height: '1px' }} />
+                        </div>
+
+                        <div
+                            ref={tableScrollRef}
+                            onScroll={handleTableScroll}
+                            onMouseDown={handleMouseDown}
+                            className={`overflow-x-auto rounded-b-xl border border-slate-800 custom-horizontal-scrollbar transition-colors ${
+                                isDraggingTable ? 'cursor-grabbing select-none [&_*]:cursor-grabbing' : 'cursor-grab'
+                            }`}
+                        >
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-700 text-xs uppercase tracking-wider bg-slate-950/90">
@@ -1003,7 +1206,7 @@ export function UpperScript({
                                             className="py-3.5 px-3 text-slate-300 font-semibold cursor-pointer select-none hover:bg-slate-800 transition-colors group"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <span>Termo Real Digitado</span>
+                                                <span>Termo de Pesquisa</span>
                                                 <span className="ml-1 text-slate-500 font-mono text-[10px] group-hover:text-white">
                                                     {sortConfig.key === 'termo' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
                                                 </span>
@@ -1015,7 +1218,7 @@ export function UpperScript({
                                             className="py-3.5 px-3 text-cyan-300 font-bold cursor-pointer select-none hover:bg-slate-800 transition-colors group bg-cyan-950/20"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <span>Palavra-Chave Ativação</span>
+                                                <span>Palavra-chave</span>
                                                 <span className="ml-1 text-slate-500 font-mono text-[10px] group-hover:text-white">
                                                     {sortConfig.key === 'palavras_chave' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
                                                 </span>
@@ -1030,18 +1233,6 @@ export function UpperScript({
                                                 <span>Grupo de Anúncios</span>
                                                 <span className="ml-1 text-slate-500 font-mono text-[10px] group-hover:text-white">
                                                     {sortConfig.key === 'grupos_anuncio' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
-                                                </span>
-                                            </div>
-                                        </th>
-
-                                        <th
-                                            onClick={() => handleSort('nota')}
-                                            className="py-3.5 px-3 text-center text-amber-400 font-bold cursor-pointer select-none hover:bg-slate-800 transition-colors group"
-                                        >
-                                            <div className="flex items-center justify-center gap-1">
-                                                <span>Nota</span>
-                                                <span className="text-slate-500 font-mono text-[10px] group-hover:text-white">
-                                                    {sortConfig.key === 'nota' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
                                                 </span>
                                             </div>
                                         </th>
@@ -1087,7 +1278,7 @@ export function UpperScript({
                                             className="py-3.5 px-3 text-emerald-400 font-bold bg-emerald-950/20 cursor-pointer select-none hover:bg-emerald-900/30 transition-colors group"
                                         >
                                             <div className="flex items-center justify-between">
-                                                <InfoTag termKey="Conversões" label="Conv." />
+                                                <InfoTag termKey="Conversões" label="Total de Conversão" />
                                                 <span className="ml-1 text-slate-500 font-mono text-[10px] group-hover:text-white">
                                                     {sortConfig.key === 'conv' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
                                                 </span>
@@ -1114,6 +1305,18 @@ export function UpperScript({
                                                 <InfoTag termKey="ROAS" label="Valor/Custo" />
                                                 <span className="ml-1 text-slate-500 font-mono text-[10px] group-hover:text-white">
                                                     {sortConfig.key === 'roas' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
+                                                </span>
+                                            </div>
+                                        </th>
+
+                                        <th
+                                            onClick={() => handleSort('nota')}
+                                            className="py-3.5 px-3 text-center text-amber-400 font-bold cursor-pointer select-none hover:bg-slate-800 transition-colors group"
+                                        >
+                                            <div className="flex items-center justify-center gap-1">
+                                                <span>Nota</span>
+                                                <span className="text-slate-500 font-mono text-[10px] group-hover:text-white">
+                                                    {sortConfig.key === 'nota' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '⇅'}
                                                 </span>
                                             </div>
                                         </th>
@@ -1165,13 +1368,6 @@ export function UpperScript({
                                                     </div>
                                                 </td>
 
-                                                <td className="py-3 px-3 text-center">
-                                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold border ${badgeBg} inline-flex items-center gap-1 shadow-sm`}>
-                                                        <span>⭐</span>
-                                                        <span>{t.nota.toFixed(1)}</span>
-                                                    </span>
-                                                </td>
-
                                                 <td className="py-3 px-3 font-mono text-purple-300 bg-purple-950/10 font-bold">
                                                     {t.impr}
                                                 </td>
@@ -1195,10 +1391,48 @@ export function UpperScript({
                                                 <td className="py-3 px-3 font-mono font-extrabold text-amber-400 bg-amber-950/10 whitespace-nowrap">
                                                     {t.roas.toFixed(1)}x
                                                 </td>
+
+                                                <td className="py-3 px-3 text-center">
+                                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-extrabold border ${badgeBg} inline-flex items-center gap-1 shadow-sm`}>
+                                                        <span>⭐</span>
+                                                        <span>{t.nota.toFixed(1)}</span>
+                                                    </span>
+                                                </td>
                                             </tr>
                                         );
                                     })}
                                 </tbody>
+
+                                <tfoot>
+                                    <tr className="border-t-2 border-slate-700 bg-slate-950/90 text-xs font-bold text-slate-200">
+                                        <td colSpan={3} className="py-3.5 px-3 text-slate-300">
+                                            Total Consolidado ({filteredTerms.length} termos listados):
+                                        </td>
+                                        <td className="py-3.5 px-3 font-mono text-purple-300 bg-purple-950/20 font-black">
+                                            {filteredTotals.impr.toLocaleString('pt-BR')}
+                                        </td>
+                                        <td className="py-3.5 px-3 font-mono text-orange-300 bg-orange-950/20 font-black">
+                                            {filteredTotals.cliques.toLocaleString('pt-BR')}
+                                        </td>
+                                        <td className="py-3.5 px-3 font-mono text-slate-100 font-black whitespace-nowrap">
+                                            R$ {filteredTotals.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="py-3.5 px-3 font-mono text-emerald-400 bg-emerald-950/30 font-black">
+                                            {filteredTotals.conv.toFixed(2)}
+                                        </td>
+                                        <td className="py-3.5 px-3 font-mono text-cyan-300 bg-cyan-950/20 font-black whitespace-nowrap">
+                                            R$ {filteredTotals.cpa.toFixed(2)}
+                                        </td>
+                                        <td className="py-3.5 px-3 font-mono text-amber-400 bg-amber-950/20 font-black whitespace-nowrap">
+                                            {filteredTotals.roas.toFixed(1)}x
+                                        </td>
+                                        <td className="py-3.5 px-3 text-center">
+                                            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                                Média ⭐ {filteredTotals.notaMedia.toFixed(1)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
