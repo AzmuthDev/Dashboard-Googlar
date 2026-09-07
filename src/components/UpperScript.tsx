@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     Sparkles, Upload, Download, RefreshCw, FileSpreadsheet,
-    HelpCircle, Layers, CheckCircle, ArrowUpDown, ChevronRight,
+    HelpCircle, Layers, CheckCircle, CheckCircle2, ArrowUpDown, ChevronRight,
     Search, Check, Globe, ShieldAlert, TrendingUp, AlertTriangle, X,
-    BookOpen, Info, FileText
+    BookOpen, Info, FileText, Loader2, FileUp, FolderOpen, FileCheck
 } from 'lucide-react';
 import { message, Modal } from 'antd';
 import * as XLSX from 'xlsx';
@@ -15,6 +15,30 @@ import {
     type UpperScriptAuditResult
 } from '../lib/upperScriptEngine';
 import type { CampaignTerm, Company } from '../types';
+
+// Etapas do pipeline de auditoria visual com feedback em tempo real
+const PROCESSING_STAGES = [
+    {
+        title: "1. Leitura do Arquivo",
+        desc: "Lendo e decodificando abas da planilha (.xlsx, .xls ou .csv)"
+    },
+    {
+        title: "2. Higienização & Mapeamento",
+        desc: "Normalizando colunas: termos de pesquisa, impressões, cliques, custo e conversões"
+    },
+    {
+        title: "3. Diagnóstico de Demanda (GAP)",
+        desc: "Cruzando intenções reais de busca com palavras ativas e detectando desvios"
+    },
+    {
+        title: "4. Balanço P&L & Notas de Prioridade",
+        desc: "Calculando ROAS, CPA e notas IPO (0 a 10) por região e cluster geográfico"
+    },
+    {
+        title: "5. Compilação do Painel Executivo",
+        desc: "Estruturando STAG, DTR e simulador de escala de verba"
+    }
+];
 
 interface UpperScriptProps {
     activeCompanyId?: string | null;
@@ -37,6 +61,16 @@ export function UpperScript({
     const [uploadedData, setUploadedData] = useState<any[] | null>(null);
     const [uploadedFileName, setUploadedFileName] = useState<string>('');
     const [isProcessingFile, setIsProcessingFile] = useState(false);
+    const [processingProgress, setProcessingProgress] = useState<number>(0);
+    const [processingStepIndex, setProcessingStepIndex] = useState<number>(0);
+    const [processingFileMeta, setProcessingFileMeta] = useState<{
+        name: string;
+        size: string;
+        rowCount: number;
+        statusText: string;
+    } | null>(null);
+    const [processingError, setProcessingError] = useState<string | null>(null);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     // Abas de visualização (Modelo 1, Modelo 2, Modelo 3)
     const [activeTab, setActiveTab] = useState<'tab1' | 'tab2' | 'tab3'>('tab2');
@@ -208,40 +242,119 @@ export function UpperScript({
         };
     }, [migrationPercent, auditResult]);
 
-    // Upload de arquivo Excel/CSV
+    // Processa arquivo com etapas visuais realistas para o usuário acompanhar o progresso
+    const processFile = async (file: File) => {
+        if (!file) return;
+
+        const validExtensions = ['.xlsx', '.xls', '.csv'];
+        const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        if (!validExtensions.includes(fileExt)) {
+            message.error("Formato inválido! Por favor envie uma planilha .xlsx, .xls ou .csv.");
+            return;
+        }
+
+        const sizeFormatted = file.size > 1048576 
+            ? `${(file.size / 1048576).toFixed(2)} MB` 
+            : `${(file.size / 1024).toFixed(1)} KB`;
+
+        setIsProcessingFile(true);
+        setProcessingStepIndex(0);
+        setProcessingProgress(15);
+        setProcessingError(null);
+        setProcessingFileMeta({
+            name: file.name,
+            size: sizeFormatted,
+            rowCount: 0,
+            statusText: 'Iniciando leitura e decodificação do arquivo...'
+        });
+
+        const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+        try {
+            // ETAPA 1: Leitura do buffer e decodificação do XLSX / CSV
+            await sleep(350);
+            setProcessingProgress(30);
+            setProcessingFileMeta(prev => prev ? { ...prev, statusText: 'Lendo abas e linhas da planilha...' } : null);
+
+            const buffer = await file.arrayBuffer();
+            const wb = XLSX.read(buffer, { type: 'array' });
+            
+            if (!wb.SheetNames || wb.SheetNames.length === 0) {
+                throw new Error("O arquivo não contém nenhuma aba ou planilha de dados válida.");
+            }
+
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+            if (!json || json.length === 0) {
+                throw new Error("A planilha está vazia ou não possui linhas de dados válidas. Verifique se há cabeçalhos na primeira linha.");
+            }
+
+            // ETAPA 2: Normalização e Mapeamento de Métricas
+            setProcessingStepIndex(1);
+            setProcessingProgress(50);
+            setProcessingFileMeta(prev => prev ? {
+                ...prev,
+                rowCount: json.length,
+                statusText: `${json.length.toLocaleString('pt-BR')} linhas identificadas. Normalizando colunas e termos de busca...`
+            } : null);
+            await sleep(400);
+
+            // ETAPA 3: Diagnóstico de GAP (Demanda vs Oferta)
+            setProcessingStepIndex(2);
+            setProcessingProgress(75);
+            setProcessingFileMeta(prev => prev ? {
+                ...prev,
+                statusText: 'Cruzando demanda real com palavras-chave e identificando vazamentos de verba...'
+            } : null);
+            await sleep(450);
+
+            // ETAPA 4: Cálculo de P&L Regional e Notas IPO (0 a 10)
+            setProcessingStepIndex(3);
+            setProcessingProgress(90);
+            setProcessingFileMeta(prev => prev ? {
+                ...prev,
+                statusText: 'Agrupando P&L por região, ROAS, CPA e notas de prioridade...'
+            } : null);
+            
+            // Validação de execução do motor
+            executarAuditoriaUpperScript(json, geoProfile, file.name);
+            await sleep(400);
+
+            // ETAPA 5: Conclusão
+            setProcessingStepIndex(4);
+            setProcessingProgress(100);
+            setProcessingFileMeta(prev => prev ? {
+                ...prev,
+                statusText: `Auditoria concluída com sucesso! ${json.length.toLocaleString('pt-BR')} termos processados.`
+            } : null);
+
+            setUploadedData(json);
+            setUploadedFileName(file.name);
+            setDataSourceMode('upload');
+
+            // Pausa visual para o usuário contemplar a conclusão com 100%
+            await sleep(650);
+            setIsProcessingFile(false);
+            message.success(`Planilha "${file.name}" auditada com sucesso! ${json.length} termos analisados.`);
+        } catch (err: any) {
+            console.error("Erro ao processar arquivo:", err);
+            setProcessingError(err?.message || "Ocorreu um erro ao processar a planilha.");
+            setProcessingFileMeta(prev => prev ? {
+                ...prev,
+                statusText: 'Falha no processamento da planilha.'
+            } : null);
+            message.error(`Falha no upload: ${err?.message || 'Erro desconhecido'}`);
+        }
+    };
+
+    // Upload de arquivo Excel/CSV via input file
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-
-        setIsProcessingFile(true);
-        setUploadedFileName(file.name);
-
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const bstr = evt.target?.result;
-                const wb = XLSX.read(bstr, { type: 'binary' });
-                const wsname = wb.SheetNames[0];
-                const ws = wb.Sheets[wsname];
-                const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-
-                if (json.length === 0) {
-                    message.error("Planilha vazia ou com formato inválido.");
-                    setIsProcessingFile(false);
-                    return;
-                }
-
-                setUploadedData(json);
-                setDataSourceMode('upload');
-                message.success(`Arquivo "${file.name}" carregado com ${json.length} linhas!`);
-            } catch (err: any) {
-                message.error(`Erro ao ler arquivo: ${err.message}`);
-            } finally {
-                setIsProcessingFile(false);
-            }
-        };
-
-        reader.readAsBinaryString(file);
+        processFile(file);
+        e.target.value = '';
     };
 
     // Download do CSV Google Ads Editor
@@ -281,7 +394,35 @@ export function UpperScript({
     const currentSim = auditResult.simulationSetups[selectedSimRegion] || Object.values(auditResult.simulationSetups)[0];
 
     return (
-        <div className="w-full text-slate-100 font-sans pb-16">
+        <div 
+            className="w-full text-slate-100 font-sans pb-16 relative"
+            onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(true);
+            }}
+            onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(true);
+            }}
+            onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.currentTarget === e.target) {
+                    setIsDragOver(false);
+                }
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragOver(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                    processFile(file);
+                }
+            }}
+        >
             
             {/* BARRA SUPERIOR DE CONTROLE E FONTE DE DADOS */}
             <div className="mb-6 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
@@ -330,7 +471,13 @@ export function UpperScript({
                         </button>
 
                         <button
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() => {
+                                if (uploadedData && uploadedData.length > 0) {
+                                    setDataSourceMode('upload');
+                                } else {
+                                    fileInputRef.current?.click();
+                                }
+                            }}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                                 dataSourceMode === 'upload'
                                     ? 'bg-emerald-600 text-white shadow-md'
@@ -338,8 +485,20 @@ export function UpperScript({
                             }`}
                         >
                             <span>📁</span>
-                            <span>{uploadedFileName ? uploadedFileName.slice(0, 18) + '...' : 'Upload Planilha'}</span>
+                            <span>{uploadedFileName ? (uploadedFileName.length > 18 ? uploadedFileName.slice(0, 18) + '...' : uploadedFileName) : 'Upload Planilha'}</span>
                         </button>
+
+                        {uploadedData && uploadedData.length > 0 && (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                title="Carregar outro arquivo"
+                                className="px-2 py-1.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center gap-1 cursor-pointer"
+                            >
+                                <Upload className="w-3 h-3 text-emerald-400" />
+                                <span className="hidden sm:inline text-[11px]">Novo</span>
+                            </button>
+                        )}
+
                         <input
                             ref={fileInputRef}
                             type="file"
@@ -409,6 +568,74 @@ export function UpperScript({
                 </div>
             </div>
 
+            {/* BANNER / STATUS DA PLANILHA CARREGADA */}
+            {dataSourceMode === 'upload' && uploadedData && uploadedData.length > 0 && (
+                <div className="mb-6 p-4 rounded-2xl bg-emerald-950/25 border border-emerald-500/40 shadow-xl flex flex-wrap items-center justify-between gap-4 backdrop-blur-md">
+                    <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                            <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-white font-mono">{uploadedFileName}</span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> Auditado com Sucesso
+                                </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 mt-1 flex flex-wrap items-center gap-2">
+                                <span className="text-slate-300 font-semibold">{uploadedData.length.toLocaleString('pt-BR')} linhas analisadas</span>
+                                <span>•</span>
+                                <span className="text-amber-400 font-semibold">{auditResult.macroMetrics.linhasGap} termos no GAP</span>
+                                <span>•</span>
+                                <span>{auditResult.allRegions.length} regiões identificadas</span>
+                                <span>•</span>
+                                <span>Perfil: <strong className="text-cyan-300 uppercase">{geoProfile}</strong></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white transition-all flex items-center gap-1.5 shadow-lg cursor-pointer"
+                        >
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Trocar Planilha</span>
+                        </button>
+                        <button
+                            onClick={() => setDataSourceMode('demo')}
+                            className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                            <span>Voltar ao Caso Demo</span>
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* DROPZONE QUANDO EM MODO UPLOAD MAS NENHUMA PLANILHA FOI CARREGADA */}
+            {dataSourceMode === 'upload' && (!uploadedData || uploadedData.length === 0) && (
+                <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mb-6 p-10 rounded-2xl bg-slate-900/90 border-2 border-dashed border-cyan-500/40 hover:border-cyan-400 transition-all cursor-pointer text-center group shadow-2xl backdrop-blur-md"
+                >
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center group-hover:scale-110 group-hover:bg-cyan-500/20 transition-all">
+                        <FileUp className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">
+                        Nenhuma planilha carregada ainda
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto mb-5 leading-relaxed">
+                        Arraste e solte o arquivo exportado do Google Ads (<strong className="text-slate-200">.xlsx, .xls ou .csv</strong>) aqui ou clique no botão abaixo para selecionar do computador.
+                    </p>
+                    <button
+                        type="button"
+                        className="px-5 py-2.5 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white shadow-lg inline-flex items-center gap-2 pointer-events-none"
+                    >
+                        <Upload className="w-4 h-4" />
+                        <span>Selecionar Planilha do Google Ads</span>
+                    </button>
+                </div>
+            )}
+
             {/* HEADER PRINCIPAL EXECUTIVO */}
             <header className="rounded-2xl p-6 sm:p-8 mb-6 relative bg-slate-900/90 border border-slate-800 border-t-4 border-t-cyan-500 shadow-2xl backdrop-blur-md">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -419,7 +646,11 @@ export function UpperScript({
                             </span>
                             <span className="text-xs text-slate-400">
                                 Campanha: <span className="text-slate-200 font-mono font-bold">
-                                    {dataSourceMode === 'company' ? (activeCompany?.name || 'Conta Conectada') : '020_PQ_BRASIL_FRASE_ROAS'}
+                                    {dataSourceMode === 'company' 
+                                        ? (activeCompany?.name || 'Conta Conectada') 
+                                        : dataSourceMode === 'upload' 
+                                            ? (uploadedFileName || 'Planilha Importada') 
+                                            : '020_PQ_BRASIL_FRASE_ROAS'}
                                 </span>
                             </span>
                         </div>
@@ -1631,6 +1862,192 @@ export function UpperScript({
                         <span className="text-[9px] text-amber-300 font-mono block border-t border-slate-800 pt-1">
                             {activeTooltipData.purpose}
                         </span>
+                    </div>
+                </div>
+            )}
+
+            {/* OVERLAY VISUAL DE ARRASTAR E SOLTAR (DRAG & DROP) */}
+            {isDragOver && (
+                <div className="fixed inset-0 z-[9998] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-6 border-4 border-dashed border-cyan-400 m-4 rounded-3xl animate-pulse pointer-events-none">
+                    <div className="text-center max-w-md p-8 bg-slate-900/95 rounded-2xl border border-cyan-500/50 shadow-2xl">
+                        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-cyan-500/20 text-cyan-300 border border-cyan-400 flex items-center justify-center animate-bounce">
+                            <Upload className="w-8 h-8" />
+                        </div>
+                        <h3 className="text-xl font-black text-white mb-2">Solte a Planilha Aqui</h3>
+                        <p className="text-xs text-slate-300 leading-relaxed">
+                            Solte o arquivo <span className="font-mono text-cyan-300 font-bold">.xlsx</span>, <span className="font-mono text-cyan-300 font-bold">.xls</span> ou <span className="font-mono text-cyan-300 font-bold">.csv</span> do Google Ads para auditar automaticamente pelo Método Quadrante Googlar.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE PROCESSAMENTO / CARREGAMENTO DE PLANILHA */}
+            {isProcessingFile && (
+                <div className="fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl p-6 sm:p-8 relative overflow-hidden text-slate-100 animate-fadeIn">
+                        {/* Ambient glowing background blur */}
+                        <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-64 h-32 bg-cyan-500/20 blur-3xl pointer-events-none rounded-full" />
+                        
+                        {/* Modal Header */}
+                        <div className="flex items-center gap-3.5 mb-5 relative z-10">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-all ${
+                                processingError 
+                                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                                    : processingProgress === 100 
+                                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                                        : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40 shadow-lg shadow-cyan-950/50'
+                            }`}>
+                                {processingError ? (
+                                    <AlertTriangle className="w-6 h-6" />
+                                ) : processingProgress === 100 ? (
+                                    <CheckCircle2 className="w-6 h-6" />
+                                ) : (
+                                    <Loader2 className="w-6 h-6 animate-spin text-cyan-400" />
+                                )}
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-white leading-tight">
+                                    {processingError 
+                                        ? 'Falha ao Processar Planilha' 
+                                        : processingProgress === 100 
+                                            ? 'Auditoria Concluída com Sucesso!' 
+                                            : 'Auditando Planilha Google Ads'}
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-0.5">
+                                    Motor Upper Script • Método Quadrante Googlar
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Informações do Arquivo Selecionado */}
+                        {processingFileMeta && (
+                            <div className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 flex items-center justify-between gap-3 mb-5">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                                        <FileSpreadsheet className="w-5 h-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="text-xs font-bold text-white truncate" title={processingFileMeta.name}>
+                                            {processingFileMeta.name}
+                                        </div>
+                                        <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                                            <span>{processingFileMeta.size}</span>
+                                            {processingFileMeta.rowCount > 0 && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="text-emerald-400 font-semibold font-mono">
+                                                        {processingFileMeta.rowCount.toLocaleString('pt-BR')} linhas
+                                                    </span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="shrink-0">
+                                    <span className="px-2.5 py-1 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                                        {processingFileMeta.name.split('.').pop()?.toUpperCase() || 'ARQUIVO'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Barra de Progresso Animada */}
+                        <div className="space-y-1.5 mb-5">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+                                    {processingError ? (
+                                        <span className="text-rose-400">Interrompido</span>
+                                    ) : processingProgress === 100 ? (
+                                        <span className="text-emerald-400 flex items-center gap-1.5">
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            100% Processado
+                                        </span>
+                                    ) : (
+                                        <span className="text-cyan-300 flex items-center gap-1.5">
+                                            <Loader2 className="w-3 h-3 animate-spin text-cyan-400" />
+                                            {processingFileMeta?.statusText || 'Processando...'}
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="font-mono font-bold text-cyan-400">{processingProgress}%</span>
+                            </div>
+                            <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-300 ease-out ${
+                                        processingError 
+                                            ? 'bg-rose-500' 
+                                            : 'bg-gradient-to-r from-cyan-500 via-amber-400 to-emerald-400'
+                                    }`}
+                                    style={{ width: `${processingProgress}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Pipeline de Etapas */}
+                        <div className="space-y-2 mb-6">
+                            {PROCESSING_STAGES.map((stage, idx) => {
+                                const isDone = idx < processingStepIndex || (idx === 4 && processingProgress === 100);
+                                const isCurrent = idx === processingStepIndex && !processingError && processingProgress < 100;
+                                const isErr = idx === processingStepIndex && !!processingError;
+
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={`p-2.5 rounded-xl border transition-all flex items-start gap-2.5 text-xs ${
+                                            isDone 
+                                                ? 'bg-emerald-950/20 border-emerald-500/30 text-slate-200'
+                                                : isCurrent
+                                                    ? 'bg-cyan-950/40 border-cyan-500/60 text-white shadow-md shadow-cyan-950/40'
+                                                    : isErr
+                                                        ? 'bg-rose-950/20 border-rose-500/40 text-rose-300'
+                                                        : 'bg-slate-950/40 border-slate-800/60 text-slate-500'
+                                        }`}
+                                    >
+                                        <div className="mt-0.5 shrink-0">
+                                            {isDone && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                                            {isCurrent && <Loader2 className="w-4 h-4 text-cyan-400 animate-spin" />}
+                                            {isErr && <AlertTriangle className="w-4 h-4 text-rose-400" />}
+                                            {!isDone && !isCurrent && !isErr && (
+                                                <div className="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[9px] font-mono text-slate-600">
+                                                    {idx + 1}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className={`font-bold ${
+                                                isDone ? 'text-emerald-300' : isCurrent ? 'text-cyan-300' : isErr ? 'text-rose-300' : 'text-slate-400'
+                                            }`}>
+                                                {stage.title}
+                                            </div>
+                                            <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                                                {stage.desc}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Mensagem de Erro ou Botão de Ação */}
+                        {processingError ? (
+                            <div className="space-y-3">
+                                <div className="p-3 rounded-xl bg-rose-950/30 border border-rose-500/40 text-rose-300 text-xs leading-relaxed">
+                                    <strong>Motivo:</strong> {processingError}
+                                    <div className="mt-1 text-[11px] text-slate-400">
+                                        Certifique-se de que a planilha exportada do Google Ads possui colunas como "Termo de pesquisa", "Impressões", "Cliques" e "Custo".
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setIsProcessingFile(false);
+                                        setProcessingError(null);
+                                    }}
+                                    className="w-full py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer shadow-lg"
+                                >
+                                    Fechar e Tentar Novamente
+                                </button>
+                            </div>
+                        ) : null}
                     </div>
                 </div>
             )}
