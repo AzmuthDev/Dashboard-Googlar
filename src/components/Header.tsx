@@ -56,7 +56,7 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                 <h1 className="text-[26px] font-black uppercase tracking-tighter text-foreground m-0 leading-none">
                     {currentView === 'laboratorio-ab' ? 'Laboratório A/B' : 
                      currentView === 'semantic-audit' ? 'Triagem de Especialistas' :
-                     currentView === 'ferramenta' ? 'Ferramenta' :
+                     (currentView === 'upperscript' || currentView === 'ferramenta') ? 'Upper Script' :
                      currentView === 'users' ? 'Usuários' : 
                      currentView === 'companies' ? 'Empresas' : 'Dashboard'}
                 </h1>

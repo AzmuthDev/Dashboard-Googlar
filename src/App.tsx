@@ -30,6 +30,7 @@ import { Toaster, toast } from 'sonner'
 import { KeywordPlanner } from './components/KeywordPlanner'
 import { MetallicGradients } from './components/ui/MetallicGradients'
 import ErrorBoundary from './components/ErrorBoundary'
+import { UpperScript } from './components/UpperScript'
 import { useAuth } from './contexts/AuthContext'
 
 const { Content } = Layout
@@ -38,7 +39,7 @@ function App() {
     const { user, profile, isLoading, signOut } = useAuth()
     const isAuthenticated = !!user
     const currentUser = profile
-    const [currentView, setCurrentView] = useState<'dashboard' | 'users' | 'companies' | 'ferramenta' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner' | 'auditoria-lsa'>('companies')
+    const [currentView, setCurrentView] = useState<'dashboard' | 'users' | 'companies' | 'ferramenta' | 'upperscript' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner' | 'auditoria-lsa'>('companies')
     const [activeTab, setActiveTab] = useState('all')
     const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
     const [auditNavParams, setAuditNavParams] = useState<{ campanha: string, grupo: string, termo?: string } | null>(null)
@@ -240,7 +241,15 @@ function App() {
                                     <FeaturesDetail />
                                 </>
                             )}
-                            {currentView === 'ferramenta' && <AutomationConsole isAdmin={profile?.isAdmin ?? false} activeCompanyId={activeCompanyId} isDarkMode={isDarkMode} onSelectCompany={setActiveCompanyId} />}
+                            {(currentView === 'upperscript' || currentView === 'ferramenta') && (
+                                <UpperScript
+                                    activeCompanyId={activeCompanyId}
+                                    activeCompany={activeCompany}
+                                    campaignTerms={effectiveData || []}
+                                    isTermsLoading={isTermsLoading}
+                                    isDarkMode={isDarkMode}
+                                />
+                            )}
                              {currentView === 'semantic-audit' && (
                                  <SemanticAudit activeCompanyId={activeCompanyId} currentUser={profile} auditNavParams={auditNavParams} clearNavParams={() => setAuditNavParams(null)} />
                              )}

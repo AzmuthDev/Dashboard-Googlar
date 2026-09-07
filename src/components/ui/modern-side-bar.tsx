@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import {
-    LayoutDashboard, Users, FileText, Bell, ChevronLeft, ChevronRight, Sun, Moon, Briefcase, Menu, X, Zap, Lock, FlaskConical, Wand2, Mic
+    LayoutDashboard, Users, FileText, Bell, ChevronLeft, ChevronRight, Sun, Moon, Briefcase, Menu, X, Zap, Lock, FlaskConical, Wand2, Mic, Sparkles
 } from 'lucide-react';
 import { ProfileDropdown } from './profile-dropdown';
 import { Switch } from './switch-button';
@@ -20,8 +20,8 @@ interface NavigationItem {
 interface SidebarProps {
     className?: string;
     currentUser: import('../../types').AuthorizedUser | null;
-    currentView: 'dashboard' | 'users' | 'companies' | 'ferramenta' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner' | 'auditoria-lsa';
-    onViewChange: (view: 'dashboard' | 'users' | 'companies' | 'ferramenta' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner' | 'auditoria-lsa') => void;
+    currentView: 'dashboard' | 'users' | 'companies' | 'ferramenta' | 'upperscript' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner' | 'auditoria-lsa';
+    onViewChange: (view: 'dashboard' | 'users' | 'companies' | 'ferramenta' | 'upperscript' | 'semantic-audit' | 'laboratorio-ab' | 'keyword-planner' | 'auditoria-lsa') => void;
     onLogout: () => void;
     isDarkMode: boolean;
     onToggleTheme: () => void;
@@ -40,7 +40,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
         { id: "companies", name: "Empresas", icon: Briefcase, isClickable: true },
         { id: "semantic-audit", name: "Triagem de Especialistas", icon: FileText, isClickable: true },
         { id: "keyword-planner", name: "Planejador", icon: Wand2, isClickable: true },
-        { id: "ferramenta", name: "Ferramenta", icon: Zap, isClickable: true },
+        { id: "upperscript", name: "Upper Script", icon: Sparkles, isClickable: true },
         { id: "auditoria-lsa", name: "Áudios LSA", icon: Mic, isClickable: true },
 
         { id: "users", name: isAdmin ? "Gerenciar Acessos" : "Meu Perfil", icon: Users, isClickable: true },
@@ -67,14 +67,14 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
     const handleItemClick = (item: NavigationItem) => {
         if (!item.isClickable) return;
 
-        const isLockedView = (item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'keyword-planner') && !currentUser?.isAdmin;
+        const isLockedView = (item.id === 'upperscript' || item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'keyword-planner') && !currentUser?.isAdmin;
 
         if (isLockedView) {
             message.warning('Acesso restrito ao administrador.');
             return;
         }
 
-        if (item.id === 'dashboard' || item.id === 'users' || item.id === 'companies' || item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'laboratorio-ab' || item.id === 'keyword-planner' || item.id === 'auditoria-lsa') {
+        if (item.id === 'dashboard' || item.id === 'users' || item.id === 'companies' || item.id === 'upperscript' || item.id === 'ferramenta' || item.id === 'semantic-audit' || item.id === 'laboratorio-ab' || item.id === 'keyword-planner' || item.id === 'auditoria-lsa') {
             onViewChange(item.id as any);
         }
 
