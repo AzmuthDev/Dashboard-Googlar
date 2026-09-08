@@ -15,7 +15,9 @@ dist-ssr
 .env.*
 !.env.example
 *.zip
- *.rar
+*.rar
+*.xlsx
+*.xls
 
 # Editor directories and files
 .vscode/*

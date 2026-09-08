@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     watch: {
-      ignored: ['**/UpperScript-master/**', '**/.git/**', '**/scratch/**'],
+      ignored: ['**/UpperScript-master/**', '**/.git/**', '**/scratch/**', '**/*.xlsx', '**/*.xls', '**/*.csv', '**/~$*'],
     },
   },
 })

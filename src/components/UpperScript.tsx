@@ -3,7 +3,8 @@ import {
     Sparkles, Upload, Download, RefreshCw, FileSpreadsheet,
     HelpCircle, Layers, CheckCircle, CheckCircle2, ArrowUpDown, ChevronRight,
     Search, Check, Globe, ShieldAlert, TrendingUp, AlertTriangle, X,
-    BookOpen, Info, FileText, Loader2, FileUp, FolderOpen, FileCheck
+    BookOpen, Info, FileText, Loader2, FileUp, FolderOpen, FileCheck,
+    ChevronDown, ExternalLink, BarChart3, PieChart, Flame
 } from 'lucide-react';
 import { message, Modal } from 'antd';
 import * as XLSX from 'xlsx';
@@ -12,7 +13,9 @@ import {
     UPPER_GLOSSARY,
     executarAuditoriaUpperScript,
     exportarGoogleAdsEditorCsv,
-    type UpperScriptAuditResult
+    type UpperScriptAuditResult,
+    type PLClusterRow,
+    type SubClusterBreakdown
 } from '../lib/upperScriptEngine';
 import type { CampaignTerm, Company } from '../types';
 
@@ -123,6 +126,54 @@ export function UpperScript({
         y: 0,
         placement: 'top'
     });
+
+    // Estado de expansão das linhas do Modelo 1 (Drill-Down / Acordeão)
+    const [expandedClusterRows, setExpandedClusterRows] = useState<Record<string, boolean>>({
+        "Europa": true // Europa vem expandido para evidenciar a decomposição das âncoras
+    });
+
+    // Tooltip interativo rico para Nuvem de Chips e Barra de Proporção (Stacked Bar)
+    const [clusterTooltip, setClusterTooltip] = useState<{
+        visible: boolean;
+        clusterRow: PLClusterRow | null;
+        x: number;
+        y: number;
+        placement: 'top' | 'bottom';
+    }>({
+        visible: false,
+        clusterRow: null,
+        x: 0,
+        y: 0,
+        placement: 'top'
+    });
+
+    const toggleClusterRow = (regiao: string) => {
+        setExpandedClusterRows(prev => ({
+            ...prev,
+            [regiao]: !prev[regiao]
+        }));
+    };
+
+    const showClusterTooltip = (row: PLClusterRow, targetEl: HTMLElement) => {
+        if (!targetEl) return;
+        const rect = targetEl.getBoundingClientRect();
+        const placement = rect.top > 250 ? 'top' : 'bottom';
+        const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+        const rawX = rect.left + rect.width / 2;
+        const clampedX = Math.max(220, Math.min(windowWidth - 220, rawX));
+
+        setClusterTooltip({
+            visible: true,
+            clusterRow: row,
+            x: clampedX,
+            y: placement === 'top' ? rect.top - 8 : rect.bottom + 8,
+            placement
+        });
+    };
+
+    const hideClusterTooltip = () => {
+        setClusterTooltip(prev => ({ ...prev, visible: false }));
+    };
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -508,10 +559,52 @@ export function UpperScript({
 
             const wsname = wb.SheetNames[0];
             const ws = wb.Sheets[wsname];
-            const json: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+            // Detecção inteligente da linha de cabeçalho do Google Ads (ignora metadados e linhas de resumo)
+            const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            let headerRowIdx = 0;
+            for (let i = 0; i < Math.min(rawRows.length, 25); i++) {
+                const row = rawRows[i];
+                if (row && row.some(cell => {
+                    const str = String(cell).toLowerCase();
+                    return str.includes('termo de pesquisa') || str.includes('search term') || str.includes('keyword') || str.includes('palavra-chave');
+                })) {
+                    headerRowIdx = i;
+                    break;
+                }
+            }
+
+            const headers = (rawRows[headerRowIdx] || []).map(h => String(h).trim());
+            let json: any[] = [];
+
+            for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+                const r = rawRows[i];
+                if (!r || r.length === 0) continue;
+
+                const firstCell = String(r[0] || '').trim().toLowerCase();
+                if (firstCell.startsWith('total') || firstCell.startsWith('todas')) {
+                    continue; // ignora linhas de totais gerais
+                }
+
+                const obj: any = {};
+                headers.forEach((header, colIdx) => {
+                    if (header) {
+                        obj[header] = r[colIdx] !== undefined ? r[colIdx] : '';
+                    }
+                });
+
+                const term = obj['Termo de pesquisa'] || obj['Search term'] || obj['termo'] || obj['termo_de_pesquisa'] || '';
+                if (term) {
+                    json.push(obj);
+                }
+            }
 
             if (!json || json.length === 0) {
-                throw new Error("A planilha está vazia ou não possui linhas de dados válidas. Verifique se há cabeçalhos na primeira linha.");
+                json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            }
+
+            if (!json || json.length === 0) {
+                throw new Error("A planilha está vazia ou não possui linhas de dados válidas. Verifique se há termos de busca no arquivo.");
             }
 
             // ETAPA 2: Normalização e Mapeamento de Métricas
@@ -1033,7 +1126,14 @@ export function UpperScript({
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-slate-700 text-xs uppercase tracking-wider">
-                                        <th className="py-3 px-3 text-slate-400 font-semibold">Cluster</th>
+                                        <th className="py-3 px-3 text-slate-400 font-semibold min-w-[240px]">
+                                            <div className="flex items-center gap-1.5">
+                                                <span>Cluster Semântico</span>
+                                                <span className="text-[10px] font-normal normal-case text-cyan-400 bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800/60">
+                                                    Drill-Down ▾
+                                                </span>
+                                            </div>
+                                        </th>
                                         <th className="py-3 px-3 text-purple-400 font-bold bg-purple-950/20"><InfoTag termKey="Impressões" label="Impressões" /></th>
                                         <th className="py-3 px-3 text-orange-400 font-bold bg-orange-950/20"><InfoTag termKey="Cliques" label="Cliques" /></th>
                                         <th className="py-3 px-3 text-slate-300 font-semibold">Custo Investido</th>
@@ -1046,36 +1146,273 @@ export function UpperScript({
                                 <tbody className="divide-y divide-slate-800 text-sm">
                                     {auditResult.plRows.map((row, idx) => {
                                         const isGeneric = row.regiao.toLowerCase().includes("genérico");
+                                        const isExpanded = !!expandedClusterRows[row.regiao];
+                                        const subClusters = row.subClusters || [];
+
                                         return (
-                                            <tr key={idx} className={`hover:bg-slate-800/40 transition-colors ${isGeneric ? "bg-red-950/15" : ""}`}>
-                                                <td className="py-3.5 px-3 font-semibold text-white flex items-center gap-2">
-                                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: row.color }}></span>
-                                                    <span>{row.regiao}</span>
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono text-purple-300 bg-purple-950/10">
-                                                    {row.impressoes.toLocaleString('pt-BR')}
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono text-orange-300 bg-orange-950/10">
-                                                    {row.cliques.toLocaleString('pt-BR')}
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono text-slate-200 font-semibold">
-                                                    R$ {row.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono font-bold text-emerald-400 bg-emerald-950/10">
-                                                    {row.conversoes.toFixed(2)}
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono font-bold text-cyan-300 bg-cyan-950/10">
-                                                    <span className={isGeneric ? "text-red-400 font-extrabold" : ""}>
-                                                        R$ {row.cpa.toFixed(2)}
-                                                    </span>
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono font-extrabold text-amber-400 bg-amber-950/10">
-                                                    {row.roas.toFixed(2)}x
-                                                </td>
-                                                <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">
-                                                    R$ {row.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                </td>
-                                            </tr>
+                                            <React.Fragment key={idx}>
+                                                <tr
+                                                    onClick={() => toggleClusterRow(row.regiao)}
+                                                    className={`hover:bg-slate-800/50 transition-colors cursor-pointer border-b border-slate-800/60 ${
+                                                        isExpanded ? "bg-slate-800/30" : ""
+                                                    } ${isGeneric ? "bg-red-950/15" : ""}`}
+                                                >
+                                                    <td className="py-3.5 px-3 font-semibold text-white">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                className="w-5 h-5 rounded flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700/60 transition-all shrink-0"
+                                                                title={isExpanded ? "Recolher detalhes" : "Expandir composição semântica"}
+                                                            >
+                                                                {isExpanded ? (
+                                                                    <ChevronDown className="w-4 h-4 text-cyan-400" />
+                                                                ) : (
+                                                                    <ChevronRight className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+
+                                                            <span
+                                                                className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                                                                style={{ backgroundColor: row.color }}
+                                                            />
+
+                                                            <div className="flex flex-col min-w-0">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className="text-white font-bold">{row.regiao}</span>
+                                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 shadow-sm">
+                                                                        {subClusters.length} âncoras
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            showClusterTooltip(row, e.currentTarget);
+                                                                        }}
+                                                                        onMouseEnter={(e) => showClusterTooltip(row, e.currentTarget)}
+                                                                        onMouseLeave={hideClusterTooltip}
+                                                                        className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-cyan-950/70 hover:bg-cyan-900/90 text-cyan-300 border border-cyan-500/40 flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+                                                                        title="Ver Nuvem de Chips e Barra de Proporção"
+                                                                    >
+                                                                        <PieChart className="w-3 h-3 text-cyan-400" />
+                                                                        <span>Nuvem & Barra</span>
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Mini Stacked Bar Visual Embutida */}
+                                                                {subClusters.length > 0 && (
+                                                                    <div
+                                                                        className="w-44 h-1.5 rounded-full bg-slate-950 overflow-hidden flex mt-1.5 border border-slate-800/80"
+                                                                        title="Composição proporcional de impressões deste cluster"
+                                                                    >
+                                                                        {subClusters.slice(0, 5).map((sub, sIdx) => {
+                                                                            const barColors = ["#38bdf8", "#f59e0b", "#10b981", "#a855f7", "#ec4899"];
+                                                                            return (
+                                                                                <div
+                                                                                    key={sIdx}
+                                                                                    style={{
+                                                                                        width: `${Math.max(4, sub.percentImpr)}%`,
+                                                                                        backgroundColor: barColors[sIdx % barColors.length]
+                                                                                    }}
+                                                                                />
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono text-purple-300 bg-purple-950/10 font-bold">
+                                                        {row.impressoes.toLocaleString('pt-BR')}
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono text-orange-300 bg-orange-950/10 font-semibold">
+                                                        {row.cliques.toLocaleString('pt-BR')}
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono text-slate-200 font-semibold">
+                                                        R$ {row.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono font-bold text-emerald-400 bg-emerald-950/10">
+                                                        {row.conversoes.toFixed(2)}
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono font-bold text-cyan-300 bg-cyan-950/10">
+                                                        <span className={isGeneric ? "text-red-400 font-extrabold" : ""}>
+                                                            R$ {row.cpa.toFixed(2)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono font-extrabold text-amber-400 bg-amber-950/10">
+                                                        {row.roas.toFixed(2)}x
+                                                    </td>
+                                                    <td className="py-3.5 px-3 font-mono font-bold text-emerald-400">
+                                                        R$ {row.receita.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                </tr>
+
+                                                {/* ========================================================= */}
+                                                {/* LINHA EXPANSÍVEL: DRILL-DOWN SEMÂNTICO (ITEM 2) */}
+                                                {/* ========================================================= */}
+                                                {isExpanded && (
+                                                    <tr className="bg-slate-950/80 border-b border-slate-800 animate-fadeIn">
+                                                        <td colSpan={8} className="p-4 sm:p-6">
+                                                            <div className="rounded-xl bg-slate-900/90 border border-slate-800 p-5 shadow-inner">
+                                                                {/* Cabeçalho do Drill-Down */}
+                                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800">
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 uppercase tracking-wider flex items-center gap-1">
+                                                                                <Layers className="w-3 h-3" /> Drill-Down Semântico
+                                                                            </span>
+                                                                            <h3 className="text-sm font-bold text-white m-0">
+                                                                                Decomposição das Buscas: {row.regiao}
+                                                                            </h3>
+                                                                        </div>
+                                                                        <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                                                                            Exibindo a partição entre o <strong>termo literal do eixo</strong> e os <strong>destinos derivados</strong> que compõem este campo semântico.
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setActiveTab("tab2");
+                                                                            setSelectedRegions([row.regiao]);
+                                                                        }}
+                                                                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm w-fit"
+                                                                    >
+                                                                        <span>Ver buscas brutas no Modelo 2</span>
+                                                                        <ExternalLink className="w-3 h-3" />
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Sub-Tabela de Âncoras do Cluster */}
+                                                                <div className="overflow-x-auto">
+                                                                    <table className="w-full text-left text-xs border-collapse">
+                                                                        <thead>
+                                                                            <tr className="text-slate-400 font-semibold border-b border-slate-800 uppercase tracking-wider text-[10px]">
+                                                                                <th className="py-2.5 px-3">Âncora / Sub-Destino</th>
+                                                                                <th className="py-2.5 px-3">Tipo</th>
+                                                                                <th className="py-2.5 px-3 text-purple-400 font-bold bg-purple-950/20">Impr. & % Cluster</th>
+                                                                                <th className="py-2.5 px-3 text-orange-400 font-bold bg-orange-950/20">Cliques & CTR</th>
+                                                                                <th className="py-2.5 px-3">Custo (R$)</th>
+                                                                                <th className="py-2.5 px-3 text-emerald-400 font-bold bg-emerald-950/20">Conversões</th>
+                                                                                <th className="py-2.5 px-3 text-cyan-400 font-bold bg-cyan-950/20">CPA Médio</th>
+                                                                                <th className="py-2.5 px-3 text-amber-400 font-bold bg-amber-950/20">ROAS</th>
+                                                                                <th className="py-2.5 px-3">Status do Quadrante</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody className="divide-y divide-slate-800/60">
+                                                                            {subClusters.map((sub, sIdx) => {
+                                                                                const isRalo = sub.status.includes("Ralo") || (sub.custo > 100 && sub.conversoes === 0);
+                                                                                const isAltaConv = sub.conversoes >= 2 || sub.roas >= 4;
+
+                                                                                return (
+                                                                                    <tr
+                                                                                        key={sIdx}
+                                                                                        className={`hover:bg-slate-800/40 transition-colors ${
+                                                                                            sub.isEixoPrincipal ? "bg-cyan-950/20 font-medium" : ""
+                                                                                        }`}
+                                                                                    >
+                                                                                        <td className="py-2.5 px-3">
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <span className="text-sm">{sub.icone}</span>
+                                                                                                <div>
+                                                                                                    <div className="font-bold text-white flex items-center gap-1.5">
+                                                                                                        <span>{sub.label}</span>
+                                                                                                        {sub.isEixoPrincipal && (
+                                                                                                            <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                                                                                                EIXO
+                                                                                                            </span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                    <div className="text-[10px] text-slate-500 font-mono">
+                                                                                                        termo: "{sub.termoChave}" • {sub.quantidadeTermos} variações
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3">
+                                                                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 capitalize">
+                                                                                                {sub.tipo}
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3 font-mono bg-purple-950/10">
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <span className="font-bold text-purple-300">
+                                                                                                    {sub.impressoes.toLocaleString('pt-BR')}
+                                                                                                </span>
+                                                                                                <span className="text-[10px] text-slate-400">
+                                                                                                    ({sub.percentImpr}%)
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div className="w-20 h-1 bg-slate-950 rounded-full overflow-hidden mt-1">
+                                                                                                <div
+                                                                                                    className="h-full bg-purple-500"
+                                                                                                    style={{ width: `${Math.min(100, sub.percentImpr)}%` }}
+                                                                                                />
+                                                                                            </div>
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3 font-mono bg-orange-950/10">
+                                                                                            <span className="text-orange-300 font-semibold">{sub.cliques.toLocaleString('pt-BR')}</span>
+                                                                                            <span className="text-[10px] text-slate-400 ml-1">({sub.ctr.toFixed(1)}%)</span>
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3 font-mono text-slate-300">
+                                                                                            R$ {sub.custo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3 font-mono font-bold text-emerald-400 bg-emerald-950/10">
+                                                                                            {sub.conversoes.toFixed(2)}
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3 font-mono font-bold bg-cyan-950/10">
+                                                                                            <span className={isRalo ? "text-red-400 font-extrabold" : "text-cyan-300"}>
+                                                                                                R$ {sub.cpa.toFixed(2)}
+                                                                                            </span>
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3 font-mono font-extrabold text-amber-400 bg-amber-950/10">
+                                                                                            {sub.roas.toFixed(2)}x
+                                                                                        </td>
+                                                                                        <td className="py-2.5 px-3">
+                                                                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border inline-flex items-center gap-1 ${
+                                                                                                isAltaConv
+                                                                                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                                                                                    : isRalo
+                                                                                                    ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                                                                                                    : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                                                                            }`}>
+                                                                                                <span>{isAltaConv ? '🔥' : isRalo ? '⚠️' : '⚡'}</span>
+                                                                                                <span>{sub.status}</span>
+                                                                                            </span>
+                                                                                        </td>
+                                                                                    </tr>
+                                                                                );
+                                                                            })}
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+
+                                                                {/* Box de Insight Pedagógico do Drill-Down */}
+                                                                <div className="mt-4 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
+                                                                    <span className="text-base">💡</span>
+                                                                    <div className="leading-relaxed">
+                                                                        <strong>Insight do Quadrante para {row.regiao}:</strong>{" "}
+                                                                        {(() => {
+                                                                            const eixoSub = subClusters.find(s => s.isEixoPrincipal);
+                                                                            const outrosPct = 100 - (eixoSub ? eixoSub.percentImpr : 0);
+                                                                            const outrosImpr = row.impressoes - (eixoSub ? eixoSub.impressoes : 0);
+                                                                            return (
+                                                                                <span>
+                                                                                    A busca literal pelo eixo{" "}
+                                                                                    <code className="text-cyan-300 px-1 py-0.5 bg-slate-800 rounded font-mono">
+                                                                                        "{eixoSub?.termoChave || row.regiao.toLowerCase()}"
+                                                                                    </code>{" "}
+                                                                                    representou <strong>{eixoSub?.percentImpr || 0}%</strong> ({eixoSub?.impressoes.toLocaleString('pt-BR') || 0} imp.). Os restantes{" "}
+                                                                                    <strong className="text-amber-300">{outrosPct.toFixed(1)}%</strong> ({outrosImpr.toLocaleString('pt-BR')} imp.) foram distribuídos em países e cidades específicos. Ao criar grupos <strong>STAG</strong> para esses destinos derivados, o anúncio e a página passam a responder exatamente ao país desejado, reduzindo o CPA e eliminando o desperdício de verba.
+                                                                                </span>
+                                                                            );
+                                                                        })()}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
                                         );
                                     })}
                                 </tbody>
@@ -2156,6 +2493,122 @@ export function UpperScript({
                         <div className="text-[10px] text-amber-300 font-mono border-t border-slate-800/80 pt-1.5 flex items-start gap-1">
                             <span className="text-amber-400 shrink-0">💡</span>
                             <span>{activeTooltipData.purpose}</span>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* TOOLTIP / POPOVER RICO: NUVEM DE CHIPS E BARRA DE PROPORÇÃO (ITEM 3) */}
+            {clusterTooltip.visible && clusterTooltip.clusterRow && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        left: `${clusterTooltip.x}px`,
+                        top: `${clusterTooltip.y}px`,
+                        transform: clusterTooltip.placement === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)',
+                        zIndex: 9999
+                    }}
+                    className="pointer-events-auto transition-all duration-150 py-2 animate-fadeIn"
+                    onMouseEnter={() => {}}
+                    onMouseLeave={hideClusterTooltip}
+                >
+                    <div className="bg-slate-950/95 border border-cyan-500/50 p-5 rounded-2xl shadow-2xl w-[440px] max-w-[92vw] text-left backdrop-blur-xl select-text relative">
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-800">
+                            <div className="flex items-center gap-2">
+                                <span className="w-3 h-3 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: clusterTooltip.clusterRow.color }}></span>
+                                <div>
+                                    <h4 className="text-sm font-bold text-white m-0 flex items-center gap-1.5">
+                                        <span>Campo Semântico:</span>
+                                        <span className="text-cyan-300">{clusterTooltip.clusterRow.regiao}</span>
+                                    </h4>
+                                    <span className="text-[10px] text-slate-400">Guarda-chuva de Intenção de Destino</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-mono font-bold text-purple-300 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">
+                                    {clusterTooltip.clusterRow.impressoes.toLocaleString('pt-BR')} imp.
+                                </span>
+                                <button
+                                    onClick={hideClusterTooltip}
+                                    className="text-slate-500 hover:text-slate-300 p-1 rounded transition-colors text-xs cursor-pointer ml-1"
+                                    title="Fechar"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Texto Didático */}
+                        <p className="text-[11px] text-slate-300 mb-3.5 leading-relaxed">
+                            O cluster agrupa todas as buscas cuja <strong>intenção de viagem</strong> é direcionada a este território. Isso diferencia a <em>intenção global</em> da <em>palavra literal individual</em>.
+                        </p>
+
+                        {/* BARRA DE PROPORÇÃO HORIZONTAL (STACKED BAR) */}
+                        <div className="mb-4 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1.5 font-bold uppercase tracking-wider">
+                                <span>Distribuição das Âncoras</span>
+                                <span className="text-cyan-400 font-mono">100% do Volume</span>
+                            </div>
+
+                            <div className="w-full h-3 rounded-full bg-slate-950 overflow-hidden flex border border-slate-800 shadow-inner">
+                                {clusterTooltip.clusterRow.subClusters?.slice(0, 6).map((sub, sIdx) => {
+                                    const barColors = ["#38bdf8", "#f59e0b", "#10b981", "#a855f7", "#ec4899", "#64748b"];
+                                    return (
+                                        <div
+                                            key={sIdx}
+                                            style={{ width: `${Math.max(3, sub.percentImpr)}%`, backgroundColor: barColors[sIdx % barColors.length] }}
+                                            title={`${sub.label}: ${sub.impressoes.toLocaleString('pt-BR')} imp (${sub.percentImpr}%)`}
+                                            className="h-full transition-all hover:opacity-90"
+                                        />
+                                    );
+                                })}
+                            </div>
+
+                            {/* Legenda da Barra */}
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-2 text-[10px] text-slate-300">
+                                {clusterTooltip.clusterRow.subClusters?.slice(0, 4).map((sub, sIdx) => {
+                                    const barColors = ["#38bdf8", "#f59e0b", "#10b981", "#a855f7"];
+                                    return (
+                                        <span key={sIdx} className="flex items-center gap-1 font-medium">
+                                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: barColors[sIdx % barColors.length] }} />
+                                            <span>{sub.icone} {sub.ancora}: <strong className="text-white font-mono">{sub.percentImpr}%</strong></span>
+                                        </span>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* NUVEM DE CHIPS INTERATIVA */}
+                        <div>
+                            <div className="text-[10px] text-slate-400 mb-2 font-bold uppercase tracking-wider flex items-center justify-between">
+                                <span>Nuvem de Âncoras Semânticas ({clusterTooltip.clusterRow.subClusters?.length || 0})</span>
+                                <span className="text-cyan-400 text-[10px] font-mono">impr. por âncora</span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+                                {clusterTooltip.clusterRow.subClusters?.map((sub, sIdx) => (
+                                    <div
+                                        key={sIdx}
+                                        className={`px-2.5 py-1 rounded-lg text-[11px] border flex items-center gap-1.5 transition-all shadow-sm ${
+                                            sub.isEixoPrincipal
+                                                ? 'bg-cyan-950/80 border-cyan-500/60 text-cyan-200 font-bold'
+                                                : 'bg-slate-900/90 border-slate-800 text-slate-200 hover:border-slate-700'
+                                        }`}
+                                    >
+                                        <span>{sub.icone}</span>
+                                        <span className="font-semibold">{sub.ancora}</span>
+                                        <span className="text-[10px] font-mono text-purple-300 font-bold bg-purple-950/50 px-1 py-0.2 rounded">
+                                            {sub.impressoes.toLocaleString('pt-BR')}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Rodapé Didático */}
+                        <div className="mt-3.5 pt-2.5 border-t border-slate-800 text-[10px] text-slate-400 flex items-center justify-between">
+                            <span>💡 Clique na linha da tabela para abrir o Drill-Down com métricas completas.</span>
                         </div>
                     </div>
                 </div>
