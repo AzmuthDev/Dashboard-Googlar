@@ -18,6 +18,7 @@ import {
     type SubClusterBreakdown
 } from '../lib/upperScriptEngine';
 import { parseSpreadsheet } from '../utils/excelParser';
+import { AnswerThePublicRadial } from './AnswerThePublicRadial';
 import type { CampaignTerm, Company } from '../types';
 
 // Etapas do pipeline de auditoria visual com feedback em tempo real
@@ -78,6 +79,7 @@ export function UpperScript({
 
     // Abas de visualização (Modelo 1, Modelo 2, Modelo 3)
     const [activeTab, setActiveTab] = useState<'tab1' | 'tab2' | 'tab3'>('tab2');
+    const [tab1ViewMode, setTab1ViewMode] = useState<'radial' | 'table' | 'split'>('radial');
 
     // Estado da simulação operacional (Modelo 3)
     const [selectedSimRegion, setSelectedSimRegion] = useState<string>('Europa');
@@ -1058,7 +1060,79 @@ export function UpperScript({
             {/* ========================================================================= */}
             {activeTab === "tab1" && (
                 <div className="space-y-6 animate-fadeIn">
-                    <div className="rounded-2xl p-6 sm:p-8 bg-slate-900/80 border border-slate-800 shadow-xl">
+                    {/* BARRA DE SELEÇÃO DE MODO DE VISUALIZAÇÃO: RADIAL / TABELA / DIVIDIDO */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl backdrop-blur-md">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500/20 to-cyan-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 shadow-md">
+                                <Sparkles className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                                    <span>Visualização do Modelo 1 (P&L por Região)</span>
+                                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                                        AnswerThePublic
+                                    </span>
+                                </h2>
+                                <p className="text-xs text-slate-400">
+                                    Projeção polar radial em 360° com heatmap de relevância e matriz analítica de alocação de verba
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Botões de Alternância */}
+                        <div className="flex items-center p-1 rounded-xl bg-slate-950 border border-slate-800 shadow-inner">
+                            <button
+                                type="button"
+                                onClick={() => setTab1ViewMode('radial')}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                                    tab1ViewMode === 'radial'
+                                        ? 'bg-sky-500 text-slate-950 shadow-md font-bold'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                                }`}
+                            >
+                                <span>🕸️</span>
+                                <span>Radial (AnswerThePublic)</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setTab1ViewMode('table')}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                                    tab1ViewMode === 'table'
+                                        ? 'bg-sky-500 text-slate-950 shadow-md font-bold'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                                }`}
+                            >
+                                <span>📊</span>
+                                <span>Tabela P&L</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setTab1ViewMode('split')}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+                                    tab1ViewMode === 'split'
+                                        ? 'bg-sky-500 text-slate-950 shadow-md font-bold'
+                                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                                }`}
+                            >
+                                <span>🌓</span>
+                                <span>Visão Dividida</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* MODO RADIAL ANSWERTHEPUBLIC */}
+                    {(tab1ViewMode === 'radial' || tab1ViewMode === 'split') && (
+                        <AnswerThePublicRadial
+                            plRows={auditResult.plRows}
+                            centralTheme={activeCompany?.name || uploadedFileName?.replace(/\.[^/.]+$/, '') || "P&L de Mídia"}
+                        />
+                    )}
+
+                    {/* MODO TABELA P&L DE ALOCAÇÃO */}
+                    {(tab1ViewMode === 'table' || tab1ViewMode === 'split') && (
+                        <div className="rounded-2xl p-6 sm:p-8 bg-slate-900/80 border border-slate-800 shadow-xl">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                             <div>
                                 <h2 className="text-xl font-bold text-white">
@@ -1382,6 +1456,7 @@ export function UpperScript({
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
             )}
 

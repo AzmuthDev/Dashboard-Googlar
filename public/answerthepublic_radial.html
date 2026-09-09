@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnswerThePublic - Radial Wheel Oficial</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #f6f8fa;
+            color: #1e293b;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+        body.dark-mode {
+            background-color: #090d16;
+            color: #f1f5f9;
+        }
+
+        /* BARRA SUPERIOR FIEL AO ANSWER THE PUBLIC */
+        header {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            z-index: 20;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        body.dark-mode header {
+            background: #0f172a;
+            border-color: #1e293b;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-badge {
+            background: #f25b2a;
+            color: white;
+            font-weight: 900;
+            font-size: 13px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            letter-spacing: -0.02em;
+        }
+        .logo-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        body.dark-mode .logo-title {
+            color: #ffffff;
+        }
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px 14px;
+            width: 320px;
+        }
+        body.dark-mode .search-container {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        .search-container input {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 13px;
+            width: 100%;
+            color: inherit;
+        }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #334155;
+        }
+        body.dark-mode .btn {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        .btn:hover {
+            border-color: #f25b2a;
+            color: #f25b2a;
+        }
+        .btn-orange {
+            background: #f25b2a;
+            color: white !important;
+            border-color: #f25b2a;
+        }
+        .btn-orange:hover {
+            background: #d94a1d;
+        }
+
+        /* ABAS DE CATEGORIA ESTILO ANSWER THE PUBLIC */
+        .tabs-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            padding: 12px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            overflow-x: auto;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        body.dark-mode .tabs-nav {
+            background: #0b1120;
+            border-color: #1e293b;
+        }
+        .tab-item {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            cursor: pointer;
+            padding: 6px 4px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        .tab-item:hover {
+            color: #f25b2a;
+        }
+        .tab-item.active {
+            color: #f25b2a;
+            border-bottom-color: #f25b2a;
+        }
+        .tab-count {
+            font-size: 11px;
+            opacity: 0.8;
+            font-weight: 600;
+        }
+
+        /* ÁREA PRINCIPAL DO GRÁFICO */
+        #viewport {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: calc(100vh - 125px);
+            cursor: grab;
+            user-select: none;
+            overflow: hidden;
+        }
+        #viewport:active {
+            cursor: grabbing;
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* LEGENDA DE CALOR EXATA DO VÍDEO */
+        .legend-card {
+            position: absolute;
+            bottom: 24px;
+            left: 28px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+            pointer-events: none;
+            transition: background 0.3s, border-color 0.3s;
+        }
+        body.dark-mode .legend-card {
+            background: #0f172a;
+            border-color: #1e293b;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        .legend-header {
+            font-weight: 800;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+        }
+        .legend-list {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .dot-high { background-color: #e04f16; }
+        .dot-med { background-color: #f97316; }
+        .dot-low { background-color: #fdba74; }
+        .dot-zero { background-color: #cbd5e1; }
+
+        /* HUD TOOLTIP FLUTUANTE */
+        #hud-tooltip {
+            position: absolute;
+            pointer-events: none;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 16px;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+            font-size: 12px;
+            opacity: 0;
+            transform: translate(-50%, -100%);
+            margin-top: -12px;
+            transition: opacity 0.15s ease-out;
+            z-index: 100;
+            min-width: 220px;
+        }
+        body.dark-mode #hud-tooltip {
+            background: #0f172a;
+            border-color: #334155;
+            color: #f8fafc;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
+        }
+        #hud-tooltip .query-title {
+            font-weight: 800;
+            color: #f25b2a;
+            font-size: 13px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 4px;
+        }
+        body.dark-mode #hud-tooltip .query-title {
+            border-color: #1e293b;
+        }
+        #hud-tooltip .metrics-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 4px;
+        }
+        #hud-tooltip .metric-label {
+            color: #64748b;
+        }
+        #hud-tooltip .metric-value {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CABEÇALHO -->
+    <header>
+        <div class="logo-area">
+            <span class="logo-badge">AnswerThePublic</span>
+            <span class="logo-title">Search Cloud Wheel</span>
+        </div>
+
+        <div class="search-container">
+            <span>🔍</span>
+            <input type="text" id="queryInput" value="o que é seo" placeholder="Buscar termo...">
+        </div>
+
+        <div class="header-actions">
+            <button class="btn" id="themeToggleBtn">🌓 Modo Escuro</button>
+            <button class="btn" id="zoomInBtn">➕</button>
+            <button class="btn" id="zoomOutBtn">➖</button>
+            <button class="btn" id="resetZoomBtn">⟲ Centralizar</button>
+            <button class="btn btn-orange" id="downloadSvgBtn">⬇ Baixar SVG</button>
+        </div>
+    </header>
+
+    <!-- NAVEGAÇÃO DE ABAS IDÊNTICA AO VÍDEO -->
+    <nav class="tabs-nav">
+        <div class="tab-item active" data-category="perguntas">
+            <span>Perguntas</span>
+            <span class="tab-count">[36]</span>
+        </div>
+        <div class="tab-item" data-category="preposicoes">
+            <span>Preposições</span>
+            <span class="tab-count">[22]</span>
+        </div>
+        <div class="tab-item" data-category="comparacoes">
+            <span>Comparações</span>
+            <span class="tab-count">[8]</span>
+        </div>
+        <div class="tab-item" data-category="alfabetica">
+            <span>Ordem Alfabética</span>
+            <span class="tab-count">[70]</span>
+        </div>
+        <div class="tab-item" data-category="relacionadas">
+            <span>Relacionadas</span>
+            <span class="tab-count">[15]</span>
+        </div>
+    </nav>
+
+    <!-- CANVAS SVG DO GRÁFICO RADIAL -->
+    <div id="viewport">
+        <svg id="wheelSvg"></svg>
+
+        <!-- LEGENDA EXATA DO VÍDEO -->
+        <div class="legend-card">
+            <div class="legend-header">Volume de Busca (Calor):</div>
+            <div class="legend-list">
+                <div class="legend-item">
+                    <span class="legend-dot dot-high"></span>
+                    <span>Laranja Escuro (Alto)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot dot-med"></span>
+                    <span>Laranja (Médio)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot dot-low"></span>
+                    <span>Laranja Claro</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot dot-zero"></span>
+                    <span>Cinza (Baixo)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOOLTIP HUD -->
+        <div id="hud-tooltip">
+            <div class="query-title" id="tt-title">Termo de Busca</div>
+            <div class="metrics-row">
+                <span class="metric-label">Volume de Busca:</span>
+                <span class="metric-value" id="tt-vol">14.800</span>
+            </div>
+            <div class="metrics-row">
+                <span class="metric-label">Custo por Clique (CPC):</span>
+                <span class="metric-value" id="tt-cpc">$0.11</span>
+            </div>
+            <div class="metrics-row">
+                <span class="metric-label">Concorrência / Relevância:</span>
+                <span class="metric-value" id="tt-comp">Alta</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // BANCO DE DADOS HIERÁRQUICO COM AS FRASES EXATAS DO VÍDEO
+        // =========================================================================
+        const DATABASE = {
+            mainKeyword: "o que é seo",
+            volumeTotal: "14.800",
+            cpcMedio: "$0.11",
+            perguntas: [
+                { query: "seo o que é como funciona", volume: 18200, cpc: 0.31 },
+                { query: "seo o que é isso", volume: 14500, cpc: 0.20 },
+                { query: "seo o que significa", volume: 22400, cpc: 0.29 },
+                { query: "seo o que é", volume: 26800, cpc: 0.50 },
+                { query: "o que é seo", volume: 32000, cpc: 0.27 },
+                { query: "o que é seo youtube", volume: 9800, cpc: 0.15 },
+                { query: "o que é seo no marketing", volume: 12400, cpc: 0.35 },
+                { query: "o que é seo e sem", volume: 16100, cpc: 0.42 },
+                { query: "o que é seo no instagram", volume: 11200, cpc: 0.18 },
+                { query: "o que é seo e como aplicar", volume: 15400, cpc: 0.38 },
+                { query: "o que é seo copywriter", volume: 7200, cpc: 0.22 },
+                { query: "o que é seo tecnico", volume: 8900, cpc: 0.45 },
+                { query: "o que é seo on page e off page", volume: 13800, cpc: 0.40 },
+                { query: "o que é seo de imagem", volume: 6400, cpc: 0.16 },
+                { query: "o que é seo local", volume: 9100, cpc: 0.33 },
+                { query: "como fazer seo no google", volume: 21500, cpc: 0.48 },
+                { query: "como funciona seo do youtube", volume: 8700, cpc: 0.19 },
+                { query: "como aprender seo do zero", volume: 14200, cpc: 0.30 },
+                { query: "como usar seo no site", volume: 10500, cpc: 0.36 },
+                { query: "como melhorar o seo do site", volume: 17800, cpc: 0.52 },
+                { query: "como trabalhar com seo", volume: 9400, cpc: 0.28 },
+                { query: "onde estudar seo gratis", volume: 6800, cpc: 0.14 },
+                { query: "onde colocar palavras chaves seo", volume: 11900, cpc: 0.37 },
+                { query: "onde contratar especialista seo", volume: 5900, cpc: 0.85 },
+                { query: "por que o seo é importante", volume: 8400, cpc: 0.25 },
+                { query: "por que investir em seo", volume: 7600, cpc: 0.60 },
+                { query: "qual o objetivo do seo", volume: 13200, cpc: 0.32 },
+                { query: "qual a diferenca entre seo e trafego pago", volume: 16900, cpc: 0.55 },
+                { query: "qual melhor ferramenta de seo", volume: 12100, cpc: 0.44 },
+                { query: "quando contratar consultoria seo", volume: 5200, cpc: 0.75 },
+                { query: "quando o seo comeca a dar resultado", volume: 9900, cpc: 0.34 },
+                { query: "quem faz o trabalho de seo", volume: 6100, cpc: 0.26 },
+                { query: "quem é o profissional de seo", volume: 5500, cpc: 0.24 },
+                { query: "sao tecnicas de seo white hat", volume: 4800, cpc: 0.21 },
+                { query: "quanto custa servico de seo", volume: 14700, cpc: 0.90 },
+                { query: "quanto tempo demora para ver resultado seo", volume: 11400, cpc: 0.39 }
+            ],
+            preposicoes: [
+                { query: "seo para youtube", volume: 18400, cpc: 0.28 },
+                { query: "seo para iniciantes", volume: 14200, cpc: 0.32 },
+                { query: "seo para ecommerce", volume: 22100, cpc: 0.65 },
+                { query: "seo para wordpress", volume: 16800, cpc: 0.45 },
+                { query: "seo com inteligência artificial", volume: 24500, cpc: 0.58 },
+                { query: "seo com chatgpt", volume: 27900, cpc: 0.62 },
+                { query: "seo sem pagar nada", volume: 8900, cpc: 0.15 },
+                { query: "seo em marketing digital", volume: 13500, cpc: 0.35 }
+            ],
+            comparacoes: [
+                { query: "seo vs trafego pago", volume: 19800, cpc: 0.54 },
+                { query: "seo vs sem", volume: 15400, cpc: 0.48 },
+                { query: "seo ou google ads", volume: 24100, cpc: 0.72 },
+                { query: "seo ou inbound marketing", volume: 8200, cpc: 0.36 }
+            ],
+            alfabetica: [
+                { query: "analise de seo", volume: 12400, cpc: 0.40 },
+                { query: "auditoria de seo gratis", volume: 15600, cpc: 0.45 },
+                { query: "backlinks para seo", volume: 18200, cpc: 0.55 },
+                { query: "consultor seo profissional", volume: 9800, cpc: 0.85 }
+            ],
+            relacionadas: [
+                { query: "google search console", volume: 320000, cpc: 0.12 },
+                { query: "google analytics 4", volume: 240000, cpc: 0.15 },
+                { query: "palavras chaves google", volume: 98000, cpc: 0.42 }
+            ]
+        };
+
+        // =========================================================================
+        // RENDERIZADOR D3.JS DO GRÁFICO IDENTICO AO VÍDEO
+        // =========================================================================
+        let currentCategory = "perguntas";
+        let activeQuery = DATABASE.mainKeyword;
+
+        const viewport = document.getElementById("viewport");
+        const svg = d3.select("#wheelSvg");
+        const hudTooltip = document.getElementById("hud-tooltip");
+
+        const width = 1200;
+        const height = 1200;
+
+        svg
+            .attr("viewBox", [-width / 2, -height / 2, width, height])
+            .attr("style", "width: 100%; height: 100%; font-family: 'Inter', sans-serif;");
+
+        // Container com Zoom e Pan
+        const g = svg.append("g").attr("class", "zoom-container");
+
+        const zoomBehavior = d3.zoom()
+            .scaleExtent([0.4, 3.5])
+            .on("zoom", (event) => {
+                g.attr("transform", event.transform);
+            });
+
+        svg.call(zoomBehavior);
+
+        function renderAnswerThePublicWheel() {
+            g.selectAll("*").remove();
+
+            const items = DATABASE[currentCategory] || DATABASE.perguntas;
+            const count = items.length;
+
+            // Raio das camadas geométricas
+            const rInner = 68;          // Raio do círculo branco central
+            const rDonut = 118;         // Raio do anel laranja (donut)
+            const rDots = 205;          // Raio onde se localiza o anel de pontos (marcadores)
+            const rText = 222;          // Raio onde se inicia o texto radial
+            const rOuterSpoke = 490;    // Raio final do raio/spoke onde fica o número
+
+            // Volumes para normalização de calor
+            const volumes = items.map(d => d.volume);
+            const minVol = d3.min(volumes) || 1000;
+            const maxVol = d3.max(volumes) || 30000;
+
+            // Função de cor idêntica ao vídeo:
+            // "Onde tem o laranja escuro..."
+            function getHeatColor(vol) {
+                const norm = (vol - minVol) / (maxVol - minVol || 1);
+                if (norm > 0.65) return "#e04f16"; // Laranja Escuro (Alto volume)
+                if (norm > 0.35) return "#f97316"; // Laranja vibrante
+                if (norm > 0.15) return "#fdba74"; // Laranja claro / Pêssego
+                return "#cbd5e1";                  // Cinza (baixo volume)
+            }
+
+            // Definições de caminhos de arco para os textos curvos dentro do anel laranja
+            const defs = g.append("defs");
+
+            // Arco Superior (Volume de busca)
+            defs.append("path")
+                .attr("id", "top-donut-arc")
+                .attr("d", d3.arc()({
+                    innerRadius: 84,
+                    outerRadius: 84,
+                    startAngle: -Math.PI * 0.42,
+                    endAngle: Math.PI * 0.42
+                }));
+
+            // Arco Inferior (Custo por clique)
+            defs.append("path")
+                .attr("id", "bottom-donut-arc")
+                .attr("d", d3.arc()({
+                    innerRadius: 94,
+                    outerRadius: 94,
+                    startAngle: Math.PI * 0.65,
+                    endAngle: Math.PI * 1.35
+                }));
+
+            // 1. TÍTULO E CONTADOR SUPERIOR "30/36 Perguntas" (Exatamente como no vídeo)
+            const topHeaderGroup = g.append("g")
+                .attr("transform", `translate(0, -${rDonut + 36})`)
+                .attr("text-anchor", "middle");
+
+            topHeaderGroup.append("text")
+                .attr("class", "wheel-count")
+                .attr("font-size", "28px")
+                .attr("font-weight", "800")
+                .attr("fill", document.body.classList.contains("dark-mode") ? "#ffffff" : "#0f172a")
+                .text(`${count}/${count}`);
+
+            topHeaderGroup.append("text")
+                .attr("dy", "18px")
+                .attr("font-size", "12px")
+                .attr("font-weight", "600")
+                .attr("fill", "#64748b")
+                .text(currentCategory.toUpperCase());
+
+            // 2. LINHAS RADIAIS (SPOKES EM 360°)
+            const spokesGroup = g.append("g").attr("class", "spokes-group");
+            const dotsGroup = g.append("g").attr("class", "dots-group");
+            const textGroup = g.append("g").attr("class", "text-group");
+
+            items.forEach((item, i) => {
+                // Ângulo uniforme em radianos (distribuído perfeitamente em 360°)
+                const angle = (2 * Math.PI / count) * i - Math.PI / 2;
+                const angleDeg = (angle * 180 / Math.PI);
+                const isLeftHemisphere = angleDeg > 90 || angleDeg < -90;
+
+                const color = getHeatColor(item.volume);
+
+                // Linha de raio suave
+                const spokeLine = spokesGroup.append("line")
+                    .attr("x1", Math.cos(angle) * (rDonut + 4))
+                    .attr("y1", Math.sin(angle) * (rDonut + 4))
+                    .attr("x2", Math.cos(angle) * (rOuterSpoke + 30))
+                    .attr("y2", Math.sin(angle) * (rOuterSpoke + 30))
+                    .attr("stroke", document.body.classList.contains("dark-mode") ? "#1e293b" : "#e2e8f0")
+                    .attr("stroke-width", 1)
+                    .attr("stroke-dasharray", "2, 3");
+
+                // Ponto Marcador de Calor no anel concêntrico (Heat Dot)
+                const dot = dotsGroup.append("circle")
+                    .attr("cx", Math.cos(angle) * rDots)
+                    .attr("cy", Math.sin(angle) * rDots)
+                    .attr("r", item.volume > 20000 ? 5.5 : 4.2)
+                    .attr("fill", color)
+                    .attr("stroke", "#ffffff")
+                    .attr("stroke-width", 1.5)
+                    .attr("cursor", "pointer")
+                    .attr("class", "heat-dot");
+
+                // Rótulo de Texto da Busca Alinhado ao Raio
+                const labelGroup = textGroup.append("g")
+                    .attr("transform", `translate(${Math.cos(angle) * rText}, ${Math.sin(angle) * rText}) rotate(${isLeftHemisphere ? angleDeg + 180 : angleDeg})`)
+                    .attr("cursor", "pointer");
+
+                const textEl = labelGroup.append("text")
+                    .attr("dy", "0.34em")
+                    .attr("text-anchor", isLeftHemisphere ? "end" : "start")
+                    .attr("fill", document.body.classList.contains("dark-mode") ? "#cbd5e1" : "#334155")
+                    .attr("font-size", "10.5px")
+                    .attr("font-weight", "500")
+                    .text(item.query);
+
+                // Número métrico na extremidade externa do raio (como $0.29, 210 no vídeo)
+                const metricGroup = textGroup.append("g")
+                    .attr("transform", `translate(${Math.cos(angle) * (rOuterSpoke + 10)}, ${Math.sin(angle) * (rOuterSpoke + 10)}) rotate(${isLeftHemisphere ? angleDeg + 180 : angleDeg})`);
+
+                metricGroup.append("text")
+                    .attr("dy", "0.34em")
+                    .attr("text-anchor", isLeftHemisphere ? "end" : "start")
+                    .attr("fill", "#94a3b8")
+                    .attr("font-size", "9px")
+                    .attr("font-weight", "600")
+                    .text(`$${item.cpc.toFixed(2)}`);
+
+                // Interatividade ao passar o mouse sobre o raio ou texto
+                const handleHover = (event) => {
+                    spokeLine
+                        .attr("stroke", "#f25b2a")
+                        .attr("stroke-width", 2)
+                        .attr("stroke-dasharray", "none");
+
+                    dot
+                        .attr("r", 7)
+                        .attr("stroke", "#f25b2a")
+                        .attr("stroke-width", 2);
+
+                    textEl
+                        .attr("fill", "#f25b2a")
+                        .attr("font-weight", "800");
+
+                    // Atualizar textos do anel donut em tempo real
+                    centerQueryText.text(item.query.length > 18 ? item.query.substring(0, 16) + '...' : item.query);
+                    topArcText.text(`Volume: ${item.volume.toLocaleString('pt-BR')}`);
+                    bottomArcText.text(`CPC: $${item.cpc.toFixed(2)}`);
+
+                    // Tooltip
+                    const [mx, my] = d3.pointer(event, viewport);
+                    document.getElementById("tt-title").textContent = item.query;
+                    document.getElementById("tt-vol").textContent = `${item.volume.toLocaleString('pt-BR')} buscas/mês`;
+                    document.getElementById("tt-cpc").textContent = `$${item.cpc.toFixed(2)}`;
+                    document.getElementById("tt-comp").textContent = item.volume > 15000 ? "Alta Relevância (Laranja Escuro)" : "Média/Baixa";
+
+                    hudTooltip.style.left = `${mx}px`;
+                    hudTooltip.style.top = `${my}px`;
+                    hudTooltip.style.opacity = "1";
+                };
+
+                const handleLeave = () => {
+                    spokeLine
+                        .attr("stroke", document.body.classList.contains("dark-mode") ? "#1e293b" : "#e2e8f0")
+                        .attr("stroke-width", 1)
+                        .attr("stroke-dasharray", "2, 3");
+
+                    dot
+                        .attr("r", item.volume > 20000 ? 5.5 : 4.2)
+                        .attr("stroke", "#ffffff")
+                        .attr("stroke-width", 1.5);
+
+                    textEl
+                        .attr("fill", document.body.classList.contains("dark-mode") ? "#cbd5e1" : "#334155")
+                        .attr("font-weight", "500");
+
+                    // Restaurar centro padrão
+                    centerQueryText.text(activeQuery);
+                    topArcText.text("Volume de busca");
+                    bottomArcText.text(`Custo por clique: ${DATABASE.cpcMedio}`);
+
+                    hudTooltip.style.opacity = "0";
+                };
+
+                dot.on("mouseenter", handleHover).on("mouseleave", handleLeave);
+                labelGroup.on("mouseenter", handleHover).on("mouseleave", handleLeave);
+            });
+
+            // 3. ANEL LARANJA (DONUT RING) DO ANSWER THE PUBLIC
+            const donutGroup = g.append("g").attr("class", "donut-hub");
+
+            // Anel Donut Laranja
+            donutGroup.append("path")
+                .attr("d", d3.arc()({
+                    innerRadius: rInner,
+                    outerRadius: rDonut,
+                    startAngle: 0,
+                    endAngle: 2 * Math.PI
+                }))
+                .attr("fill", "#f25b2a")
+                .attr("stroke", "#ffffff")
+                .attr("stroke-width", 2.5);
+
+            // Texto Curvo Superior no Donut: "Volume de busca"
+            const topArcText = donutGroup.append("text")
+                .attr("fill", "#ffffff")
+                .attr("font-size", "10px")
+                .attr("font-weight", "700")
+                .attr("letter-spacing", "0.03em")
+                .append("textPath")
+                .attr("href", "#top-donut-arc")
+                .attr("startOffset", "50%")
+                .attr("text-anchor", "middle")
+                .text("Volume de busca");
+
+            // Texto Curvo Inferior no Donut: "Custo por clique: $0.11"
+            const bottomArcText = donutGroup.append("text")
+                .attr("fill", "#ffffff")
+                .attr("font-size", "10px")
+                .attr("font-weight", "700")
+                .attr("letter-spacing", "0.03em")
+                .append("textPath")
+                .attr("href", "#bottom-donut-arc")
+                .attr("startOffset", "50%")
+                .attr("text-anchor", "middle")
+                .text(`Custo por clique: ${DATABASE.cpcMedio}`);
+
+            // 4. CÍRCULO BRANCO CENTRAL (HUB COM O TERMO PRINCIPAL)
+            donutGroup.append("circle")
+                .attr("r", rInner)
+                .attr("fill", document.body.classList.contains("dark-mode") ? "#0f172a" : "#ffffff")
+                .attr("stroke", "#f25b2a")
+                .attr("stroke-width", 2);
+
+            const centerQueryText = donutGroup.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dy", "0.35em")
+                .attr("fill", document.body.classList.contains("dark-mode") ? "#f8fafc" : "#0f172a")
+                .attr("font-size", "13px")
+                .attr("font-weight", "800")
+                .text(activeQuery);
+        }
+
+        renderAnswerThePublicWheel();
+
+        // CONTROLE DAS ABAS (PERGUNTAS, PREPOSIÇÕES, COMPARAÇÕES, ETC.)
+        document.querySelectorAll(".tab-item").forEach(tab => {
+            tab.addEventListener("click", function() {
+                document.querySelectorAll(".tab-item").forEach(t => t.classList.remove("active"));
+                this.classList.add("active");
+                currentCategory = this.getAttribute("data-category");
+                renderAnswerThePublicWheel();
+            });
+        });
+
+        // PESQUISA EM TEMPO REAL
+        document.getElementById("queryInput").addEventListener("input", function(e) {
+            const val = e.target.value.trim();
+            if (val) {
+                activeQuery = val;
+                renderAnswerThePublicWheel();
+            }
+        });
+
+        // BOTÕES DE ZOOM
+        document.getElementById("zoomInBtn").addEventListener("click", () => {
+            svg.transition().duration(300).call(zoomBehavior.scaleBy, 1.3);
+        });
+        document.getElementById("zoomOutBtn").addEventListener("click", () => {
+            svg.transition().duration(300).call(zoomBehavior.scaleBy, 0.75);
+        });
+        document.getElementById("resetZoomBtn").addEventListener("click", () => {
+            svg.transition().duration(400).call(zoomBehavior.transform, d3.zoomIdentity);
+        });
+
+        // MODO ESCURO / CLARO
+        document.getElementById("themeToggleBtn").addEventListener("click", function() {
+            document.body.classList.toggle("dark-mode");
+            this.textContent = document.body.classList.contains("dark-mode") ? "☀️ Modo Claro" : "🌓 Modo Escuro";
+            renderAnswerThePublicWheel();
+        });
+
+        // DOWNLOAD SVG
+        document.getElementById("downloadSvgBtn").addEventListener("click", () => {
+            const svgEl = document.getElementById("wheelSvg");
+            const serializer = new XMLSerializer();
+            const source = '<?xml version="1.0" standalone="no"?>\r\n' + serializer.serializeToString(svgEl);
+            const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `answerthepublic_${activeQuery.replace(/\s+/g, '_')}.svg`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // RESPONSIVIDADE
+        window.addEventListener("resize", () => {
+            renderAnswerThePublicWheel();
+        });
+    </script>
+</body>
+</html>
