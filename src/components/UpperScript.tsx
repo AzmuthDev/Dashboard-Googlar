@@ -17,6 +17,7 @@ import {
     type PLClusterRow,
     type SubClusterBreakdown
 } from '../lib/upperScriptEngine';
+import { parseSpreadsheet } from '../utils/excelParser';
 import type { CampaignTerm, Company } from '../types';
 
 // Etapas do pipeline de auditoria visual com feedback em tempo real
@@ -551,57 +552,7 @@ export function UpperScript({
             setProcessingFileMeta(prev => prev ? { ...prev, statusText: 'Lendo abas e linhas da planilha...' } : null);
 
             const buffer = await file.arrayBuffer();
-            const wb = XLSX.read(buffer, { type: 'array' });
-            
-            if (!wb.SheetNames || wb.SheetNames.length === 0) {
-                throw new Error("O arquivo não contém nenhuma aba ou planilha de dados válida.");
-            }
-
-            const wsname = wb.SheetNames[0];
-            const ws = wb.Sheets[wsname];
-
-            // Detecção inteligente da linha de cabeçalho do Google Ads (ignora metadados e linhas de resumo)
-            const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-            let headerRowIdx = 0;
-            for (let i = 0; i < Math.min(rawRows.length, 25); i++) {
-                const row = rawRows[i];
-                if (row && row.some(cell => {
-                    const str = String(cell).toLowerCase();
-                    return str.includes('termo de pesquisa') || str.includes('search term') || str.includes('keyword') || str.includes('palavra-chave');
-                })) {
-                    headerRowIdx = i;
-                    break;
-                }
-            }
-
-            const headers = (rawRows[headerRowIdx] || []).map(h => String(h).trim());
-            let json: any[] = [];
-
-            for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
-                const r = rawRows[i];
-                if (!r || r.length === 0) continue;
-
-                const firstCell = String(r[0] || '').trim().toLowerCase();
-                if (firstCell.startsWith('total') || firstCell.startsWith('todas')) {
-                    continue; // ignora linhas de totais gerais
-                }
-
-                const obj: any = {};
-                headers.forEach((header, colIdx) => {
-                    if (header) {
-                        obj[header] = r[colIdx] !== undefined ? r[colIdx] : '';
-                    }
-                });
-
-                const term = obj['Termo de pesquisa'] || obj['Search term'] || obj['termo'] || obj['termo_de_pesquisa'] || '';
-                if (term) {
-                    json.push(obj);
-                }
-            }
-
-            if (!json || json.length === 0) {
-                json = XLSX.utils.sheet_to_json(ws, { defval: '' });
-            }
+            const { items: json, detectedSheet } = parseSpreadsheet(buffer, file.name);
 
             if (!json || json.length === 0) {
                 throw new Error("A planilha está vazia ou não possui linhas de dados válidas. Verifique se há termos de busca no arquivo.");
@@ -613,7 +564,7 @@ export function UpperScript({
             setProcessingFileMeta(prev => prev ? {
                 ...prev,
                 rowCount: json.length,
-                statusText: `${json.length.toLocaleString('pt-BR')} linhas identificadas. Normalizando colunas e termos de busca...`
+                statusText: `${json.length.toLocaleString('pt-BR')} linhas identificadas na aba "${detectedSheet}". Normalizando colunas e termos de busca...`
             } : null);
             await sleep(400);
 

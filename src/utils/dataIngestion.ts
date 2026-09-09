@@ -1,5 +1,6 @@
 import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
+import { parseSpreadsheet, parseFlexNumber } from './excelParser';
 import type { CampaignTerm } from '../types';
 
 /**
@@ -37,26 +38,17 @@ function cleanAndFormatRow(rawRow: any): Partial<CampaignTerm> {
         _debugLoggedOnce = true;
     }
 
-    const getNum = (val: any) => {
-        if (typeof val === 'number') return val;
-        if (typeof val === 'string') {
-            let cleanStr = val.replace(/R\$\s?/gi, '').trim();
-            cleanStr = cleanStr.replace(/\./g, '').replace(',', '.');
-            const parsed = parseFloat(cleanStr);
-            return isNaN(parsed) ? 0 : parsed;
-        }
-        return 0;
-    };
+    const getNum = (val: any) => parseFlexNumber(val);
 
     const getStr = (val: any) => {
         return val !== null && val !== undefined ? String(val).trim() : '';
     };
 
     return {
-        campanha:            getStr(row['campanha'] || row['campaign_name'] || '—'),
-        grupo_de_anuncios:   getStr(row['grupo de anuncios'] || row['ad_group'] || '—'),
-        palavra_chave:       getStr(row['palavra-chave'] || row['keyword'] || '—'),
-        termo_de_pesquisa:   getStr(row['termo de pesquisa'] || row['search_term'] || '—'),
+        campanha:            getStr(row['campanha'] || row['campaign_name'] || row['campaign'] || '—'),
+        grupo_de_anuncios:   getStr(row['grupo de anuncios'] || row['ad_group'] || row['grupo'] || '—'),
+        palavra_chave:       getStr(row['palavra-chave'] || row['keyword'] || row['palavra chave'] || row['criterio'] || '—'),
+        termo_de_pesquisa:   getStr(row['termo de pesquisa'] || row['search_term'] || row['termo'] || row['termos de pesquisa'] || row['termo de busca'] || row['search query'] || row['query'] || '—'),
         observacao:          getStr(row['observacao'] || row['observation'] || row['obs.'] || row['obs'] || ''),
         duvida:              getStr(row['duvida'] || row['duvida?'] || row['duvidas'] || ''),
         sugestao_grupo:      getStr(row['grupo de sugestao'] || row['suggestion_group'] || ''),
@@ -64,16 +56,16 @@ function cleanAndFormatRow(rawRow: any): Partial<CampaignTerm> {
         negativar:           getStr(row['negativar?'] || row['negativar'] || row['negativize'] || ''),
         teste_ab:            getStr(row['teste_ab'] || row['teste a/b'] || row['teste_a_b'] || row['ab_test'] || ''),
         status_granularidade: getStr(row['status_granularidade'] || row['status de granularidade'] || row['status_granularity'] || row['status'] || ''),
-        cliques:             getNum(row['cliques'] || row['clicks']),
-        impressoes:          getNum(row['impr.'] || row['impressoes'] || row['impressions']),
-        ctr:                 getNum(row['ctr']),
-        cpc_medio:           getNum(row['cpc medio'] || row['avg_cpc']),
-        custo:               getNum(row['custo'] || row['cost']),
-        conversoes:          getNum(row['conversoes'] || row['conversions']),
-        custo_conv:          getNum(row['custo / conv.'] || row['custo por conversao'] || row['cost_per_conversion']),
+        cliques:             getNum(row['cliques'] || row['clicks'] || row['interacoes']),
+        impressoes:          getNum(row['impr.'] || row['impressoes'] || row['impressions'] || row['impr']),
+        ctr:                 getNum(row['ctr'] || row['taxa de cliques']),
+        cpc_medio:           getNum(row['cpc medio'] || row['avg_cpc'] || row['cpc med.'] || row['custo medio']),
+        custo:               getNum(row['custo'] || row['cost'] || row['investimento']),
+        conversoes:          getNum(row['conversoes'] || row['conversions'] || row['conv.'] || row['todas as conv.']),
+        custo_conv:          getNum(row['custo / conv.'] || row['custo por conversao'] || row['cost_per_conversion'] || row['cpa']),
         taxa_conv:           getNum(row['taxa de conv.'] || row['taxa de conversao'] || row['conversion_rate']),
-        tipo_corresp:        getStr(row['tipo de correspondencia'] || row['match_type'] || ''),
-        adicionada_excluida: getStr(row['adicionado/excluido'] || row['added_excluded'] || ''),
+        tipo_corresp:        getStr(row['tipo de correspondencia'] || row['match_type'] || row['tipo de corresp.'] || ''),
+        adicionada_excluida: getStr(row['adicionado/excluido'] || row['added_excluded'] || row['adicionada/excluid'] || ''),
     };
 }
 
@@ -87,15 +79,11 @@ export async function carregarDados(caminho_ou_url: string | File, tipo: "sheets
     try {
         if (tipo === "sheets" && typeof caminho_ou_url === "string") {
             const url = caminho_ou_url;
-
-            // Extrai o ID da planilha e converte para link de exportação CSV
-            const idMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-            if (!idMatch) {
-                throw new Error("Erro: URL do Google Sheets inválida.");
+            const sheetIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (!sheetIdMatch) {
+                throw new Error("Link do Google Sheets inválido. Certifique-se de usar a URL completa da planilha.");
             }
-
-            const sheetId = idMatch[1];
-            // Tenta identificar o GID (aba específica) se houver
+            const sheetId = sheetIdMatch[1];
             const gidMatch = url.match(/gid=([0-9]+)/);
             const gid = gidMatch ? gidMatch[1] : "0";
 
@@ -140,18 +128,15 @@ export async function carregarDados(caminho_ou_url: string | File, tipo: "sheets
         } else if (tipo === "local" && caminho_ou_url instanceof File) {
             const file = caminho_ou_url;
             return new Promise((resolve, reject) => {
-                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         try {
                             const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                            const workbook = XLSX.read(data, { type: 'array' });
-                            const firstSheetName = workbook.SheetNames[0];
-                            const worksheet = workbook.Sheets[firstSheetName];
-                            const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+                            const { items: jsonData } = parseSpreadsheet(data, file.name);
 
                             if (jsonData.length > 0) {
-                                console.log("Primeira linha processada (XLSX):", jsonData[0]);
+                                console.log("Primeira linha processada (Smart Parser):", jsonData[0]);
                             }
 
                             const cleanData = jsonData.map((row: any, index: number) => ({
@@ -163,38 +148,11 @@ export async function carregarDados(caminho_ou_url: string | File, tipo: "sheets
 
                             resolve(cleanData);
                         } catch (err: any) {
-                            reject(new Error(`Erro ao ler arquivo Excel: ${err.message}`));
+                            reject(new Error(`Erro ao processar planilha: ${err.message}`));
                         }
                     };
                     reader.onerror = () => reject(new Error("Erro ao ler arquivo."));
                     reader.readAsArrayBuffer(file);
-                } else if (file.name.endsWith('.csv')) {
-                    Papa.parse(file, {
-                        header: true,
-                        skipEmptyLines: true,
-                        complete: (results) => {
-                            if (results.errors.length && !results.data.length) {
-                                reject(new Error(`Erro ao ler CSV local: ${results.errors[0].message}`));
-                                return;
-                            }
-
-                            if (results.data.length > 0) {
-                                console.log("Primeira linha processada (CSV Local):", results.data[0]);
-                            }
-
-                            const cleanData = results.data.map((row: any, index: number) => ({
-                                id: index.toString(),
-                                company_id: companyId,
-                                campaign_id: `cmp_${companyId}_${index}`,
-                                ...cleanAndFormatRow(row)
-                            })) as CampaignTerm[];
-
-                            resolve(cleanData);
-                        },
-                        error: (error: any) => {
-                            reject(new Error(`Erro ao processar CSV: ${error.message}`));
-                        }
-                    });
                 } else {
                     reject(new Error("Formato não suportado. Use CSV, XLS ou XLSX."));
                 }
