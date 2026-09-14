@@ -43,7 +43,13 @@ function App() {
     const [activeTab, setActiveTab] = useState('all')
     const [activeCompanyId, setActiveCompanyId] = useState<string | null>(null)
     const [auditNavParams, setAuditNavParams] = useState<{ campanha: string, grupo: string, termo?: string } | null>(null)
-    const [isDarkMode, setIsDarkMode] = useState(false)
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+        const savedTheme = localStorage.getItem('googlar_theme')
+        if (savedTheme !== null) {
+            return savedTheme === 'dark'
+        }
+        return true // Padrão: Tema Escuro ao acessar o Pocket
+    })
     const dashboardGridRef = useRef<HTMLDivElement>(null)
 
     const [localData, setLocalData] = useState<CampaignTerm[] | null>(null)
@@ -59,8 +65,10 @@ function App() {
     useEffect(() => {
         if (isDarkMode) {
             document.documentElement.classList.add('dark')
+            localStorage.setItem('googlar_theme', 'dark')
         } else {
             document.documentElement.classList.remove('dark')
+            localStorage.setItem('googlar_theme', 'light')
         }
     }, [isDarkMode])
 

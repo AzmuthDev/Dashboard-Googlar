@@ -88,7 +88,7 @@ export function Sidebar({
     isDarkMode?: boolean;
 }) {
     const isAdmin = currentUser?.isAdmin
-    const dark = isDarkMode ?? false
+    const dark = isDarkMode ?? true
 
     const navItems: NavItem[] = [
         { key: 'dashboard',       icon: <AppstoreOutlined />, label: 'Dashboard' },

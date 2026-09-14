@@ -3,7 +3,7 @@ import { Table, Button, message, Input, Select, Tooltip, Tabs, Modal as AntModal
 import { CheckCircleOutlined } from '@ant-design/icons';
 import {
     FileText, TrendingUp, User, ShieldCheck, Search, Send, Sparkles, Clock, ClipboardPaste,
-    Megaphone, Layers, Download
+    Megaphone, Layers, Download, Trash2
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
@@ -12,6 +12,9 @@ import { cn } from '../lib/utils';
 import { useCampaignTerms, useCompanies } from '../hooks/useCampaignData';
 import { type CampaignTerm, type Company } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { deduplicateTermsByOrigin, getTermOriginKey } from '../utils/termDeduplication';
+import { fetchTermsFromTable, deleteDuplicateTermsFromTable } from '../lib/supabaseProvider';
+import { queueSevenNotification } from '../utils/sevenNotifier';
 
 // --- Types ---
 type CategoryKey = 'negativar' | 'duvida' | 'segmentar' | 'teste_ab' | 'manter' | null;
@@ -88,6 +91,7 @@ export function SemanticAudit({
     const [importPasteData, setImportPasteData] = useState('');
     const [importTriageLevel, setImportTriageLevel] = useState<'trg1' | 'trg2' | 'trg3'>('trg1');
     const [isImporting, setIsImporting] = useState(false);
+    const [isCleaningDuplicates, setIsCleaningDuplicates] = useState(false);
 
     // Negativar Modal State
     const [isNegativarModalVisible, setIsNegativarModalVisible] = useState(false);
@@ -427,6 +431,16 @@ export function SemanticAudit({
             const displayName = level === 1 ? 'TRG 2' : 'TRG 3';
             if (newValue) {
                 message.success(`${displayName} confirmado ✓`);
+                // Quando a 2ª triagem (TRG 2) for confirmada, enfileira notificação para o Seven (Tânios)
+                if (level === 1) {
+                    queueSevenNotification({
+                        auditorName,
+                        auditorEmail: currentUser?.email || user?.email,
+                        companyId: activeCompanyId || '',
+                        companyName: activeCompany?.name || 'Empresa',
+                        termCount: 1
+                    });
+                }
             } else {
                 message.info(`${displayName} desmarcado.`);
             }
@@ -612,16 +626,39 @@ export function SemanticAudit({
 
             if (rows.length === 0) throw new Error('Nenhum termo válido encontrado. Verifique a ordem das colunas.');
 
+            // 1. Deduplica termos repetidos dentro da própria colagem
+            const { deduplicated: uniquePasted, duplicateCount: pastedDuplicates } = deduplicateTermsByOrigin(rows);
+
+            // 2. Exclui termos que já existem na mesa com a mesma origem
+            const existingKeys = new Set((terms || []).map(t => getTermOriginKey(t)));
+            const newRows = uniquePasted.filter(r => !existingKeys.has(getTermOriginKey(r)));
+            const alreadyExistingCount = uniquePasted.length - newRows.length;
+
+            if (newRows.length === 0) {
+                message.warning({ 
+                    content: `Todos os ${rows.length} termos colados já existem na mesa com a mesma origem. Nenhum termo duplicado foi inserido.`, 
+                    key: toastKey, 
+                    duration: 5 
+                });
+                setIsImportModalVisible(false);
+                return;
+            }
+
             const { error } = await supabase
                 .from(targetTable)
-                .insert(rows);
+                .insert(newRows);
 
             if (error) throw error;
 
             // Refresh cache
             queryClient.invalidateQueries({ queryKey: ['campaign-terms', activeCompanyId, activeCompany?.tableName] });
 
-            message.success({ content: `${rows.length} termos importados com sucesso!`, key: toastKey, duration: 4 });
+            let msg = `${newRows.length} novos termos importados com sucesso!`;
+            if (pastedDuplicates > 0 || alreadyExistingCount > 0) {
+                const totalExcluded = pastedDuplicates + alreadyExistingCount;
+                msg += ` (${totalExcluded} duplicados da mesma origem foram excluídos).`;
+            }
+            message.success({ content: msg, key: toastKey, duration: 5 });
             setImportPasteData('');
             setImportTriageLevel('trg1');
             setIsImportModalVisible(false);
@@ -630,6 +667,47 @@ export function SemanticAudit({
             message.error({ content: 'Erro na importação: ' + error.message, key: toastKey });
         } finally {
             setIsImporting(false);
+        }
+    };
+
+    // --- Limpeza de termos duplicados diretamente no banco de dados ---
+    const handleCleanDatabaseDuplicates = async () => {
+        if (!activeCompanyId || !targetTable) {
+            message.warning("Selecione uma empresa válida.");
+            return;
+        }
+
+        setIsCleaningDuplicates(true);
+        const toastId = 'clean-db-duplicates';
+        message.loading({ content: 'Buscando termos repetidos com a mesma origem...', key: toastId });
+
+        try {
+            const rawData = await fetchTermsFromTable(targetTable);
+            const { duplicateIds, duplicateCount } = deduplicateTermsByOrigin(rawData);
+
+            if (duplicateCount === 0 || duplicateIds.length === 0) {
+                message.info({ 
+                    content: 'Nenhum termo duplicado encontrado na mesa! Todos os registros possuem origens únicas.', 
+                    key: toastId, 
+                    duration: 4 
+                });
+                return;
+            }
+
+            const { success, deletedCount, error } = await deleteDuplicateTermsFromTable(targetTable, duplicateIds);
+            if (!success) throw new Error(error || 'Falha ao remover duplicados no banco.');
+
+            queryClient.invalidateQueries({ queryKey: ['campaign-terms', activeCompanyId, activeCompany?.tableName] });
+            message.success({ 
+                content: `Excelente! ${deletedCount} termos duplicados com a mesma origem foram excluídos permanentemente da mesa.`, 
+                key: toastId, 
+                duration: 5 
+            });
+        } catch (err: any) {
+            console.error('[Clean Duplicates Error]:', err);
+            message.error({ content: 'Erro ao limpar duplicados: ' + err.message, key: toastId });
+        } finally {
+            setIsCleaningDuplicates(false);
         }
     };
     
@@ -1057,6 +1135,16 @@ export function SemanticAudit({
                                 </motion.div>
                             )}
                         </AnimatePresence>
+
+                        <Button
+                            icon={<Trash2 size={16} />}
+                            onClick={handleCleanDatabaseDuplicates}
+                            loading={isCleaningDuplicates}
+                            className="h-10 px-4 rounded-2xl font-bold border border-border text-foreground hover:bg-muted/50 transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                            title="Verifica e exclui termos repetidos com a mesma origem da mesa no banco"
+                        >
+                            Limpar Duplicados
+                        </Button>
 
                         <Button
                             icon={<ClipboardPaste size={16} />}

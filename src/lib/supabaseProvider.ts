@@ -135,6 +135,8 @@ export async function fetchCampaignTerms(companyId: string): Promise<CampaignTer
     }
 }
 
+import { deduplicateTermsByOrigin } from '../utils/termDeduplication';
+
 /**
  * Função de emergência / bypass manual.
  * Recebe dados locais (JSON) pareados com a tipagem CampaignTerm e empurra em Batch pro BD.
@@ -169,12 +171,18 @@ export async function insertCampaignTermsBatch(
       return { success: false, count: 0, error: deleteError.message }
     }
 
-    if (terms.length === 0) {
+    // Deduplica termos que compartilham a mesma origem antes de persistir
+    const { deduplicated: cleanTerms, duplicateCount } = deduplicateTermsByOrigin(terms);
+    if (duplicateCount > 0) {
+      console.log(`[Supabase] 🧹 ${duplicateCount} termos repetidos da mesma origem excluídos antes da inserção na mesa ${targetTable}.`);
+    }
+
+    if (cleanTerms.length === 0) {
       return { success: true, count: 0 }
     }
 
     // 2. Preparar linhas
-    const rows = terms.map((term, index) => ({
+    const rows = cleanTerms.map((term, index) => ({
       ...term,
       // Se for mesa central, garantimos ID único e company_id. 
       // Se for dinâmica, o company_id é implícito mas bom manter se a coluna existir.
@@ -199,6 +207,41 @@ export async function insertCampaignTermsBatch(
   } catch (err: any) {
     console.error(`[Supabase] Exception na mesa selecionada:`, err)
     return { success: false, count: 0, error: err.message }
+  }
+}
+
+/**
+ * Remove IDs de termos duplicados diretamente da tabela no Supabase.
+ */
+export async function deleteDuplicateTermsFromTable(
+  tableName: string,
+  duplicateIds: string[]
+): Promise<{ success: boolean; deletedCount: number; error?: string }> {
+  try {
+    if (!tableName || !duplicateIds || duplicateIds.length === 0) {
+      return { success: true, deletedCount: 0 };
+    }
+
+    const BATCH = 100;
+    let deleted = 0;
+    for (let i = 0; i < duplicateIds.length; i += BATCH) {
+      const batchIds = duplicateIds.slice(i, i + BATCH);
+      const { error } = await supabase
+        .from(tableName)
+        .delete()
+        .in('id', batchIds);
+
+      if (error) {
+        console.error(`[Supabase] Erro ao deletar duplicados da mesa ${tableName}:`, error);
+        return { success: false, deletedCount: deleted, error: error.message };
+      }
+      deleted += batchIds.length;
+    }
+
+    return { success: true, deletedCount: deleted };
+  } catch (err: any) {
+    console.error(`[Supabase] Exceção ao deletar duplicados da mesa ${tableName}:`, err);
+    return { success: false, deletedCount: 0, error: err.message };
   }
 }
 

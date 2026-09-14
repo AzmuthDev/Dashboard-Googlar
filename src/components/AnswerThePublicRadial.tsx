@@ -46,7 +46,12 @@ export const AnswerThePublicRadial: React.FC<AnswerThePublicRadialProps> = ({
 
     // Estados de controle
     const [activeTab, setActiveTab] = useState<TabCategory>('clusters');
-    const [isDarkMode, setIsDarkMode] = useState<boolean>(false); // Padrão claro idêntico ao vídeo
+    const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+        if (typeof document !== 'undefined') {
+            return document.documentElement.classList.contains('dark');
+        }
+        return true;
+    });
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
     const [activeHoverQuery, setActiveHoverQuery] = useState<SpokeQueryItem | null>(null);

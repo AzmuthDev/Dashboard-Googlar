@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR" translate="no">
+<html lang="pt-BR" class="dark" translate="no">
 
 <head>
   <meta charset="UTF-8" />
@@ -9,6 +9,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <title>Dashboard Googlar</title>
+  <script>
+    (function() {
+      try {
+        var theme = localStorage.getItem('googlar_theme');
+        if (theme === 'light') {
+          document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 
 <body>

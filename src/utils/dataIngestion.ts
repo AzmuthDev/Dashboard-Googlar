@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import * as XLSX from 'xlsx';
 import { parseSpreadsheet, parseFlexNumber } from './excelParser';
 import type { CampaignTerm } from '../types';
+import { deduplicateTermsByOrigin } from './termDeduplication';
 
 /**
  * Normalizes a CSV header key:
@@ -117,7 +118,11 @@ export async function carregarDados(caminho_ou_url: string | File, tipo: "sheets
                             ...cleanAndFormatRow(row)
                         })) as CampaignTerm[];
 
-                        resolve(cleanData);
+                        const { deduplicated, duplicateCount } = deduplicateTermsByOrigin(cleanData);
+                        if (duplicateCount > 0) {
+                            console.log(`[dataIngestion] 🧹 ${duplicateCount} termos repetidos da mesma origem excluídos (Sheets).`);
+                        }
+                        resolve(deduplicated);
                     },
                     error: (error: any) => {
                         reject(new Error(`Erro de rede ou CORS: ${error.message}`));
@@ -146,7 +151,11 @@ export async function carregarDados(caminho_ou_url: string | File, tipo: "sheets
                                 ...cleanAndFormatRow(row)
                             })) as CampaignTerm[];
 
-                            resolve(cleanData);
+                            const { deduplicated, duplicateCount } = deduplicateTermsByOrigin(cleanData);
+                            if (duplicateCount > 0) {
+                                console.log(`[dataIngestion] 🧹 ${duplicateCount} termos repetidos da mesma origem excluídos (Local).`);
+                            }
+                            resolve(deduplicated);
                         } catch (err: any) {
                             reject(new Error(`Erro ao processar planilha: ${err.message}`));
                         }
