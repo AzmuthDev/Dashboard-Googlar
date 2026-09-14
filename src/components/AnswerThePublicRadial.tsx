@@ -219,6 +219,16 @@ export const AnswerThePublicRadial: React.FC<AnswerThePublicRadialProps> = ({
 
         const zoom = d3.zoom<SVGSVGElement, unknown>()
             .scaleExtent([0.45, 3.2])
+            .filter((event) => {
+                // Não intercepta a rolagem vertical comum do mouse:
+                // Permite que o usuário role a página normalmente para cima e para baixo.
+                // O zoom com scroll só é acionado segurando Ctrl (padrão Figma, n8n, Google Maps)
+                if (event.type === 'wheel') {
+                    return event.ctrlKey;
+                }
+                // Permite arrastar o canvas (pan) com o botão esquerdo do mouse
+                return !event.button;
+            })
             .on('zoom', (event) => {
                 g.attr('transform', event.transform);
             });
@@ -551,45 +561,8 @@ export const AnswerThePublicRadial: React.FC<AnswerThePublicRadialProps> = ({
                         {isDarkMode ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
                         <span className="hidden sm:inline">{isDarkMode ? "Claro" : "Escuro"}</span>
                     </button>
-
-                    <div className="flex items-center gap-1 border-l pl-2 border-slate-300 dark:border-slate-800">
-                        <button
-                            onClick={handleZoomIn}
-                            title="Aproximar (+)"
-                            className="p-1.5 rounded-lg border bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-[#f25b2a]"
-                        >
-                            <ZoomIn className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={handleZoomOut}
-                            title="Afastar (-)"
-                            className="p-1.5 rounded-lg border bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-[#f25b2a]"
-                        >
-                            <ZoomOut className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={handleResetZoom}
-                            title="Centralizar"
-                            className="p-1.5 rounded-lg border bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-[#f25b2a]"
-                        >
-                            <RotateCcw className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={handleExportSVG}
-                            title="Baixar SVG"
-                            className="p-1.5 rounded-lg bg-[#f25b2a] hover:bg-[#d94a1d] text-white border border-[#f25b2a]"
-                        >
-                            <Download className="w-4 h-4" />
-                        </button>
-                        <button
-                            onClick={() => setIsFullscreen(!isFullscreen)}
-                            title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
-                            className="p-1.5 rounded-lg border bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                        >
-                            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                        </button>
-                    </div>
                 </div>
+
             </div>
 
             {/* ABAS DE CATEGORIA EXATAS DO VÍDEO */}
@@ -729,6 +702,72 @@ export const AnswerThePublicRadial: React.FC<AnswerThePublicRadialProps> = ({
                         </div>
                     </div>
                 )}
+
+                {/* CONTROLES FLUTUANTES NO CANTO DO QUADRO (ESTILO N8N) */}
+                <div className={`absolute bottom-4 right-4 z-20 flex flex-col items-center p-1.5 rounded-2xl border shadow-2xl backdrop-blur-md gap-1 transition-all ${
+                    isDarkMode 
+                        ? 'bg-slate-900/90 border-slate-800 text-slate-300 shadow-black/40' 
+                        : 'bg-white/95 border-slate-200 text-slate-700 shadow-slate-300/70'
+                }`}>
+                    <button
+                        onClick={handleZoomIn}
+                        title="Aproximar (+) • Dica: Ctrl + Scroll"
+                        className={`p-2 rounded-xl transition-all ${
+                            isDarkMode 
+                                ? 'hover:bg-slate-800 hover:text-white active:bg-slate-700' 
+                                : 'hover:bg-slate-100 hover:text-slate-950 active:bg-slate-200'
+                        }`}
+                    >
+                        <ZoomIn className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={handleZoomOut}
+                        title="Afastar (-) • Dica: Ctrl + Scroll"
+                        className={`p-2 rounded-xl transition-all ${
+                            isDarkMode 
+                                ? 'hover:bg-slate-800 hover:text-white active:bg-slate-700' 
+                                : 'hover:bg-slate-100 hover:text-slate-950 active:bg-slate-200'
+                        }`}
+                    >
+                        <ZoomOut className="w-4 h-4" />
+                    </button>
+
+                    <div className={`w-4 h-px my-0.5 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`} />
+
+                    <button
+                        onClick={handleResetZoom}
+                        title="Centralizar e Redefinir Zoom"
+                        className={`p-2 rounded-xl transition-all ${
+                            isDarkMode 
+                                ? 'hover:bg-slate-800 hover:text-[#f25b2a] active:bg-slate-700' 
+                                : 'hover:bg-slate-100 hover:text-[#f25b2a] active:bg-slate-200'
+                        }`}
+                    >
+                        <RotateCcw className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={handleExportSVG}
+                        title="Baixar Gráfico em SVG"
+                        className={`p-2 rounded-xl transition-all ${
+                            isDarkMode 
+                                ? 'hover:bg-slate-800 hover:text-white active:bg-slate-700' 
+                                : 'hover:bg-slate-100 hover:text-slate-950 active:bg-slate-200'
+                        }`}
+                    >
+                        <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => setIsFullscreen(!isFullscreen)}
+                        title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+                        className={`p-2 rounded-xl transition-all ${
+                            isDarkMode 
+                                ? 'hover:bg-slate-800 hover:text-white active:bg-slate-700' 
+                                : 'hover:bg-slate-100 hover:text-slate-950 active:bg-slate-200'
+                        }`}
+                    >
+                        {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                    </button>
+                </div>
             </div>
         </div>
     );
