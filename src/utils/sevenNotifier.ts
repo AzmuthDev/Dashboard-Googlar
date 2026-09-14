@@ -6,8 +6,15 @@ const SEVEN_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOi
 
 const sevenClient = createClient(SEVEN_SUPABASE_URL, SEVEN_SUPABASE_ANON_KEY);
 
-// ID do Tânios Acácio no Seven
-export const TANIOS_SEVEN_USER_ID = '4847737a-24ae-4c01-a971-982fbe005d81';
+// IDs dos Gestores no Seven que recebem as notificações de 2ª triagem
+export const NOTIFICATION_RECIPIENT_IDS = [
+    '4847737a-24ae-4c01-a971-982fbe005d81', // Tânios Acácio (taniosmktacacio@gmail.com)
+    '62e1da40-bb95-4691-bb11-a0f2e8695110', // Otávio Valente (otavio.r.valente94@gmail.com)
+    '315b083c-c137-411a-9223-40f2bb85077e', // José Eduardo (joseeduardorms29@gmail.com)
+];
+
+// Compatibilidade retroativa
+export const TANIOS_SEVEN_USER_ID = NOTIFICATION_RECIPIENT_IDS[0];
 
 interface NotificationPayload {
     auditorName: string;
@@ -18,7 +25,7 @@ interface NotificationPayload {
 }
 
 // Fila e timer para Agrupamento Inteligente (Debounce)
-// Evita que 30 cliques do analista gerem 30 notificações para o Tanios
+// Evita que múltiplos cliques do analista gerem dezenas de notificações repetidas
 let debounceTimer: any = null;
 let pendingCount = 0;
 let lastAuditor = '';
@@ -45,33 +52,35 @@ async function flushNotification() {
     const title = 'Nova 2ª Triagem Realizada';
     const message = `${auditorName} realizou a 2ª triagem de ${count} termo${count > 1 ? 's' : ''} na empresa ${companyName}.`;
 
-    console.log(`[Seven Notifier] 🚀 Disparando notificação para o Seven (Tânios): ${message}`);
+    console.log(`[Seven Notifier] 🚀 Disparando notificação para gestores no Seven: ${message}`);
 
     try {
-        // 1. Inserir na tabela 'notifications' do Supabase do Seven
+        // 1. Inserir na tabela 'notifications' do Supabase do Seven para todos os gestores
+        const rowsToInsert = NOTIFICATION_RECIPIENT_IDS.map((userId) => ({
+            user_id: userId,
+            title,
+            message,
+            type: 'segunda_triagem',
+            metadata: {
+                empresa_id: companyId,
+                empresa_nome: companyName,
+                autor_nome: auditorName,
+                quantidade_termos: count,
+                origem: 'Pocket Googlar',
+                url: `https://pocket.googlar.com.br/?company=${companyId}&view=semantic-audit&tab=duvidas`,
+                timestamp: new Date().toISOString()
+            },
+            is_read: false
+        }));
+
         const { error: insertError } = await sevenClient
             .from('notifications')
-            .insert({
-                user_id: TANIOS_SEVEN_USER_ID,
-                title,
-                message,
-                type: 'segunda_triagem',
-                metadata: {
-                    empresa_id: companyId,
-                    empresa_nome: companyName,
-                    autor_nome: auditorName,
-                    quantidade_termos: count,
-                    origem: 'Pocket Googlar',
-                    url: `https://pocket.googlar.com.br/?company=${companyId}&view=semantic-audit&tab=duvidas`,
-                    timestamp: new Date().toISOString()
-                },
-                is_read: false
-            });
+            .insert(rowsToInsert);
 
         if (insertError) {
             console.warn('[Seven Notifier] Aviso ao inserir direto no Supabase do Seven:', insertError.message);
         } else {
-            console.log('[Seven Notifier] ✅ Notificação entregue no Seven com sucesso!');
+            console.log(`[Seven Notifier] ✅ Notificações entregues para ${rowsToInsert.length} gestores no Seven com sucesso!`);
         }
 
         // 2. Disparo secundário via webhook/API se o Seven local ou web estiver rodando
@@ -81,22 +90,23 @@ async function flushNotification() {
         ];
 
         for (const ep of endpoints) {
-            try {
-                fetch(ep, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        destinatario: 'tanios',
-                        userId: TANIOS_SEVEN_USER_ID,
-                        title,
-                        message,
-                        companyId,
-                        companyName,
-                        auditorName,
-                        termCount: count
-                    })
-                }).catch(() => {});
-            } catch (e) {}
+            for (const userId of NOTIFICATION_RECIPIENT_IDS) {
+                try {
+                    fetch(ep, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            userId,
+                            title,
+                            message,
+                            companyId,
+                            companyName,
+                            auditorName,
+                            termCount: count
+                        })
+                    }).catch(() => {});
+                } catch (e) {}
+            }
         }
     } catch (err) {
         console.error('[Seven Notifier] Erro ao enviar notificação para o Seven:', err);
