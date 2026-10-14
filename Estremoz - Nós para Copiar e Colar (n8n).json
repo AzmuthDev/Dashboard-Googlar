@@ -1,0 +1,682 @@
+{
+  "name": "Estremoz - Nós para Copiar e Colar (n8n)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🏡 Esteira de Julgamento: Estremoz\nAgente especializado em Cercamentos Metálicos, Gradis em PVC, Telas Eletrossoldadas e Alambrados B2B:\n1. IA Auditor Semântico: Classificação de termos de cercamento industrial, cerca para sítio e gradis\n2. Bloqueio de Desperdício: Elimina materiais incompatíveis (madeira, alumínio, concertina, rede de nylon)\n3. Dúvidas: Envia enquetes ao Pocket Interno com a tag Estremoz\n4. Consenso: Caso aprovada dúvida, direciona para o grupo Estremoz (120363406729550086@g.us)",
+        "height": 908,
+        "width": 3080,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3904,
+        2832
+      ],
+      "id": "dad1a3f0-efbd-4e60-aaa4-ee55ff2f473f",
+      "name": "Sticky Note - Estremoz"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.remoteJid || '120363424743503833@g.us',\n  text: '🚀 *COMANDO RECEBIDO*\\n\\n👤 *Solicitante:* ' + ($json.pushName || 'Equipe') + '\\n⏳ Iniciando auditoria semântica da *Estremoz*...'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        3040
+      ],
+      "id": "16bf5677-ee5b-4b01-afa9-585239a00f8c",
+      "name": "Notificar Início Estremoz"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -4000,
+        6352
+      ],
+      "id": "095e2d6c-cbc3-498a-b9ed-7cdeae06d2c5",
+      "name": "Trigger Semanal (Estremoz)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1DnheXycNLjlN3qF5pNv5vf6l7beAuL4Gkk6jHZ8MvmI/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1DnheXycNLjlN3qF5pNv5vf6l7beAuL4Gkk6jHZ8MvmI/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3776,
+        3216
+      ],
+      "id": "8404bcdd-ab87-45bb-aab0-7f028c971989",
+      "name": "Ler Termos da Planilha (Estremoz)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XYA9aww9CIscaVaV",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst staticData = $getWorkflowStaticData('global');\nstaticData.stats = staticData.stats || {};\nstaticData.stats[\"Estremoz\"] = {\n  totalLidos: items.length,\n  totalDuvidas: 0,\n  erros: [],\n  inicio: new Date().toISOString()\n};\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3552,
+        3216
+      ],
+      "id": "a43f0932-8cdf-46da-ae32-b774583aea5f",
+      "name": "Inicializar Estatísticas (Estremoz)"
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3328,
+        3216
+      ],
+      "id": "a1e539a8-be59-40c8-9144-7ae8376324e9",
+      "name": "Lote de Itens (Estremoz)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst stats = staticData.stats?.[\"Estremoz\"] || { totalLidos: 0, totalDuvidas: 0, erros: [], listaDuvidas: [] };\nconst totalDuvidas = stats.totalDuvidas || 0;\nconst totalLidos = stats.totalLidos || 0;\nconst erros = stats.erros || [];\nconst listaDuvidas = stats.listaDuvidas || [];\nconst listaNomes = [...new Set(listaDuvidas.map(d => d['Termo de pesquisa'] || d['Termo']).filter(Boolean))];\n\nreturn [{\n  json: {\n    cliente: \"Estremoz\",\n    total_lidos: totalLidos,\n    total_duvidas: totalDuvidas,\n    tem_duvidas: totalDuvidas > 0,\n    lista_duvidas_nomes: listaNomes,\n    teve_erros: erros.length > 0,\n    erros: erros\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        3040
+      ],
+      "id": "bceecbc2-6214-4bd7-9d99-abbef140145a",
+      "name": "Concluir Auditoria (Estremoz)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_teve_duvidas_estremoz",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2816,
+        3040
+      ],
+      "id": "3e3f810c-6cc5-4ec2-bead-b3a715a724db",
+      "name": "Teve Dúvidas no Processo? (Estremoz)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363424743503833@g.us',\n  text: '✅ *AUDITORIA CONCLUÍDA: Estremoz*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n✨ *Resultado:* Não foram encontradas dúvidas!\\n\\nTodos os termos foram classificados com segurança pela IA entre *Segmentar* e *Negativar*. Nenhuma enquete foi necessária.'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        3200
+      ],
+      "id": "92a18f8a-3126-43b8-ae5f-e4433785c38f",
+      "name": "Notificar Sem Dúvidas (Estremoz)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363424743503833@g.us',\n  text: '🏁 *AUDITORIA FINALIZADA: Estremoz*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n❓ *Total de dúvidas geradas:* ' + $json.total_duvidas + '\\n\\nTodas as enquetes foram enviadas acima para a votação da equipe!'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        3008
+      ],
+      "id": "c4b8b519-b8f8-49e1-afe9-a39f170d61ca",
+      "name": "Notificar Fim com Dúvidas (Estremoz)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst textoParaIA = JSON.stringify(items.map(i => i.json));\nreturn {\n  json: {\n    meu_texto_pronto: textoParaIA\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        3376
+      ],
+      "id": "6cecd238-fc20-46e8-bb73-ab303fe461fa",
+      "name": "Preparar Texto IA (Estremoz)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA B2B (Estremoz)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Estremoz (Cercamentos Metálicos, Gradis em PVC, Telas Eletrossoldadas, Alambrados e Segurança Perimetral B2B).\n\nSua missão é classificar cada Termo de pesquisa da lista de entrada em exatamente UMA das 4 opções de decisão (marcando o emoji correspondente e deixando as outras 3 vazias: \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se contiver tecnologia ou material divergente:\n* Materiais Incompatíveis: alumínio, madeira, eucalipto, concreto, alvenaria, vidro, plástico.\n* Malha Fina / Animais: viveiro, galinheiro, pássaro, tela hexagonal (foco da Estremoz é estrutural).\n* Nylon / Tecidos: rede de proteção, rede de nylon, rede para janela, rede de gol.\n* Segurança Cortante / Eletrônica: concertina, rede laminada, cerca elétrica, arame farpado.\n* Concorrentes Locais Fortes: telas prado, telas dorigati, telas triângulo.\n* RH / Vagas / Curiosos: vagas, emprego, currículo, curso, como fazer cerca caseira.\n\n2. ✅ SEGMENTAR (Lead B2B Core / Cercamento Estrutural):\nMarque SEGMENTAR=\"✅\" se expressar intenção comercial de compra, cotação, orçamento ou projeto:\n* Gradis & Telas: gradil em pvc, tela galvanizada, tela revestida, tela de aço, alambrado, tela ondulada/soldada, mourão de concreto/aço, portão para gradil.\n* Aplicações: cerca para sítio, cercamento de condomínio, cercamento industrial, fechamento de terreno.\n* Marcas Parceiras / Referência (Se na campanha correspondente): nylofor, tellacor, painel belgo slim, belgo durafor, belgo practica, morlan.\n* Intenção Comercial: comprar tela, preço gradil, orçamento alambrado, fornecedor de cercamento, distribuidor de gradil, valor por metro.\n* ALINHAMENTO COM PALAVRA-CHAVE: Se o termo corresponder à Palavra-chave ou contiver produtos core da Estremoz, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real dúvida comercial:\n* Termos \"Nus\" e Genéricos: termos com apenas 1 palavra vaga sem contexto (ex: apenas \"tela\" solto, apenas \"grade\" solto).\n* Geografia de Borda: cidades distantes fora da Grande BH (ex: Divinópolis, Passos MG, Uberlândia) para validação logística/frete.\n\n4. ⚠️ TESTE_AB:\nMarque TESTE_AB=\"⚠️\" se for produto atípico ou oportunidade de expansão (ex: tela 3/4, tela artística, malha diferenciada).\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação. ",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        3376
+      ],
+      "id": "40b4ef82-a247-42c9-9abb-f49cfa7f94ef",
+      "name": "IA Auditor Semântico (Estremoz)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2808,
+        3592
+      ],
+      "id": "9411355a-110b-4d21-ae21-8e3cae06fd33",
+      "name": "Google Gemini (Estremoz)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CJ590DJ4YzYgkyyf",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nlet rawText = item.json.output || item.json.text || item.json.response || \"\";\n\nrawText = rawText.replace(/\\`\\`\\`json/gi, \"\")\n                 .replace(/\\`\\`\\`/gi, \"\")\n                 .replace(/^json/gi, \"\")\n                 .replace(/\\\\\\\\n/g, \" \")\n                 .trim();\n\nfunction extrairJSON(texto) {\n  const inicio = texto.indexOf('[');\n  const fim = texto.lastIndexOf(']');\n  if (inicio === -1 || fim === -1) {\n    const inicioObj = texto.indexOf('{');\n    const fimObj = texto.lastIndexOf('}');\n    if (inicioObj !== -1 && fimObj !== -1) {\n      return [JSON.parse(texto.substring(inicioObj, fimObj + 1))];\n    }\n    throw new Error(\"Formato JSON não reconhecido\");\n  }\n  return JSON.parse(texto.substring(inicio, fim + 1));\n}\n\nfunction normalizar(str) {\n  return String(str || '')\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\\\u0300-\\\\u036f]/g, \"\")\n    .replace(/[^a-z0-9]/g, \" \")\n    .replace(/\\\\s+/g, \" \")\n    .trim();\n}\n\ntry {\n  let dados = extrairJSON(rawText);\n  if (!Array.isArray(dados)) dados = [dados];\n\n  const duvidas = dados.filter(linha => {\n    const d = String(linha[\"DUVIDA\"] || \"\").trim();\n    const s = String(linha[\"SEGMENTAR\"] || \"\").trim();\n    const n = String(linha[\"NEGATIVAR\"] || \"\").trim();\n    if (s.includes(\"✅\") || n.includes(\"❌\")) return false;\n    if (!d.includes(\"❓\") && !d.includes(\"?\")) return false;\n\n    // GUARD-RAIL: Evita que termos alinhados com palavra-chave ou produtos core virem dúvida\n    const termo = normalizar(linha[\"Termo de pesquisa\"] || linha[\"Termo\"]);\n    const kw = normalizar(linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"]);\n\n    const termosNegativos = [\"aluminio\", \"madeira\", \"eucalipto\", \"concreto\", \"vidro\", \"plastico\", \"viveiro\", \"galinheiro\", \"passaro\", \"hexagonal\", \"nylon\", \"concertina\", \"eletrica\", \"farpado\", \"prado\", \"dorigati\"];\n    const temNegativo = termosNegativos.some(t => termo.includes(t));\n\n    // Se o termo bater com a palavra-chave ou produto core e não tiver negativa\n    if (termo && kw && !temNegativo) {\n      if (termo === kw || termo.includes(kw) || kw.includes(termo)) {\n        return false;\n      }\n    }\n\n    const termosCore = [\"gradil\", \"tela\", \"alambrado\", \"cercamento\", \"galvanizad\", \"pvc\", \"nylofor\", \"tellacor\", \"belgo\", \"morlan\"];\n    if (termosCore.some(tc => termo.includes(tc)) && !temNegativo) {\n      // Se tiver clara intenção de compra\n      if (termo.includes(\"preco\") || termo.includes(\"comprar\") || termo.includes(\"metro\") || termo.includes(\"valor\") || termo.includes(\"cotacao\") || termo.includes(\"orcamento\")) {\n        return false;\n      }\n    }\n\n    return true;\n  }).map(linha => ({\n    \"Campanha\": linha[\"Campanha\"] || \"Estremoz\",\n    \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"Estremoz\",\n    \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n    \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n    \"Conversoes\": String(linha[\"Conversões\"] || linha[\"Conversoes\"] || \"0\"),\n    \"Impressoes\": String(linha[\"Impr.\"] || linha[\"Impressoes\"] || \"0\"),\n    \"Observacao\": linha[\"Observacao\"] || \"Validar pertinência para Estremoz\",\n    \"Cliente\": \"Estremoz\",\n    \"Cliente_JID\": \"120363406729550086@g.us\"\n  }));\n\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Estremoz\"] = staticData.stats[\"Estremoz\"] || { totalDuvidas: 0, erros: [], listaDuvidas: [] };\n  staticData.stats[\"Estremoz\"].totalDuvidas = (staticData.stats[\"Estremoz\"].totalDuvidas || 0) + duvidas.length;\n  staticData.stats[\"Estremoz\"].listaDuvidas = staticData.stats[\"Estremoz\"].listaDuvidas || [];\n  staticData.stats[\"Estremoz\"].listaDuvidas.push(...duvidas);\n\n  return [{\n    json: {\n      tem_duvidas: duvidas.length > 0,\n      total_duvidas: duvidas.length,\n      lista_duvidas: duvidas\n    }\n  }];\n} catch (e) {\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Estremoz\"] = staticData.stats[\"Estremoz\"] || { totalDuvidas: 0, erros: [] };\n  staticData.stats[\"Estremoz\"].erros = staticData.stats[\"Estremoz\"].erros || [];\n  staticData.stats[\"Estremoz\"].erros.push(e.message);\n\n  return [{\n    json: {\n      tem_duvidas: false,\n      total_duvidas: 0,\n      lista_duvidas: [],\n      erro: e.message\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        3376
+      ],
+      "id": "82f2d53d-6fed-408c-859c-593f05493625",
+      "name": "Avaliar Lote (Dúvidas? - Estremoz)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_tem_duvidas_estremoz",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        3376
+      ],
+      "id": "88d08135-5c7a-42fa-875c-22decfeec822",
+      "name": "Tem Dúvidas no Lote? (Estremoz)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const duvidas = $json.lista_duvidas || [];\nreturn duvidas.map(d => ({ json: d }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        3376
+      ],
+      "id": "c34a8d25-f349-4315-9568-cff854a752c2",
+      "name": "Desmembrar Dúvidas (Estremoz)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendPoll/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\\n  (() => {\\n    const termoRaw = String($json['Termo de pesquisa'] || 'N/A').trim();\\n    const kwRaw = String($json['Palavra-chave'] || 'N/A').trim();\\n    const campRaw = String($json['Campanha'] || 'Estremoz').trim();\\n    const obsRaw = String($json['Observacao'] || 'Avaliar pertinência').replace(/\\n/g, ' ').trim();\\n\\n    const termo = termoRaw.length > 50 ? termoRaw.substring(0, 47) + '...' : termoRaw;\\n    const kw = kwRaw.length > 35 ? kwRaw.substring(0, 32) + '...' : kwRaw;\\n\\n    const topo = `🏢 *Cliente:* Estremoz\\\\n🔍 *Termo:* \\\"${termo}\\\"\\\\n🔑 *KW:* ${kw}\\\\n💬 *Obs:* `;\\n    const espacoLivre = 250 - topo.length;\\n\\n    let obsTratada = obsRaw;\\n    let campFinal = '';\\n\\n    if (obsRaw.length <= espacoLivre - 25 && campRaw) {\\n      const sobra = espacoLivre - obsRaw.length - 5;\\n      if (sobra >= 10) {\\n        campFinal = `\\\\n📁 ${campRaw.substring(0, sobra)}`;\\n      }\\n    } else if (obsRaw.length > espacoLivre) {\\n      obsTratada = obsRaw.substring(0, espacoLivre - 3) + '...';\\n    }\\n\\n    return JSON.stringify({\\n      number: '120363424743503833@g.us',\\n      name: topo + obsTratada + campFinal,\\n      selectableCount: 1,\\n      values: [\\n        '✅ Segmentar',\\n        '❌ Negativar',\\n        '⚠️ Teste A/B',\\n        '🏢 Concorrente',\\n        '❓ Dúvida (Enviar ao Cliente)'\\n      ]\\n    });\\n  })()\\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1504,
+        3376
+      ],
+      "id": "6117a776-be2f-4b80-aa40-e9827ef368d8",
+      "name": "Enviar Enquete WhatsApp (Estremoz)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.mapaEnquetes = staticData.mapaEnquetes || {};\n\nconst itemsEnquete = $input.all();\nconst duvidasOriginais = $('Desmembrar Dúvidas (Estremoz)').all();\n\nfor (let i = 0; i < itemsEnquete.length; i++) {\n  const item = itemsEnquete[i].json;\n  \n  const pollId = item.key?.id || item.id || item.messageId;\n  const d = duvidasOriginais[i]?.json;\n  \n  if (pollId && d) {\n    staticData.mapaEnquetes[pollId] = {\n      termo: d['Termo de pesquisa'] || 'Termo em auditoria',\n      palavra_chave: d['Palavra-chave'] || 'N/A',\n      comentario: d['Observacao'] || 'Validar intenção comercial com a equipe',\n      campanha: d['Campanha'] || 'Estremoz',\n      grupo: d['Grupo de anúncios'] || 'Geral',\n      cliente: 'Estremoz',\n      cliente_jid: '120363406729550086@g.us'\n    };\n  }\n}\n\nreturn [{ json: { loop: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        3376
+      ],
+      "id": "60f4cec1-3051-4a56-82a7-517bc2ba4ab2",
+      "name": "Unificar para 1 Sinal (Estremoz)"
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1056,
+        3568
+      ],
+      "id": "3d1c4c34-fb70-4476-a663-c9bacc799058",
+      "name": "Pausa Anti-Spam (Estremoz)",
+      "webhookId": "espera-lote-estremoz"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA B2B (Estremoz)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Estremoz (Cercamentos Metálicos, Gradis em PVC, Telas Eletrossoldadas, Alambrados e Segurança Perimetral B2B).\n\nSua missão é classificar cada Termo de pesquisa da lista de entrada em exatamente UMA das 4 opções de decisão (marcando o emoji correspondente e deixando as outras 3 vazias: \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se contiver tecnologia ou material divergente:\n* Materiais Incompatíveis: alumínio, madeira, eucalipto, concreto, alvenaria, vidro, plástico.\n* Malha Fina / Animais: viveiro, galinheiro, pássaro, tela hexagonal (foco da Estremoz é estrutural).\n* Nylon / Tecidos: rede de proteção, rede de nylon, rede para janela, rede de gol.\n* Segurança Cortante / Eletrônica: concertina, rede laminada, cerca elétrica, arame farpado.\n* Concorrentes Locais Fortes: telas prado, telas dorigati, telas triângulo.\n* RH / Vagas / Curiosos: vagas, emprego, currículo, curso, como fazer cerca caseira.\n\n2. ✅ SEGMENTAR (Lead B2B Core / Cercamento Estrutural):\nMarque SEGMENTAR=\"✅\" se expressar intenção comercial de compra, cotação, orçamento ou projeto:\n* Gradis & Telas: gradil em pvc, tela galvanizada, tela revestida, tela de aço, alambrado, tela ondulada/soldada, mourão de concreto/aço, portão para gradil.\n* Aplicações: cerca para sítio, cercamento de condomínio, cercamento industrial, fechamento de terreno.\n* Marcas Parceiras / Referência (Se na campanha correspondente): nylofor, tellacor, painel belgo slim, belgo durafor, belgo practica, morlan.\n* Intenção Comercial: comprar tela, preço gradil, orçamento alambrado, fornecedor de cercamento, distribuidor de gradil, valor por metro.\n* ALINHAMENTO COM PALAVRA-CHAVE: Se o termo corresponder à Palavra-chave ou contiver produtos core da Estremoz, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real dúvida comercial:\n* Termos \"Nus\" e Genéricos: termos com apenas 1 palavra vaga sem contexto (ex: apenas \"tela\" solto, apenas \"grade\" solto).\n* Geografia de Borda: cidades distantes fora da Grande BH (ex: Divinópolis, Passos MG, Uberlândia) para validação logística/frete.\n\n4. ⚠️ TESTE_AB:\nMarque TESTE_AB=\"⚠️\" se for produto atípico ou oportunidade de expansão (ex: tela 3/4, tela artística, malha diferenciada).\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação. ",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2528,
+        3488
+      ],
+      "id": "7b44502b-57a3-41f1-8a7e-4128890f6637",
+      "name": "IA Auditor Semântico (Estremoz)1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -2456,
+        3720
+      ],
+      "id": "96e1155a-c6e4-4ca3-8e99-592bebf1ecb4",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Notificar Início Estremoz": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Semanal (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Termos da Planilha (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Inicializar Estatísticas (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Estatísticas (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lote de Itens (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Concluir Auditoria (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Texto IA (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concluir Auditoria (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Teve Dúvidas no Processo? (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Teve Dúvidas no Processo? (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Notificar Fim com Dúvidas (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Sem Dúvidas (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Texto IA (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "IA Auditor Semântico (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IA Auditor Semântico (Estremoz)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini (Estremoz)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Estremoz)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avaliar Lote (Dúvidas? - Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Tem Dúvidas no Lote? (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Dúvidas no Lote? (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Desmembrar Dúvidas (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pausa Anti-Spam (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desmembrar Dúvidas (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Enquete WhatsApp (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Enquete WhatsApp (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Unificar para 1 Sinal (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar para 1 Sinal (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Pausa Anti-Spam (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa Anti-Spam (Estremoz)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Estremoz)1": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Estremoz)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Estremoz)1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  }
+}

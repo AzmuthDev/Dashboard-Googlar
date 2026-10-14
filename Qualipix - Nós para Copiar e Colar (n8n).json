@@ -1,0 +1,680 @@
+{
+  "name": "Qualipix - Nós para Copiar e Colar (n8n)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🖥️ Esteira de Julgamento: Qualipix\nAgente especializado em Displays Corporativos, Lousas Digitais, Totens e Painéis de LED (B2B):\n1. IA Auditor Semântico: Classificação de intenções corporativas B2B, regra de polegadas e filtragem de domésticos B2C\n2. Dúvidas: Envia enquetes ao Pocket Interno com a tag Qualipix\n3. Finalização: Avisa no grupo quando a auditoria termina sem dúvidas ou com resumo",
+        "height": 920,
+        "width": 3192,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3968,
+        3968
+      ],
+      "id": "678f7e87-8be7-4f90-adad-8ed1ae2518cc",
+      "name": "Sticky Note - Qualipix"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.remoteJid || '120363424743503833@g.us',\n  text: '🚀 *COMANDO RECEBIDO*\\n\\n👤 *Solicitante:* ' + ($json.pushName || 'Equipe') + '\\n⏳ Iniciando auditoria semântica da *Qualipix*...'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        4096
+      ],
+      "id": "43c1849d-c324-4a93-9f91-7fc231d85480",
+      "name": "Notificar Início Qualipix"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -4000,
+        6544
+      ],
+      "id": "9778ccad-324a-470b-bede-92de42131653",
+      "name": "Trigger Semanal (Qualipix)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/19FsSb9ku8nFsSOfT4f032aTkV9j3iwunfJBThTTIRrQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/19FsSb9ku8nFsSOfT4f032aTkV9j3iwunfJBThTTIRrQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3776,
+        4256
+      ],
+      "id": "cff1e8da-0dbd-4679-8aa3-ba0f0f0bc6da",
+      "name": "Ler Termos da Planilha (Qualipix)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XYA9aww9CIscaVaV",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst staticData = $getWorkflowStaticData('global');\nstaticData.stats = staticData.stats || {};\nstaticData.stats[\"Qualipix\"] = {\n  totalLidos: items.length,\n  totalDuvidas: 0,\n  erros: [],\n  inicio: new Date().toISOString()\n};\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3552,
+        4256
+      ],
+      "id": "bba19fc7-46dc-43fc-88a2-a49ba726041d",
+      "name": "Inicializar Estatísticas (Qualipix)"
+    },
+    {
+      "parameters": {
+        "batchSize": 30,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3328,
+        4256
+      ],
+      "id": "eac90f98-3d24-4bd4-b456-c085abbbb9e3",
+      "name": "Lote de Itens (Qualipix)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst stats = staticData.stats?.[\"Qualipix\"] || { totalLidos: 0, totalDuvidas: 0, erros: [], listaDuvidas: [] };\nconst totalDuvidas = stats.totalDuvidas || 0;\nconst totalLidos = stats.totalLidos || 0;\nconst erros = stats.erros || [];\nconst listaDuvidas = stats.listaDuvidas || [];\nconst listaNomes = [...new Set(listaDuvidas.map(d => d['Termo de pesquisa'] || d['Termo']).filter(Boolean))];\n\nreturn [{\n  json: {\n    cliente: \"Qualipix\",\n    total_lidos: totalLidos,\n    total_duvidas: totalDuvidas,\n    tem_duvidas: totalDuvidas > 0,\n    lista_duvidas_nomes: listaNomes,\n    teve_erros: erros.length > 0,\n    erros: erros\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        4016
+      ],
+      "id": "fa1a78e1-19ab-49a4-8a69-814e1a027413",
+      "name": "Concluir Auditoria (Qualipix)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_teve_duvidas_quali",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2816,
+        4016
+      ],
+      "id": "99312f1a-be2c-46c0-975b-46a1f234ad60",
+      "name": "Teve Dúvidas no Processo? (Qualipix)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363424743503833@g.us',\n  text: '✅ *AUDITORIA CONCLUÍDA: Qualipix*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n✨ *Resultado:* Não foram encontradas dúvidas!\\n\\nTodos os termos foram classificados com segurança pela IA entre *Segmentar* e *Negativar*. Nenhuma enquete foi necessária.'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        4176
+      ],
+      "id": "893e96b2-ce22-4467-9628-fcf12899ebcb",
+      "name": "Notificar Sem Dúvidas (Qualipix)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363424743503833@g.us',\n  text: '🏁 *AUDITORIA FINALIZADA: Qualipix*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n🗳️ *Total de dúvidas encontradas:* ' + $json.total_duvidas + ($json.lista_duvidas_nomes && $json.lista_duvidas_nomes.length > 0 ? ('\\n\\n📋 *Termos com Dúvida para votação:*\\n' + $json.lista_duvidas_nomes.map(t => '• \"' + t + '\"').join('\\n')) : '') + '\\n\\nTodas as dúvidas foram enviadas acima para a votação da equipe!'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        3984
+      ],
+      "id": "70eadcda-364c-4b7f-aa22-e124e32f5a4c",
+      "name": "Notificar Fim com Dúvidas (Qualipix)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Transforma as linhas em um único texto JSON\nconst textoParaIA = JSON.stringify(items.map(i => i.json));\n\nreturn {\n  json: {\n    meu_texto_pronto: textoParaIA\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        4352
+      ],
+      "id": "2dda4651-961d-4fb6-b3f1-460e4c2ef6b4",
+      "name": "Preparar Texto IA (Qualipix)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA B2B (Qualipix)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Qualipix (Displays Corporativos, Lousas Digitais Interativas, Totens de Autoatendimento e Painéis de LED B2B).\n\nSua missão é classificar cada Termo de pesquisa da lista de entrada em exatamente UMA das 4 opções de decisão (marcando o emoji correspondente e deixando as outras 3 vazias: \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se contiver vazamentos:\n* B2C / Doméstico / Games / TV comum: \"tv para sala\", \"smart tv 32\", \"tv infantil\", \"monitor gamer\", \"jogos\", \"suporte de tv doméstica\", \"tv box\", \"iptv\".\n* Dicas / Tutoriais / DIY / Downloads: \"como fazer totem\", \"software gratis para painel\", \"drivers\", \"esquema eletrico\", \"artigo\", \"pdf\".\n* Vagas / Emprego: \"vagas\", \"emprego\", \"salario\", \"curriculo\", \"trabalhe conosco\".\n* Pequeno Porte Não Corporativo: telas pequenas (<32\") sem aplicação interativa ou corporativa.\n\n2. ✅ SEGMENTAR (Lead B2B Core / Corporativo):\nMarque SEGMENTAR=\"✅\" se expressar intenção B2B de compra, locação, projeto ou orçamento:\n* Lousas Digitais & Telas Interativas: \"lousa digital interativa\", \"tela touch screen corporativa\", \"display touch 55 65 75 86 polegadas\", \"lousa para sala de aula\", \"painel interativo reuniões\".\n* Totens & Autoatendimento: \"totem de autoatendimento\", \"totem interativo touch\", \"quiosque interativo\", \"totem para shopping / hospital / recepção\".\n* Painéis de LED & Video Wall: \"painel de led indoor / outdoor\", \"video wall para salas de controle\", \"monitores profissionais para propaganda\".\n* Intenção Comercial B2B: \"comprar lousa digital\", \"preço totem interativo\", \"orçamento video wall\", \"fornecedor de display corporativo\", \"locação de totem\".\n* ALINHAMENTO COM PALAVRA-CHAVE: Se corresponder à Palavra-chave corporativa da Qualipix, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real ambiguidade:\n* Marcas de Concorrentes Diretos: \"lousa digital benq\", \"painel interativo samsung flip\", \"totem schalter\".\n* Monitores Profissionais Sem Tamanho/Uso Definido: termos genéricos como \"monitor profissional\" sem especificar se é B2B ou B2C.\n* Propostas Híbridas: termos que podem ser tanto eventos quanto residenciais de alto padrão.\n\n4. ⚠️ TESTE_AB:\nMarque TESTE_AB=\"⚠️\" se for aplicação corporativa inovadora ou novo nicho interativo em expansão.\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação. ",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        4352
+      ],
+      "id": "48b8df97-e64a-4a89-a320-535c0b905055",
+      "name": "IA Auditor Semântico (Qualipix)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2808,
+        4568
+      ],
+      "id": "74a2a4be-44d1-4b55-8ed8-5c671acd2267",
+      "name": "Google Gemini (Qualipix)",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CJ590DJ4YzYgkyyf",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nlet rawText = item.json.output || item.json.text || item.json.response || \"\";\n\nrawText = rawText.replace(/```json/gi, \"\")\n                 .replace(/```/gi, \"\")\n                 .replace(/^json/gi, \"\")\n                 .replace(/\\\\n/g, \" \")\n                 .trim();\n\nfunction extrairJSON(texto) {\n  const inicio = texto.indexOf('[');\n  const fim = texto.lastIndexOf(']');\n  if (inicio === -1 || fim === -1) {\n    const inicioObj = texto.indexOf('{');\n    const fimObj = texto.lastIndexOf('}');\n    if (inicioObj !== -1 && fimObj !== -1) {\n      return [JSON.parse(texto.substring(inicioObj, fimObj + 1))];\n    }\n    throw new Error(\"Formato JSON não reconhecido\");\n  }\n  return JSON.parse(texto.substring(inicio, fim + 1));\n}\n\nfunction normalizar(str) {\n  return String(str || '')\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\u0300-\\u036f]/g, \"\")\n    .replace(/[^a-z0-9]/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n}\n\ntry {\n  let dados = extrairJSON(rawText);\n  if (!Array.isArray(dados)) dados = [dados];\n\n  const duvidas = dados.filter(linha => {\n    const d = String(linha[\"DUVIDA\"] || \"\").trim();\n    const s = String(linha[\"SEGMENTAR\"] || \"\").trim();\n    const n = String(linha[\"NEGATIVAR\"] || \"\").trim();\n    if (s.includes(\"✅\") || n.includes(\"❌\")) return false;\n    if (!d.includes(\"❓\") && !d.includes(\"?\")) return false;\n\n    // GUARD-RAIL: Evita que termos alinhados com a palavra-chave ou produtos core virem dúvida\n    const termo = normalizar(linha[\"Termo de pesquisa\"] || linha[\"Termo\"]);\n    const kw = normalizar(linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"]);\n    const obs = normalizar(linha[\"Observacao\"] || \"\");\n\n    const termosNegativos = [\"gratis\", \"gratuito\", \"caseiro\", \"como fazer\", \"tutorial\", \"emprego\", \"vaga\", \"salario\", \"trincada\", \"celular\", \"smartphone\", \"notebook\"];\n    const temNegativo = termosNegativos.some(t => termo.includes(t));\n\n    // Se o termo bater com a palavra-chave ou tiver produto core sem termos negativos\n    if (termo && kw && !temNegativo) {\n      if (termo === kw || termo.includes(kw) || kw.includes(termo)) {\n        return false;\n      }\n    }\n\n    const termosCore = [\"lousa digital\", \"tela interativa\", \"totem\", \"touchscreen\", \"video wall\", \"painel de led\", \"e-board\", \"display interativo\", \"mesa touch\"];\n    if (termosCore.some(tc => termo.includes(tc) || kw.includes(tc)) && !temNegativo) {\n      return false; // É SEGMENTAR legítimo da Qualipix\n    }\n\n    return true;\n  }).map(linha => ({\n    \"Campanha\": linha[\"Campanha\"] || \"Qualipix\",\n    \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"Qualipix\",\n    \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n    \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n    \"Conversoes\": String(linha[\"Conversões\"] || linha[\"Conversoes\"] || \"0\"),\n    \"Impressoes\": String(linha[\"Impr.\"] || linha[\"Impressoes\"] || \"0\"),\n    \"Observacao\": linha[\"Observacao\"] || \"Validar pertinência para Qualipix\",\n    \"Cliente\": \"Qualipix\",\n    \"Cliente_JID\": \"120363402801713988@g.us\"\n  }));\n\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Qualipix\"] = staticData.stats[\"Qualipix\"] || { totalDuvidas: 0, erros: [], listaDuvidas: [] };\n  staticData.stats[\"Qualipix\"].totalDuvidas = (staticData.stats[\"Qualipix\"].totalDuvidas || 0) + duvidas.length;\n  staticData.stats[\"Qualipix\"].listaDuvidas = staticData.stats[\"Qualipix\"].listaDuvidas || [];\n  staticData.stats[\"Qualipix\"].listaDuvidas.push(...duvidas);\n\n  return [{\n    json: {\n      tem_duvidas: duvidas.length > 0,\n      total_duvidas: duvidas.length,\n      lista_duvidas: duvidas\n    }\n  }];\n} catch (e) {\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Qualipix\"] = staticData.stats[\"Qualipix\"] || { totalDuvidas: 0, erros: [] };\n  staticData.stats[\"Qualipix\"].erros = staticData.stats[\"Qualipix\"].erros || [];\n  staticData.stats[\"Qualipix\"].erros.push(e.message);\n\n  return [{\n    json: {\n      tem_duvidas: false,\n      total_duvidas: 0,\n      lista_duvidas: [],\n      erro: e.message\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        4352
+      ],
+      "id": "04349659-51db-4048-8dea-70ef981928ac",
+      "name": "Avaliar Lote (Dúvidas? - Qualipix)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_tem_duvidas_quali",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        4352
+      ],
+      "id": "e08f7db0-01d5-435f-9d16-16b5ebc0de76",
+      "name": "Tem Dúvidas no Lote? (Qualipix)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const duvidas = $json.lista_duvidas || [];\nreturn duvidas.map(d => ({ json: d }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        4352
+      ],
+      "id": "c6b94190-1003-4982-9cad-68dc2c928d4b",
+      "name": "Desmembrar Dúvidas (Qualipix)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendPoll/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\\n  (() => {\\n    const termoRaw = String($json['Termo de pesquisa'] || 'N/A').trim();\\n    const kwRaw = String($json['Palavra-chave'] || 'N/A').trim();\\n    const campRaw = String($json['Campanha'] || 'Qualipix').trim();\\n    const obsRaw = String($json['Observacao'] || 'Avaliar pertinência').replace(/\\n/g, ' ').trim();\\n\\n    const termo = termoRaw.length > 50 ? termoRaw.substring(0, 47) + '...' : termoRaw;\\n    const kw = kwRaw.length > 35 ? kwRaw.substring(0, 32) + '...' : kwRaw;\\n\\n    const topo = `🏢 *Cliente:* Qualipix\\\\n🔍 *Termo:* \\\"${termo}\\\"\\\\n🔑 *KW:* ${kw}\\\\n💬 *Obs:* `;\\n    const espacoLivre = 250 - topo.length;\\n\\n    let obsTratada = obsRaw;\\n    let campFinal = '';\\n\\n    if (obsRaw.length <= espacoLivre - 25 && campRaw) {\\n      const sobra = espacoLivre - obsRaw.length - 5;\\n      if (sobra >= 10) {\\n        campFinal = `\\\\n📁 ${campRaw.substring(0, sobra)}`;\\n      }\\n    } else if (obsRaw.length > espacoLivre) {\\n      obsTratada = obsRaw.substring(0, espacoLivre - 3) + '...';\\n    }\\n\\n    return JSON.stringify({\\n      number: '120363424743503833@g.us',\\n      name: topo + obsTratada + campFinal,\\n      selectableCount: 1,\\n      values: [\\n        '✅ Segmentar',\\n        '❌ Negativar',\\n        '⚠️ Teste A/B',\\n        '🏢 Concorrente',\\n        '❓ Dúvida (Enviar ao Cliente)'\\n      ]\\n    });\\n  })()\\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1504,
+        4352
+      ],
+      "id": "1b6de95b-8b10-4fcc-a3ba-3d93e71adbd8",
+      "name": "Enviar Enquete WhatsApp (Qualipix)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.mapaEnquetes = staticData.mapaEnquetes || {};\n\nconst itemsEnquete = $input.all();\nconst duvidasOriginais = $('Desmembrar Dúvidas (Qualipix)').all();\n\nfor (let i = 0; i < itemsEnquete.length; i++) {\n  const item = itemsEnquete[i].json;\n  \n  const pollId = item.key?.id || item.id || item.messageId;\n  const d = duvidasOriginais[i]?.json;\n  \n  if (pollId && d) {\n    staticData.mapaEnquetes[pollId] = {\n      termo: d['Termo de pesquisa'] || 'Termo em auditoria',\n      palavra_chave: d['Palavra-chave'] || 'N/A',\n      comentario: d['Observacao'] || 'Validar intenção comercial com a equipe',\n      campanha: d['Campanha'] || 'Qualipix',\n      grupo: d['Grupo de anúncios'] || 'Qualipix',\n      cliente: 'Qualipix',\n      cliente_jid: '120363402801713988@g.us'\n    };\n  }\n}\n\nreturn [{ json: { loop: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        4352
+      ],
+      "id": "3843f05f-0a92-419f-b6b5-ce6e05ccdd50",
+      "name": "Unificar para 1 Sinal (Qualipix)"
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1056,
+        4352
+      ],
+      "id": "4b283c8b-3316-49bc-9e5d-96608421a645",
+      "name": "Pausa Anti-Spam (Qualipix)",
+      "webhookId": "espera-lote-qualipix"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA B2B (Qualipix)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Qualipix (Displays Corporativos, Lousas Digitais Interativas, Totens de Autoatendimento e Painéis de LED B2B).\n\nSua missão é classificar cada Termo de pesquisa da lista de entrada em exatamente UMA das 4 opções de decisão (marcando o emoji correspondente e deixando as outras 3 vazias: \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se contiver vazamentos:\n* B2C / Doméstico / Games / TV comum: \"tv para sala\", \"smart tv 32\", \"tv infantil\", \"monitor gamer\", \"jogos\", \"suporte de tv doméstica\", \"tv box\", \"iptv\".\n* Dicas / Tutoriais / DIY / Downloads: \"como fazer totem\", \"software gratis para painel\", \"drivers\", \"esquema eletrico\", \"artigo\", \"pdf\".\n* Vagas / Emprego: \"vagas\", \"emprego\", \"salario\", \"curriculo\", \"trabalhe conosco\".\n* Pequeno Porte Não Corporativo: telas pequenas (<32\") sem aplicação interativa ou corporativa.\n\n2. ✅ SEGMENTAR (Lead B2B Core / Corporativo):\nMarque SEGMENTAR=\"✅\" se expressar intenção B2B de compra, locação, projeto ou orçamento:\n* Lousas Digitais & Telas Interativas: \"lousa digital interativa\", \"tela touch screen corporativa\", \"display touch 55 65 75 86 polegadas\", \"lousa para sala de aula\", \"painel interativo reuniões\".\n* Totens & Autoatendimento: \"totem de autoatendimento\", \"totem interativo touch\", \"quiosque interativo\", \"totem para shopping / hospital / recepção\".\n* Painéis de LED & Video Wall: \"painel de led indoor / outdoor\", \"video wall para salas de controle\", \"monitores profissionais para propaganda\".\n* Intenção Comercial B2B: \"comprar lousa digital\", \"preço totem interativo\", \"orçamento video wall\", \"fornecedor de display corporativo\", \"locação de totem\".\n* ALINHAMENTO COM PALAVRA-CHAVE: Se corresponder à Palavra-chave corporativa da Qualipix, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real ambiguidade:\n* Marcas de Concorrentes Diretos: \"lousa digital benq\", \"painel interativo samsung flip\", \"totem schalter\".\n* Monitores Profissionais Sem Tamanho/Uso Definido: termos genéricos como \"monitor profissional\" sem especificar se é B2B ou B2C.\n* Propostas Híbridas: termos que podem ser tanto eventos quanto residenciais de alto padrão.\n\n4. ⚠️ TESTE_AB:\nMarque TESTE_AB=\"⚠️\" se for aplicação corporativa inovadora ou novo nicho interativo em expansão.\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação. ",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2528,
+        4576
+      ],
+      "id": "61ac7d5a-a3f6-4eec-ab89-a32ae9e5e66f",
+      "name": "IA Auditor Semântico (Qualipix)1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -2456,
+        4792
+      ],
+      "id": "b818a84a-d0fa-4139-b0da-61aea9833f49",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Notificar Início Qualipix": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Semanal (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Termos da Planilha (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Inicializar Estatísticas (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Estatísticas (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lote de Itens (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Concluir Auditoria (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Texto IA (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concluir Auditoria (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Teve Dúvidas no Processo? (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Teve Dúvidas no Processo? (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Notificar Fim com Dúvidas (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Sem Dúvidas (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Texto IA (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "IA Auditor Semântico (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IA Auditor Semântico (Qualipix)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini (Qualipix)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Qualipix)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avaliar Lote (Dúvidas? - Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Tem Dúvidas no Lote? (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Dúvidas no Lote? (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Desmembrar Dúvidas (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Lote de Itens (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desmembrar Dúvidas (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Enquete WhatsApp (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Enquete WhatsApp (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Unificar para 1 Sinal (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar para 1 Sinal (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Pausa Anti-Spam (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa Anti-Spam (Qualipix)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Qualipix)1": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Qualipix)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Qualipix)1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  }
+}

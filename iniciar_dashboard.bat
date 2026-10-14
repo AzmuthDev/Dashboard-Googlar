@@ -1,5 +1,5 @@
 @echo off
 echo Iniciando o Googlar Dashboard...
-cd /d "C:\Users\JEduardo\OneDrive\Documentos\Googlar\Dashboard"
+cd /d "%~dp0"
 npm run dev
 pause

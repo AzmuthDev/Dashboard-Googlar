@@ -1,0 +1,1313 @@
+{
+  "name": "Analise ADS Endomarcas",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// 1. RECUPERA OS ITENS (Devem vir diretamente do Planilha Rush1 ou filtro de tabela)\nconst items = $input.all();\n\n// 2. RECUPERA O CONTEXTO DO SITE (Se disponível)\nlet contextoSite = \"Conteúdo do site não disponível.\";\ntry {\n    contextoSite = $('HTML to Markdown').first().json.conteudo_site || \"\";\n} catch (e) {}\n\n// 3. MAPEAMENTO MANUAL EXATO (Baseado na imagem Planilha Rush1)\nconst listaEstruturada = items.map(item => {\n    const d = item.json;\n    return {\n        // ORDEM: Campanha, Grupo, Palavra-Chave, Termo\n        \"Campanha\": d[\"Campanha\"] || \"N/A\",\n        \"Grupo_Anuncio\": d[\"Grupo de anúncios\"] || \"N/A\",\n        \"Palavra_Chave\": d[\"Palavra-chave\"] || \"N/A\",\n        \"Termo\": d[\"Termo de pesquisa\"] || \"N/A\",\n        \n        // MÉTRICAS (Usando nomes exatos capturados na imagem Planilha Rush1)\n        \"Impressoes\": String(d[\"Impr.\"] || \"0\"),\n        \"Cliques\": String(d[\"Cliques\"] || \"0\"),\n        \"CTR\": String(d[\"CTR\"] || \"0%\"),\n        \"Custo\": String(d[\"Custo\"] || \"0\"),\n        \"Conversoes\": String(d[\"Conversões\"] || \"0\"),\n        \"Custo_Conv\": String(d[\"Custo / conv.\"] || \"0\")\n    };\n});\n\n// 4. MONTA O INPUT FINAL PARA A IA\nconst inputParaIA = `\n=== CONTEXTO DO SITE ===\n${contextoSite.substring(0, 3000)}\n\n=== DADOS PARA AUDITORIA ===\n${JSON.stringify(listaEstruturada)}\n`;\n\nreturn {\n    json: {\n        meu_texto_pronto: inputParaIA\n    }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        64
+      ],
+      "id": "bc44e4b3-cd7b-46e1-9de4-de3bb361ce8d",
+      "name": "Formatador1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        1344
+      ],
+      "id": "fc747457-cc43-47bb-9699-83efece229ae",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. CAPTURA O TEXTO DA IA\nconst item = $input.first();\nconst rawText = item.json.output || item.json.text || item.json.response || \"\";\n\nif (!rawText || rawText.length < 5) {\n    return [{ json: { \"Termo de pesquisa\": \"ERRO\", \"STATUS_GRANULARIDADE\": \"IA VAZIA\", \"debug_texto_ia\": \"A IA não respondeu nada.\" } }];\n}\n\n// 2. FUNÇÃO PARA EXTRAIR APENAS O ARRAY JSON\nfunction extrairJSON(texto) {\n    try {\n        // Localiza o primeiro '[' e o último ']' para ignorar conversas extras\n        const inicio = texto.indexOf('[');\n        const fim = texto.lastIndexOf(']');\n\n        if (inicio === -1 || fim === -1) {\n            // Se não achou array, procura por objetos individuais {} (Plano B)\n            const regexObj = /\\{[\\s\\S]*?\\}/g;\n            const matches = texto.match(regexObj);\n            if (matches) return matches.map(m => JSON.parse(m));\n            throw new Error(\"A IA enviou apenas texto, sem formato de tabela.\");\n        }\n\n        const apenasJSON = texto.substring(inicio, fim + 1);\n        return JSON.parse(apenasJSON);\n    } catch (e) {\n        throw new Error(\"Falha ao processar a estrutura: \" + e.message);\n    }\n}\n\ntry {\n    let dados = extrairJSON(rawText);\n    if (!Array.isArray(dados)) dados = [dados];\n\n    // 3. NORMALIZAÇÃO DE CHAVES (Garante que os nomes batam com a Planilha)\n    return dados.map(linha => {\n        return {\n            json: {\n                \"Campanha\": linha[\"Campanha\"] || \"N/A\",\n                \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"N/A\",\n                \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n                \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n                \"Tipo de corresp.\": linha[\"Tipo de corresp.\"] || \"N/A\",\n                \"Adicionada/excluída\": linha[\"Adicionada/excluída\"] || \"N/A\",\n                \"STATUS_GRANULARIDADE\": linha[\"STATUS_GRANULARIDADE\"] || \"\",\n                \"Sugestao_Grupo\": linha[\"Sugestao_Grupo\"] || \"\",\n                \"SEGMENTAR\": linha[\"SEGMENTAR\"] || \"\",\n                \"NEGATIVAR\": linha[\"NEGATIVAR\"] || \"\",\n                \"TESTE_AB\": linha[\"TESTE_AB\"] || \"\",\n                \"Observacao\": linha[\"Observacao\"] || \"\",\n                \"Cliques\": String(linha[\"Cliques\"] || \"0\"),\n                \"Impr.\": String(linha[\"Impr.\"] || linha[\"Impressoes\"] || \"0\"),\n                \"CTR\": String(linha[\"CTR\"] || \"0%\"),\n                \"CPC méd.\": String(linha[\"CPC méd.\"] || \"0\"),\n                \"Custo\": String(linha[\"Custo\"] || \"0\"),\n                \"Conversões\": String(linha[\"Conversões\"] || linha[\"Conversoes\"] || \"0\"),\n                \"Custo / conv.\": String(linha[\"Custo / conv.\"] || linha[\"Custo_Conv\"] || \"0\"),\n                \"Taxa de conv.\": String(linha[\"Taxa de conv.\"] || \"0\")\n            }\n        };\n    });\n\n} catch (erro) {\n    // 4. TRATAMENTO DE ERRO (Grava na planilha o que a IA respondeu de errado)\n    return [{\n        json: {\n            \"Termo de pesquisa\": \"ERRO CRÍTICO\",\n            \"STATUS_GRANULARIDADE\": \"❌ FALHA\",\n            \"Observacao\": erro.message,\n            \"debug_texto_ia\": rawText.substring(0, 1000) // Pega os primeiros 1000 caracteres para análise\n        }\n    }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -912,
+        288
+      ],
+      "id": "66ea55e9-f384-4a4d-ad9e-b833d84546e3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash-001",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        768,
+        960
+      ],
+      "id": "0379ca59-fc94-4b11-b387-fd4c0cfd3d8a",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🚀 COMANDO DE EXECUÇÃO: SELETOR DE INCERTEZAS (Style Brokers)\nDADOS DE ENTRADA: {{ $json.output }}\n\nQUEM É VOCÊ\nVocê é o Coletor de Dados de Auditoria (Filtro Cego). Sua única e exclusiva função é realizar uma filtragem técnica. Você não é um gerador de conteúdo e não deve realizar julgamentos; você é apenas um extrator de dados existentes.\n\n🛑 REGRA DE TOLERÂNCIA ZERO (PROIBIÇÃO ABSOLUTA)\n\nNÃO INVENTE: É terminantemente proibido criar novos termos, exemplos, colunas ou linhas que não existam na entrada.\n\nNÃO JULGUE: Não reavalie se o termo é dúvida ou não. Se o agente anterior marcou como ❓, você coleta. Se não marcou, você ignora.\n\nNÃO ALTERE: Você não tem permissão para corrigir gramática, mudar maiúsculas/minúsculas ou alterar as métricas. Se o dado original estiver \"sujo\", ele deve sair \"sujo\".\n\nCÓPIA FIEL: Você deve agir como um comando \"Copy-Paste\" seletivo.\n\n🧠 LÓGICA DE FILTRAGEM RÍGIDA\nAnalise cada objeto do Array recebido nos DADOS DE ENTRADA e siga este processo:\n\nIDENTIFICAÇÃO: Localize apenas os objetos onde a chave \"DUVIDA\" contém o símbolo exato: ❓.\n\nDESCARTE: Se a linha estiver marcada como ✅ (Segmentar), ❌ (Negativar) ou ⚠️ (Teste A/B), IGNORE-A. Ela deve ser eliminada do fluxo.\n\nCAPTURAR TUDO: Ao encontrar a dúvida (❓), capture todas as colunas daquela linha exatamente como estão.\n\n🛑 REGRAS DE INTEGRIDADE (O ESPELHO)\n\nSe a entrada tiver 50 termos e apenas 2 forem dúvidas, sua saída terá exatamente 2 objetos.\n\nSe a entrada não contiver nenhuma dúvida (❓), retorne um Array vazio: [].\n\nMantenha a integridade de todas as métricas (Cliques, Impr., Custo, CTR, etc.) sem arredondamentos ou mudanças.\n\n📤 INSTRUÇÕES DE SAÍDA (JSON PURO)\nRetorne APENAS o Array JSON filtrado. É proibido incluir textos explicativos, observações próprias ou markdown (```json).\n\nORDEM EXATA DAS CHAVES:\n\"Campanha\", \"Grupo de anúncios\", \"Palavra-chave\", \"Termo de pesquisa\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Sugestao_Grupo\", \"STATUS_GRANULARIDADE\", \"Cliques\", \"Impr.\", \"CTR\", \"CPC méd.\", \"Custo\", \"Conversões\", \"Custo / conv.\", \"Tipo de corresp.\", \"Adicionada/excluída\", \"Taxa de conv.\"",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        688,
+        736
+      ],
+      "id": "e6e4b731-8b21-41fc-b05e-609573e422c4",
+      "name": "Agente Filtro",
+      "disabled": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🚀 COMANDO DE EXECUÇÃO: AUDITORIA SEMÂNTICA & ESPELHAMENTO (Endomarcas)\nDADOS DE ENTRADA: {{ $json.output }}\n\nQUEM É VOCÊ\nVocê é o Analista Semântico Sênior (Especialista em Equipamentos de ENDOSCOPIA e afins).\n\nNAS COLUNAS DE DADOS: Você é um robô de cópia cega. Processe apenas os termos presentes na entrada. Se a entrada tiver 10 linhas, a saída terá exatamente 10 linhas. É terminantemente proibido inventar termos, exemplos ou adicionar linhas que não constam na origem.\n\nNAS COLUNAS DE TRATAMENTO: Você aplica a metodologia de \"Semantic Pitfalls\" para filtrar leads B2B e identificar incertezas estratégicas que exigem validação humana.\n\n🛑 REGRAS DE INTEGRIDADE (O ESPELHO)\nNas chaves Campanha, Grupo de anúncios, Palavra-chave, Termo de pesquisa e métricas:\n\nPROIBIDO ALTERAR: Copie cada caractere exatamente como entrou.\n\nPROIBIDO INVENTAR: Não adicione termos ou métricas fantasmas.\n\nPROIBIDO TRADUZIR: Mantenha a grafia original (maiúsculas, minúsculas e acentos). Se for \"N/A\", mantenha \"N/A\".\n\n🧠 LÓGICA DE TRATAMENTO (RACIOCÍNIO AVANÇADO)\nAnalise o Termo de pesquisa e preencha as colunas de decisão (SEGMENTAR, NEGATIVAR, TESTE_AB, DUVIDA) usando apenas os símbolos correspondentes (✅, ❌, ⚠️, ❓). ⚠️ REGRA DE OURO: Um termo pode ter apenas UM símbolo em UMA dessas quatro colunas. Se marcar uma, as outras três devem ficar vazias (\"\").\n\n1. AUDITORIA DE CATEGORIA (Cross-Check) 🩺\n⚠️ DESLOCADO: Se houver conflito de marca (ex: \"Fujinon\" em grupo \"Olympus\") ou especialidade. Sugira o grupo oficial em Sugestao_Grupo.\n\n✅ CORRETO: Termo e grupo estão em harmonia técnica.\n\nAção: Preencha STATUS_GRANULARIDADE=\"✅ CORRETO\".\n\n2. HIERARQUIA DE JULGAMENTO (Regra de Exclusão) ⚖️\nPRIORIDADE 1: NEGATIVAR (❌) - O \"LIXO\" / FORA DE PERFIL Marque NEGATIVAR=\"❌\" e preencha a Observacao se o termo for ruim (independente do idioma):\n\nIntenção de Paciente: (exame, agendar, clínica, dói, preparo, sedação, onde fazer).\n\nInformativo/RH/Financeiro: (vaga, emprego, salário, PDF, curso, o que é, significado).\n\nVeterinária: (cachorro, gato, pet - se o grupo não for de veterinária).\n\nTermo Estrangeiro Ruim: Se a busca em inglês ou espanhol for por exames, dores ou informações não comerciais.\n\nPRIORIDADE 2: DÚVIDA (❓) - VALIDAÇÃO ESTRATÉGICA Marque DUVIDA=\"❓\" e preencha a Observacao obrigatoriamente se o termo for BOM/POTENCIAL, mas houver uma incerteza:\n\nIdioma Estrangeiro com Potencial: Termos comerciais ou de equipamentos em Inglês ou Espanhol (ex: \"Endoscopy tower price\").\n\nNota: Se o termo for ruim (exame/informativo) em outro idioma, ele deve ser NEGATIVADO na Prioridade 1.\n\nObs: \"Dúvida: Termo em [Idioma] com potencial comercial. A empresa deseja atender leads internacionais?\".\n\nConteúdo Raso/Escasso: O termo é B2B e relevante (ex: \"Cistoscópio\"), mas o site da Endomarcas tem pouca informação técnica sobre ele.\n\nObs: \"Dúvida: Termo relevante, mas o conteúdo no site é escasso para este nicho específico.\"\n\nPeças vs. Aparelhos: Busca por acessórios menores ou peças (lâmpadas, válvulas, bicos).\n\nObs: \"Dúvida: O lead busca peça de reposição. Validar se o foco é venda de peças ou apenas aparelhos.\"\n\nServiço de Manutenção: Busca por \"conserto\", \"reparo\" ou \"assistência técnica\".\n\nObs: \"Dúvida: Lead busca manutenção. Validar se este serviço é prioridade comercial.\"\n\nPRIORIDADE 3: SEGMENTAR (✅) - O \"OURO\" (Lead B2B Core) Marque SEGMENTAR=\"✅\" se o termo for comercial, em português, e o conteúdo for farto no site:\n\nExemplos: \"Comprar videogastroscópio\", \"Torre de endoscopia preço\", \"Equipamento endoscopia usado\", \"Venda de processadora de vídeo\".\n\nPRIORIDADE 4: TESTE A/B (⚠️) - OPORTUNIDADE SEM CONTEÚDO Marque TESTE_AB=\"⚠️\" se o termo for um lead comercial B2B excelente, mas NÃO EXISTIR nenhuma menção a ele no site ou portfólio.\n\nAção: Preencha Observacao como \"Validar: Termo comercial relevante, mas inexistente no conteúdo atual do site.\"\n\n📋 LISTA DE GRUPOS OFICIAIS (Para Sugestao_Grupo)\n(Mantenha a sua lista de grupos: #Endoscopio Flexivel, #Fujinon, #Olympus, #Pentax, etc.)\n\n📤 INSTRUÇÕES DE SAÍDA (JSON PURO)\nRetorne APENAS o Array JSON. Sem markdown. ORDEM EXATA DAS CHAVES: \"Campanha\", \"Grupo de anúncios\", \"Palavra-chave\", \"Termo de pesquisa\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Sugestao_Grupo\", \"STATUS_GRANULARIDADE\", \"Cliques\", \"Impr.\", \"CTR\", \"CPC méd.\", \"Custo\", \"Conversões\", \"Custo / conv.\", \"Tipo de corresp.\", \"Adicionada/excluída\", \"Taxa de conv.\"",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        336,
+        992
+      ],
+      "id": "5dc21090-d812-4e6b-b236-a2a118ca784e",
+      "name": "Agente de blindagem"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🚀 COMANDO DE EXECUÇÃO: AUDITORIA SEMÂNTICA & ESPELHAMENTO (Endomarcas)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\nQUEM É VOCÊ\nVocê é o Analista Semântico Sênior (Especialista em Equipamentos de ENDOSCOPIA e afins).\n\nNAS COLUNAS DE DADOS: Você é um robô de cópia cega. Você deve processar apenas os termos presentes na entrada. Se a entrada tiver 5 linhas, a saída terá exatamente 5 linhas. É terminantemente proibido inventar termos, exemplos ou linhas extras.\n\nNAS COLUNAS DE TRATAMENTO: Você aplica a metodologia de \"Semantic Pitfalls\" para filtrar leads B2B e identificar incertezas estratégicas que exigem validação humana.\n\n🛑 REGRAS DE INTEGRIDADE (O ESPELHO)\nNas chaves Campanha, Grupo de anúncios, Palavra-chave, Termo de pesquisa e métricas:\n\nPROIBIDO ALTERAR: Copie cada caractere exatamente como entrou.\n\nPROIBIDO INVENTAR: Não adicione termos que não constam na lista original.\n\nPROIBIDO TRADUZIR: Não mude maiúsculas, minúsculas ou acentos. Se for \"N/A\", mantenha \"N/A\".\n\n🧠 LÓGICA DE TRATAMENTO (RACIOCÍNIO AVANÇADO)\nAnalise o Termo de pesquisa fornecido e preencha as colunas de decisão (SEGMENTAR, NEGATIVAR, TESTE_AB, DUVIDA) usando apenas os símbolos correspondentes (✅, ❌, ⚠️, ❓). ⚠️ REGRA DE OURO: Um termo pode ter apenas UM símbolo em UMA dessas quatro colunas. Se marcar uma, as outras três devem ficar vazias (\"\").\n\n1. AUDITORIA DE CATEGORIA (Cross-Check) 🩺\n⚠️ DESLOCADO: Conflito de marca (ex: \"Fujinon\" em grupo \"Olympus\") ou especialidade (ex: Urologia em grupo de Gastro).\n\nAção: STATUS_GRANULARIDADE=\"⚠️ DESLOCADO\" e preencha Sugestao_Grupo com o nome oficial.\n\n✅ CORRETO: Termo e grupo em harmonia técnica.\n\nAção: STATUS_GRANULARIDADE=\"✅ CORRETO\".\n\n2. HIERARQUIA DE JULGAMENTO (Regra de Exclusão) ⚖️\nPRIORIDADE 1: NEGATIVAR (❌) - O \"LIXO\" Marque NEGATIVAR=\"❌\" e preencha a Observacao se o termo for:\n\nIntenção de Paciente: (exame, agendar, clínica, dói, preparo, sedação, plano de saúde).\n\nInformativo/RH: (vaga, emprego, salário, PDF, curso, significado).\n\nVeterinária: (cachorro, gato, pet - exceto se o grupo for de veterinária).\n\nEstrangeiro Ruim: Busca em inglês/espanhol por exames ou dores.\n\nPRIORIDADE 2: DÚVIDA (❓) - VALIDAÇÃO ESTRATÉGICA Marque DUVIDA=\"❓\" e preencha a Observacao obrigatoriamente se:\n\nEstrangeiro com Potencial: Termos comerciais/equipamentos em Inglês ou Espanhol (ex: \"Endoscopy tower price\").\n\nNota: Se o termo estrangeiro for ruim (exame), deve ser NEGATIVADO na Prioridade 1.\n\nBaixo Conteúdo: Termo B2B relevante (ex: \"Cistoscópio\"), mas com pouca informação no site atual da Endomarcas.\n\nPeças vs. Equipamento: Busca por acessórios menores (lâmpadas, válvulas, bicos).\n\nServiço de Manutenção: Busca por \"conserto\", \"reparo\" ou \"assistência técnica\".\n\nPRIORIDADE 3: SEGMENTAR (✅) - O \"OURO\" (Lead B2B Core) Marque SEGMENTAR=\"✅\" se o termo for comercial, em português, e farto no site:\n\nExemplos: \"Comprar videogastroscópio\", \"Torre de endoscopia preço\", \"Equipamento usado\", marcas + termos comerciais.\n\nPRIORIDADE 4: TESTE A/B (⚠️) - OPORTUNIDADE SEM CONTEÚDO Marque TESTE_AB=\"⚠️\" se o termo for um lead B2B excelente, mas NÃO EXISTIR menção a ele no conteúdo da empresa.\n\nObs: \"Validar: Termo comercial relevante sem conteúdo correspondente no site.\"\n\n📋 LISTA DE GRUPOS OFICIAIS (Para Sugestao_Grupo)\n(Mantenha a lista anterior de grupos: #Endoscopio Flexivel, #Fujinon, #Olympus, #Pentax, etc.)\n\n📤 INSTRUÇÕES DE SAÍDA (JSON PURO)\nRetorne APENAS o Array JSON. Sem markdown. ORDEM EXATA DAS CHAVES: \"Campanha\", \"Grupo de anúncios\", \"Palavra-chave\", \"Termo de pesquisa\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Sugestao_Grupo\", \"STATUS_GRANULARIDADE\", \"Cliques\", \"Impr.\", \"CTR\", \"CPC méd.\", \"Custo\", \"Conversões\", \"Custo / conv.\", \"Tipo de corresp.\", \"Adicionada/excluída\", \"Taxa de conv.\"",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        992
+      ],
+      "id": "4f0715c2-fe87-45e8-b785-62bc53345727",
+      "name": "Agente juiz",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "content": "Agentes de Julgamento\n\nOs dois agentes fazem o julgamento dos termos.\nAgente Juiz: Faz o primeiro julgamento, ele recebe os dados brutos da planilha que você deseja fazer o tratamento de dados.\n\nAgente de Blindagem: Ele faz correções se forem necessárias é uma segunda comada de julgamento para os termos. ",
+        "height": 480,
+        "width": 1296,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -624,
+        816
+      ],
+      "typeVersion": 1,
+      "id": "8b4e72d7-65f5-4947-86e9-3dd9dcdfb586",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Os nós code são responsáveis pelo tratamento de dados.\n\nFiltro: Ele é responsável pelo primeiro passo de tratamento de dados, ele vai pegar as colunas que precisamos e que são essenciais para analise geral dos termos.\n\nGrudador: Ele é responsável em colocar os termos no melhor formato que nossos agentes possam entender e fazer os julgamentos.",
+        "height": 448,
+        "width": 784
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1408,
+        848
+      ],
+      "typeVersion": 1,
+      "id": "f646d528-aeec-4001-98da-9947bb60e99e",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Nó responsavel em pegar dados do site da empresa enviando para os agentes para um melhor entendimento da estrutura da empresa.",
+        "height": 544,
+        "width": 992,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1440,
+        1296
+      ],
+      "typeVersion": 1,
+      "id": "ffe53094-0374-4b01-92ed-970a84ba566e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "Ramificação responsável para o envio das informações para o Baserow\n\nAgente filtro: Ele separa os termos julgados como dúvida para serem enviados para o baserow.\nFormatador: responsável em pegar os dados enviados pelo agente e colocar no formato de leitura do baserow.\n\nClique [Aqui](https://baserow.io/database/347578/table/791189/1536653) para acessar o banco de dados.",
+        "height": 512,
+        "width": 1184,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        672,
+        528
+      ],
+      "typeVersion": 1,
+      "id": "a457e951-a7f5-46e3-a7f4-63ec6a1ac0de",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "São os nós que enviam todas as informações julgadas pelo agente para a planilha  no google sheets\n\nClique [aqui](https://docs.google.com/spreadsheets/d/1QYtWQc6NUa3Y6-BLDZwuh7vjP3tFWqCjYu-CJNIIJDs/edit?gid=1044748350#gid=1044748350) para  acessar a planilha",
+        "height": 448,
+        "width": 1168,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        816,
+        1152
+      ],
+      "typeVersion": 1,
+      "id": "3461a7c1-6233-4221-8fcd-747f1423caf1",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -912,
+        1632
+      ],
+      "id": "6f6c7505-00cf-4383-83be-196cfa2d4399",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "databaseId": 347578,
+        "tableId": 791189,
+        "additionalOptions": {
+          "filters": {
+            "fields": [
+              {
+                "field": 6749177,
+                "value": "true"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.baserow",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        512
+      ],
+      "id": "9e8556fe-a299-4681-ba8e-8255d41b74c3",
+      "name": "Get many rows",
+      "credentials": {
+        "baserowApi": {
+          "id": "vfNZJ0Z0vVSgv0Qu",
+          "name": "Baserow account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {
+          "maxOutputTokens": 15000,
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        64,
+        1216
+      ],
+      "id": "dae8d5b6-75dc-4313-9994-7c090065cd9c",
+      "name": "Google Gemini Chat Model3",
+      "notesInFlow": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -464,
+        1120
+      ],
+      "id": "8406850b-aa0f-4421-8440-874ec9e3d31f",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Transforma as 25 linhas em um único texto JSON\nconst textoParaIA = JSON.stringify(items.map(i => i.json));\n\nreturn {\n  json: {\n    meu_texto_pronto: textoParaIA\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        992
+      ],
+      "id": "1241f80a-86e2-45ab-aa1e-4f7b69f652eb",
+      "name": "grudador1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1WW7pjMk08Rj214fwwNnzL3hNRdEkTUljiMesOQXYlUQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1WW7pjMk08Rj214fwwNnzL3hNRdEkTUljiMesOQXYlUQ/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -704,
+        1120
+      ],
+      "id": "672b628f-df00-4c09-be03-6092af57c067",
+      "name": "planilha1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XYA9aww9CIscaVaV",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 15000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        416,
+        1216
+      ],
+      "id": "d98d48d6-e182-453a-894e-411c302ee18e",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. CAPTURA O TEXTO DA IA\nconst item = $input.first();\nconst rawText = item.json.output || item.json.text || item.json.response || \"\";\n\nif (!rawText || rawText.length < 5) {\n    return [{ json: { \"Termo de pesquisa\": \"ERRO\", \"STATUS_GRANULARIDADE\": \"IA VAZIA\", \"debug_texto_ia\": \"A IA não respondeu nada.\" } }];\n}\n\n// 2. FUNÇÃO PARA EXTRAIR O ARRAY JSON\nfunction extrairJSON(texto) {\n    try {\n        const inicio = texto.indexOf('[');\n        const fim = texto.lastIndexOf(']');\n        if (inicio === -1 || fim === -1) {\n            const regexObj = /\\{[\\s\\S]*?\\}/g;\n            const matches = texto.match(regexObj);\n            if (matches) return matches.map(m => JSON.parse(m));\n            throw new Error(\"A IA enviou apenas texto, sem formato de tabela.\");\n        }\n        const apenasJSON = texto.substring(inicio, fim + 1);\n        return JSON.parse(apenasJSON);\n    } catch (e) {\n        throw new Error(\"Falha ao processar a estrutura: \" + e.message);\n    }\n}\n\ntry {\n    let dados = extrairJSON(rawText);\n    if (!Array.isArray(dados)) dados = [dados];\n\n    // 3. NORMALIZAÇÃO E ORDENAÇÃO EXATA DAS CHAVES\n    return dados.map(linha => {\n        return {\n            json: {\n                \"Campanha\": linha[\"Campanha\"] || \"N/A\",\n                \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"N/A\",\n                \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n                \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n                \"SEGMENTAR\": linha[\"SEGMENTAR\"] || \"\",\n                \"NEGATIVAR\": linha[\"NEGATIVAR\"] || \"\",\n                \"TESTE_AB\": linha[\"TESTE_AB\"] || \"\",\n                \"DUVIDA\": linha[\"DUVIDA\"] || \"\",\n                \"Observacao\": linha[\"Observacao\"] || \"\",\n                \"Sugestao_Grupo\": linha[\"Sugestao_Grupo\"] || \"\",\n                \"STATUS_GRANULARIDADE\": linha[\"STATUS_GRANULARIDADE\"] || \"\",\n                \"Cliques\": String(linha[\"Cliques\"] || \"0\"),\n                \"Impr.\": String(linha[\"Impr.\"] || \"0\"),\n                \"CTR\": String(linha[\"CTR\"] || \"0%\"),\n                \"CPC méd.\": String(linha[\"CPC méd.\"] || \"0\"),\n                \"Custo\": String(linha[\"Custo\"] || \"0\"),\n                \"Conversões\": String(linha[\"Conversões\"] || \"0\"),\n                \"Custo / conv.\": String(linha[\"Custo / conv.\"] || \"0\"),\n                \"Tipo de corresp.\": linha[\"Tipo de corresp.\"] || \"N/A\",\n                \"Adicionada/excluída\": linha[\"Adicionada/excluída\"] || \"N/A\",\n                \"Taxa de conv.\": String(linha[\"Taxa de conv.\"] || \"0\")\n            }\n        };\n    });\n\n} catch (erro) {\n    return [{\n        json: {\n            \"Termo de pesquisa\": \"ERRO CRÍTICO\",\n            \"STATUS_GRANULARIDADE\": \"❌ FALHA\",\n            \"Observacao\": erro.message,\n            \"debug_texto_ia\": rawText.substring(0, 1000)\n        }\n    }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        848
+      ],
+      "id": "6c645e53-5547-4d43-8a48-9d622a7a4e50",
+      "name": "Formatador2"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/14cNL0Zz5o7hV3kWZ9CyXrKm_7V_MwJrXq8AzTNm8eQE/edit?gid=108992556#gid=108992556",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/14cNL0Zz5o7hV3kWZ9CyXrKm_7V_MwJrXq8AzTNm8eQE/edit?gid=108992556#gid=108992556",
+          "mode": "url"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Campanha",
+              "displayName": "Campanha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Grupo de anúncios",
+              "displayName": "Grupo de anúncios",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Palavra-chave",
+              "displayName": "Palavra-chave",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Termo de pesquisa",
+              "displayName": "Termo de pesquisa",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SEGMENTAR",
+              "displayName": "SEGMENTAR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NEGATIVAR",
+              "displayName": "NEGATIVAR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TESTE_AB",
+              "displayName": "TESTE_AB",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "DUVIDA",
+              "displayName": "DUVIDA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Observacao",
+              "displayName": "Observacao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sugestao_Grupo",
+              "displayName": "Sugestao_Grupo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "STATUS_GRANULARIDADE",
+              "displayName": "STATUS_GRANULARIDADE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cliques",
+              "displayName": "Cliques",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Impr.",
+              "displayName": "Impr.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CTR",
+              "displayName": "CTR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "CPC méd.",
+              "displayName": "CPC méd.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Custo",
+              "displayName": "Custo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Conversões",
+              "displayName": "Conversões",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Custo / conv.",
+              "displayName": "Custo / conv.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Tipo de corresp.",
+              "displayName": "Tipo de corresp.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adicionada/excluída",
+              "displayName": "Adicionada/excluída",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Taxa de conv.",
+              "displayName": "Taxa de conv.",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1408,
+        1376
+      ],
+      "id": "2a940423-7bc4-4662-908c-8fc3e2ad7896",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XYA9aww9CIscaVaV",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega todos os itens (linhas) que vieram do nó anterior do Baserow\nconst todosOsItens = $input.all();\n\n// Mapeia todos os itens extraindo o JSON completo de cada linha (todas as colunas)\nconst historicoCompleto = todosOsItens.map(item => item.json);\n\n// Transforma a lista completa em texto (String) e envia para a variável do Agente\nreturn {\n  json: {\n    historico_baserow: JSON.stringify(historicoCompleto)\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -688,
+        512
+      ],
+      "id": "fdb09bf1-2a3e-4c6d-a405-69372b2ca3ff",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cf2c978b-e876-4110-b81b-48d09fc88f80",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -912,
+        976
+      ],
+      "id": "1ff7cef6-9ada-47c7-9e0f-6055d1d8b68e",
+      "name": "Webhook",
+      "webhookId": "cf2c978b-e876-4110-b81b-48d09fc88f80"
+    },
+    {
+      "parameters": {
+        "tableId": "Duvidas_Endomarcas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "Campanha"
+            },
+            {
+              "fieldId": "Grupos de Anuncio"
+            },
+            {
+              "fieldId": "Palavras Chave"
+            },
+            {
+              "fieldId": "Termos de pesquisa"
+            },
+            {
+              "fieldId": "Comentário"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        592
+      ],
+      "id": "5315cbb2-36ff-422a-8eef-c1a02278d4fc",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "gs7qwXHgtBeNrgsC",
+          "name": "Supabase account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "mesa_qualipix",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "campanha"
+            },
+            {
+              "fieldId": "grupo_de_anuncios"
+            },
+            {
+              "fieldId": "palavra_chave"
+            },
+            {
+              "fieldId": "termo_de_pesquisa"
+            },
+            {
+              "fieldId": "tipo_corresp"
+            },
+            {
+              "fieldId": "adicionada_excluida"
+            },
+            {
+              "fieldId": "cliques"
+            },
+            {
+              "fieldId": "impressoes"
+            },
+            {
+              "fieldId": "ctr"
+            },
+            {
+              "fieldId": "cpc_medio"
+            },
+            {
+              "fieldId": "custo"
+            },
+            {
+              "fieldId": "conversoes"
+            },
+            {
+              "fieldId": "custo_conv"
+            },
+            {
+              "fieldId": "taxa_conv"
+            },
+            {
+              "fieldId": "segmentar"
+            },
+            {
+              "fieldId": "negativar"
+            },
+            {
+              "fieldId": "teste_ab"
+            },
+            {
+              "fieldId": "duvida"
+            },
+            {
+              "fieldId": "observacao"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2067ea94-a26d-454c-aa4a-a38a4ec6bc65",
+      "name": "Create a row2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FUabs49WcVpHY9ez",
+          "name": "Supabase account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. CAPTURA O TEXTO DE FORMA MAIS ABRANGENTE\nconst item = $input.first();\nlet rawText = item.json.output || item.json.text || item.json.response || \"\";\n\n// 2. LIMPEZA PROFUNDA (Remove Markdown, prefixos e quebras de linha estranhas)\nrawText = rawText.replace(/```json/gi, \"\")\n                 .replace(/```/gi, \"\")\n                 .replace(/^json/gi, \"\")\n                 .replace(/\\\\n/g, \" \") // Remove quebras de linha escapadas\n                 .trim();\n\n// 3. FUNÇÃO DE EXTRAÇÃO COM SUPORTE A TEXTO ANTES/DEPOIS\nfunction extrairJSON(texto) {\n    try {\n        const inicio = texto.indexOf('[');\n        const fim = texto.lastIndexOf(']');\n\n        if (inicio === -1 || fim === -1) {\n            // Tenta achar apenas um objeto {} se não for lista\n            const inicioObj = texto.indexOf('{');\n            const fimObj = texto.lastIndexOf('}');\n            if (inicioObj !== -1 && fimObj !== -1) {\n                return [JSON.parse(texto.substring(inicioObj, fimObj + 1))];\n            }\n            throw new Error(\"A IA não retornou o formato de colchetes [ ].\");\n        }\n\n        const apenasJSON = texto.substring(inicio, fim + 1);\n        return JSON.parse(apenasJSON);\n    } catch (e) {\n        throw new Error(\"Erro de Sintaxe JSON: \" + e.message);\n    }\n}\n\ntry {\n    let dados = extrairJSON(rawText);\n    if (!Array.isArray(dados)) dados = [dados];\n\n    return dados.map(linha => {\n        return {\n            json: {\n                \"Campanha\": linha[\"Campanha\"] || \"N/A\",\n                \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"N/A\",\n                \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n                \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n                \"SEGMENTAR\": linha[\"SEGMENTAR\"] || \"\",\n                \"NEGATIVAR\": linha[\"NEGATIVAR\"] || \"\",\n                \"TESTE_AB\": linha[\"TESTE_AB\"] || \"\",\n                \"DUVIDA\": linha[\"DUVIDA\"] || \"\",\n                \"Observacao\": \"Processado com sucesso\",\n                \"Sugestao_Grupo\": linha[\"Sugestao_Grupo\"] || \"\",\n                \"STATUS_GRANULARIDADE\": linha[\"STATUS_GRANULARIDADE\"] || \"CORRETO\",\n                \"Cliques\": String(linha[\"Cliques\"] || \"0\"),\n                \"Impr.\": String(linha[\"Impr.\"] || \"0\"),\n                \"CTR\": String(linha[\"CTR\"] || \"0\"),\n                \"CPC méd.\": String(linha[\"CPC méd.\"] || \"0\"),\n                \"Custo\": String(linha[\"Custo\"] || \"0\"),\n                \"Conversões\": String(linha[\"Conversões\"] || \"0\"),\n                \"Custo / conv.\": String(linha[\"Custo / conv.\"] || \"0\")\n            }\n        };\n    });\n\n} catch (erro) {\n    // Retorna o erro estruturado para você ver no Supabase o que falhou\n    return [{\n        json: {\n            \"Termo de pesquisa\": \"ERRO CRÍTICO\",\n            \"STATUS_GRANULARIDADE\": \"❌ FALHA\",\n            \"Observacao\": erro.message,\n            \"Palavra-chave\": \"Checar coluna Observacao\",\n            \"debug_texto_ia\": rawText.substring(0, 500)\n        }\n    }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1168
+      ],
+      "id": "3504099f-db61-4d17-a511-df9c7ea89cd2",
+      "name": "Formatador4"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  // Lê do maiúsculo (como vem da planilha) e salva no minúsculo (para o Supabase)\n  item.json.segmentar = (item.json.SEGMENTAR === '✅' || item.json.SEGMENTAR === 'true' || item.json.SEGMENTAR === true);\n  \n  // Atenção aqui: o input é NEGATIVO, mas o Supabase espera negativar\n  item.json.negativar = (item.json.NEGATIVO === '❌' || item.json.NEGATIVO === 'true' || item.json.NEGATIVO === true);\n  \n  item.json.teste_ab = (item.json.TESTE_AB === '⚠️' || item.json.TESTE_AB === 'true' || item.json.TESTE_AB === true);\n  \n  item.json.duvida = (item.json.DUVIDA === '❓' || item.json.DUVIDA === '?' || item.json.DUVIDA === 'true' || item.json.DUVIDA === true);\n\n  // Limpeza: Apaga as chaves em maiúsculo para não enviar sujeira para o Supabase\n  delete item.json.SEGMENTAR;\n  delete item.json.NEGATIVO;\n  delete item.json.TESTE_AB;\n  delete item.json.DUVIDA;\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        1136
+      ],
+      "id": "7e4d8a65-f182-406a-bb44-b409cbbc3c4f",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "tableId": "mesa_endomarcas",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "campanha",
+              "fieldValue": "={{ $json.Campanha }}"
+            },
+            {
+              "fieldId": "grupo_de_anuncios",
+              "fieldValue": "={{ $json['Grupo de anúncios'] }}"
+            },
+            {
+              "fieldId": "palavra_chave",
+              "fieldValue": "={{ $json['Palavra-chave'] }}"
+            },
+            {
+              "fieldId": "termo_de_pesquisa",
+              "fieldValue": "={{ $json['Termo de pesquisa'] }}"
+            },
+            {
+              "fieldId": "tipo_corresp",
+              "fieldValue": "={{ $json['Tipo de corresp.'] }}"
+            },
+            {
+              "fieldId": "=cpc_medio",
+              "fieldValue": "={{ $json['CPC méd.'] }}"
+            },
+            {
+              "fieldId": "custo",
+              "fieldValue": "={{ $json.Custo }}"
+            },
+            {
+              "fieldId": "conversoes",
+              "fieldValue": "={{ $json['Conversões'] }}"
+            },
+            {
+              "fieldId": "custo_conv",
+              "fieldValue": "={{ $json['Custo / conv.'] }}"
+            },
+            {
+              "fieldId": "taxa_conv",
+              "fieldValue": "={{ $json['Taxa de conv.'] }}"
+            },
+            {
+              "fieldId": "segmentar",
+              "fieldValue": "={{ $json.segmentar }}"
+            },
+            {
+              "fieldId": "negativar",
+              "fieldValue": "={{ $json.negativar }}"
+            },
+            {
+              "fieldId": "teste_ab",
+              "fieldValue": "={{ $json.teste_ab }}"
+            },
+            {
+              "fieldId": "duvida",
+              "fieldValue": "={{ $json.duvida }}"
+            },
+            {
+              "fieldId": "observacao",
+              "fieldValue": "={{ $json.Observacao }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        1168
+      ],
+      "id": "fa1b6848-e2a6-4ac3-b4ce-d5247a9da87e",
+      "name": "Create a row4",
+      "credentials": {
+        "supabaseApi": {
+          "id": "FUabs49WcVpHY9ez",
+          "name": "Supabase account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -560,
+        2304
+      ],
+      "id": "54f4eba8-1f2d-48b5-a51f-8699295bb447",
+      "name": "Schedule Trigger2"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "mesa_endomarcas",
+        "limit": 5,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "pode_enviar",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            },
+            {
+              "keyName": "duvida",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            },
+            {
+              "keyName": "triagem1",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            },
+            {
+              "keyName": "triagem2",
+              "condition": "eq",
+              "keyValue": "={{ true }}"
+            },
+            {
+              "keyName": "enviado_para_grupo",
+              "condition": "eq",
+              "keyValue": "={{ false }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        2288
+      ],
+      "id": "425fe5aa-71bf-4fd3-8894-5f55c93586d6",
+      "name": "Buscar 5 Pendentes1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Jozbn9uORNVr3MTH",
+          "name": "Supabase account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        176,
+        2304
+      ],
+      "id": "c7956ca6-0c16-4505-834e-8ebe2dc3da36",
+      "name": "Wait 10s2",
+      "webhookId": "bbd37a2e-34f8-405f-a5e3-380342d865bd"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendPoll/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"120363407305667257@g.us\",\n  \"name\": \"🔍 *Termo:* {{ $json.termo_de_pesquisa }}\\n\\n💬 *Análise:* {{ $json.observacao || 'Sem análise disponível' }}\",\n  \"selectableCount\": 1,\n  \"values\": [\n    \"✅ Relevante\",\n    \"❌ Negativar\",\n    \"⚠️ Teste A/B\"\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -64,
+        2304
+      ],
+      "id": "b4708836-f02d-46e5-bf9e-df68d36af13d",
+      "name": "Enviar Enquete Evolution1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        2304
+      ],
+      "id": "228bb9d6-844a-4b5f-bd4c-80e92ff00bee",
+      "name": "Limpar Dados"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "mesa_endomarcas",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Buscar 5 Pendentes1').item.json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "enviado_para_grupo",
+              "fieldValue": "={{ true }}"
+            },
+            {
+              "fieldId": "id_enquete",
+              "fieldValue": "={{ $('Enviar Enquete Evolution1').item.json.key.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        704,
+        2304
+      ],
+      "id": "74b40fc6-3a20-4d8e-a7db-c7bb495c00cc",
+      "name": "Marcar como Enviado",
+      "credentials": {
+        "supabaseApi": {
+          "id": "Jozbn9uORNVr3MTH",
+          "name": "Supabase account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "planilha1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente Filtro",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente Filtro": {
+      "main": [
+        [
+          {
+            "node": "Formatador2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente de blindagem": {
+      "main": [
+        [
+          {
+            "node": "Formatador4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agente juiz": {
+      "main": [
+        [
+          {
+            "node": "Agente de blindagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "planilha1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente juiz",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "grudador1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "grudador1": {
+      "main": [
+        [
+          {
+            "node": "Agente juiz",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "planilha1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agente de blindagem",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatador2": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        []
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "planilha1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatador4": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Create a row4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row4": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger2": {
+      "main": [
+        [
+          {
+            "node": "Buscar 5 Pendentes1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar 5 Pendentes1": {
+      "main": [
+        [
+          {
+            "node": "Enviar Enquete Evolution1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10s2": {
+      "main": [
+        [
+          {
+            "node": "Limpar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Enquete Evolution1": {
+      "main": [
+        [
+          {
+            "node": "Wait 10s2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpar Dados": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Enviado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "14b24be6-f408-4c67-b5fc-cce5c156f4b8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  },
+  "nodeGroups": [],
+  "id": "izqF7glcXxReCXY2",
+  "tags": []
+}

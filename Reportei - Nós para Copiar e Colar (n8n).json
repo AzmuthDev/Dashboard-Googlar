@@ -1,0 +1,681 @@
+{
+  "name": "Reportei - Nós para Copiar e Colar (n8n)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📊 Esteira de Julgamento: Reportei\nAgente especializado em Plataforma SaaS de Relatórios, Dashboards e Automação de Marketing Digital:\n1. IA Auditor Semântico: Classificação de termos de dashboards, relatórios e inteligência de marketing\n2. Bloqueio de Desperdício: Elimina buscas de suporte/login, administrativas/RH e ferramentas irrelevantes\n3. Especialistas: Envia enquetes ao Grupo de Especialistas (120363435040456024@g.us)\n4. Consenso: Caso aprovada dúvida, direciona para o grupo do Cliente (120363412429579994@g.us)",
+        "height": 908,
+        "width": 3080,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3904,
+        592
+      ],
+      "id": "107f0410-ca7a-4d4e-8726-d165bc0fcb41",
+      "name": "Sticky Note - Reportei"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.remoteJid || '120363435040456024@g.us',\n  text: '🚀 *COMANDO RECEBIDO*\\n\\n👤 *Solicitante:* ' + ($json.pushName || 'Equipe') + '\\n⏳ Iniciando auditoria semântica da *Reportei*...'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        800
+      ],
+      "id": "0cc12064-77dd-436c-84e1-4d2395a68846",
+      "name": "Notificar Início Reportei"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -4000,
+        1000
+      ],
+      "id": "509f950c-d3d8-4de3-9850-d6a66c2dfafe",
+      "name": "Trigger Semanal (Reportei)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1QpH1AKrKEF7c-cixO3bba-i266FVucxWkQjySGptkXY/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1QpH1AKrKEF7c-cixO3bba-i266FVucxWkQjySGptkXY/edit?pli=1&gid=0#gid=0",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3776,
+        976
+      ],
+      "id": "cf6f43a9-109f-47fc-9b78-ab6b9d6e892a",
+      "name": "Ler Termos da Planilha (Reportei)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XYA9aww9CIscaVaV",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst staticData = $getWorkflowStaticData('global');\nstaticData.stats = staticData.stats || {};\nstaticData.stats[\"Reportei\"] = {\n  totalLidos: items.length,\n  totalDuvidas: 0,\n  erros: [],\n  inicio: new Date().toISOString()\n};\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3552,
+        976
+      ],
+      "id": "cf918191-8328-49a7-91d6-aed36356b1a2",
+      "name": "Inicializar Estatísticas (Reportei)"
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3328,
+        976
+      ],
+      "id": "e15dc4b7-5b66-442f-8c34-84f51711e771",
+      "name": "Lote de Itens (Reportei)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst stats = staticData.stats?.[\"Reportei\"] || { totalLidos: 0, totalDuvidas: 0, erros: [], listaDuvidas: [] };\nconst totalDuvidas = stats.totalDuvidas || 0;\nconst totalLidos = stats.totalLidos || 0;\nconst erros = stats.erros || [];\nconst listaDuvidas = stats.listaDuvidas || [];\nconst listaNomes = [...new Set(listaDuvidas.map(d => d['Termo de pesquisa'] || d['Termo']).filter(Boolean))];\n\nreturn [{\n  json: {\n    cliente: \"Reportei\",\n    total_lidos: totalLidos,\n    total_duvidas: totalDuvidas,\n    tem_duvidas: totalDuvidas > 0,\n    lista_duvidas_nomes: listaNomes,\n    teve_erros: erros.length > 0,\n    erros: erros\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        800
+      ],
+      "id": "0033c3c5-5cd8-405f-b191-09afa27c6e5c",
+      "name": "Concluir Auditoria (Reportei)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_teve_duvidas_reportei",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2816,
+        800
+      ],
+      "id": "a44c79c3-310b-4e1c-a63c-d26cb2f301dc",
+      "name": "Teve Dúvidas no Processo? (Reportei)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363435040456024@g.us',\n  text: '✅ *AUDITORIA CONCLUÍDA: Reportei*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n✨ *Resultado:* Não foram encontradas dúvidas!\\n\\nTodos os termos foram classificados com segurança pela IA entre *Segmentar* e *Negativar*. Nenhuma enquete foi necessária.'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        960
+      ],
+      "id": "b9393b2a-1030-4f33-934b-b72c5c5c62af",
+      "name": "Notificar Sem Dúvidas (Reportei)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363435040456024@g.us',\n  text: '🏁 *AUDITORIA FINALIZADA: Reportei*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n❓ *Total de dúvidas geradas:* ' + $json.total_duvidas + '\\n\\nTodas as enquetes foram enviadas acima para a votação da equipe!'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        768
+      ],
+      "id": "c399ef48-47b8-45d6-a3ef-5023ebac5ed0",
+      "name": "Notificar Fim com Dúvidas (Reportei)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst textoParaIA = JSON.stringify(items.map(i => i.json));\nreturn {\n  json: {\n    meu_texto_pronto: textoParaIA\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        1136
+      ],
+      "id": "864bcb98-6a2d-46c4-8dc7-ed5297516892",
+      "name": "Preparar Texto IA (Reportei)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA DE TRÁFEGO PAGO (Reportei)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Reportei (Plataforma de relatórios e dashboards de marketing).\n\nClassifique cada Termo da entrada em UMA das 4 opções de decisão (marcando o emoji e deixando as outras 3 vazias \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se for busca operacional, suporte, administrativa ou irrelevante:\n- Suporte / Clientes atuais: login, entrar, cancelar assinatura, erro, bug, suporte, fora do ar, reclame aqui.\n- Administrativo / RH: cnpj, vagas, emprego, trabalhar, currículo, salário, glassdoor, gupy.\n- Ferramentas não relacionadas / Tutoriais: como fazer no excel, template canva, dashboard financeiro, relatório contábil, crackeado, pirata.\n\n2. ✅ SEGMENTAR (Lead Core / Assinatura Reportei):\nMarque SEGMENTAR=\"✅\" se for busca pela marca ou intenção de contratação de dashboards de marketing:\n- Institucional / Fundo de Funil: reportei, reportai, reporteu, assinar reportei, planos reportei, ferramenta reportei, preço reportei.\n- Intenção de Solução (Marketing): ferramenta de relatórios de marketing, dashboard para redes sociais, gerar relatório instagram, automação relatórios google ads, dashboard agência, relatórios mídias sociais.\n- ALINHAMENTO COM PALAVRA-CHAVE: Se o termo corresponder à intenção de criar dashboards e reports automatizados para marketing, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real dúvida de intenção de busca, se o termo for excessivamente genérico ou focado em áreas cinzentas:\n- Termos \"Nus\" e Genéricos: Apenas \"relatório\", \"dashboard\", \"análise de dados\", \"instagram analytics\". Não sabemos se a pessoa quer aprender o conceito, programar um dashboard do zero (TI) ou assinar uma plataforma.\n- Buscas Híbridas de Login/Marca: ex: \"reportei entrar\", \"reportei login\" (avaliar se negativa nas campanhas de captação).\n\n4. ⚠️ TESTE_AB (Oportunidades, IA e Concorrência):\nMarque TESTE_AB=\"⚠️\" se for uma busca por funcionalidades novas, tendências ou concorrentes diretos (oportunidade de roubar audiência):\n- Funcionalidades Novas / IA: reportei ai, inteligência artificial relatórios, mcp, análise de métricas com IA.\n- Concorrentes Diretos / Benchmarking: dashgoo, mlabs, etus, metricool, swonkie, looker studio (antigo data studio), power bi para marketing.\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação.",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        1136
+      ],
+      "id": "ba8e89ef-c3e4-4641-b242-a7f1dfc5e136",
+      "name": "IA Auditor Semântico (Reportei)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2808,
+        1352
+      ],
+      "id": "29bd94d0-e72a-441b-bba8-7f9c6d159247",
+      "name": "Google Gemini (Reportei)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CJ590DJ4YzYgkyyf",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA DE TRÁFEGO PAGO (Reportei)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Reportei (Plataforma de relatórios e dashboards de marketing).\n\nClassifique cada Termo da entrada em UMA das 4 opções de decisão (marcando o emoji e deixando as outras 3 vazias \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se for busca operacional, suporte, administrativa ou irrelevante:\n- Suporte / Clientes atuais: login, entrar, cancelar assinatura, erro, bug, suporte, fora do ar, reclame aqui.\n- Administrativo / RH: cnpj, vagas, emprego, trabalhar, currículo, salário, glassdoor, gupy.\n- Ferramentas não relacionadas / Tutoriais: como fazer no excel, template canva, dashboard financeiro, relatório contábil, crackeado, pirata.\n\n2. ✅ SEGMENTAR (Lead Core / Assinatura Reportei):\nMarque SEGMENTAR=\"✅\" se for busca pela marca ou intenção de contratação de dashboards de marketing:\n- Institucional / Fundo de Funil: reportei, reportai, reporteu, assinar reportei, planos reportei, ferramenta reportei, preço reportei.\n- Intenção de Solução (Marketing): ferramenta de relatórios de marketing, dashboard para redes sociais, gerar relatório instagram, automação relatórios google ads, dashboard agência, relatórios mídias sociais.\n- ALINHAMENTO COM PALAVRA-CHAVE: Se o termo corresponder à intenção de criar dashboards e reports automatizados para marketing, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real dúvida de intenção de busca, se o termo for excessivamente genérico ou focado em áreas cinzentas:\n- Termos \"Nus\" e Genéricos: Apenas \"relatório\", \"dashboard\", \"análise de dados\", \"instagram analytics\". Não sabemos se a pessoa quer aprender o conceito, programar um dashboard do zero (TI) ou assinar uma plataforma.\n- Buscas Híbridas de Login/Marca: ex: \"reportei entrar\", \"reportei login\" (avaliar se negativa nas campanhas de captação).\n\n4. ⚠️ TESTE_AB (Oportunidades, IA e Concorrência):\nMarque TESTE_AB=\"⚠️\" se for uma busca por funcionalidades novas, tendências ou concorrentes diretos (oportunidade de roubar audiência):\n- Funcionalidades Novas / IA: reportei ai, inteligência artificial relatórios, mcp, análise de métricas com IA.\n- Concorrentes Diretos / Benchmarking: dashgoo, mlabs, etus, metricool, swonkie, looker studio (antigo data studio), power bi para marketing.\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação.",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2528,
+        1248
+      ],
+      "id": "df4a3ec7-1df3-4dda-8442-e987231bae9e",
+      "name": "IA Auditor Semântico (Reportei)1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -2456,
+        1480
+      ],
+      "id": "817e154b-7358-4708-90b7-99df8b427520",
+      "name": "Google Gemini Chat Model (Reportei)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nlet rawText = item.json.output || item.json.text || item.json.response || \"\";\n\nrawText = rawText.replace(/\\`\\`\\`json/gi, \"\")\n                 .replace(/\\`\\`\\`/gi, \"\")\n                 .replace(/^json/gi, \"\")\n                 .replace(/\\\\\\\\n/g, \" \")\n                 .trim();\n\nfunction extrairJSON(texto) {\n  const inicio = texto.indexOf('[');\n  const fim = texto.lastIndexOf(']');\n  if (inicio === -1 || fim === -1) {\n    const inicioObj = texto.indexOf('{');\n    const fimObj = texto.lastIndexOf('}');\n    if (inicioObj !== -1 && fimObj !== -1) {\n      return [JSON.parse(texto.substring(inicioObj, fimObj + 1))];\n    }\n    throw new Error(\"Formato JSON não reconhecido\");\n  }\n  return JSON.parse(texto.substring(inicio, fim + 1));\n}\n\nfunction normalizar(str) {\n  return String(str || '')\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\\\u0300-\\\\u036f]/g, \"\")\n    .replace(/[^a-z0-9]/g, \" \")\n    .replace(/\\\\s+/g, \" \")\n    .trim();\n}\n\ntry {\n  let dados = extrairJSON(rawText);\n  if (!Array.isArray(dados)) dados = [dados];\n\n  const duvidas = dados.filter(linha => {\n    const d = String(linha[\"DUVIDA\"] || \"\").trim();\n    const s = String(linha[\"SEGMENTAR\"] || \"\").trim();\n    const n = String(linha[\"NEGATIVAR\"] || \"\").trim();\n    if (s.includes(\"✅\") || n.includes(\"❌\")) return false;\n    if (!d.includes(\"❓\") && !d.includes(\"?\")) return false;\n\n    // GUARD-RAIL: Evita que termos alinhados com palavra-chave ou produtos core virem dúvida\n    const termo = normalizar(linha[\"Termo de pesquisa\"] || linha[\"Termo\"]);\n    const kw = normalizar(linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"]);\n\n    const termosNegativos = [\n      \"login\", \"entrar\", \"cancelar\", \"cancelamento\", \"erro\", \"bug\", \n      \"fora do ar\", \"suporte\", \"reclame aqui\", \"cnpj\", \"vagas\", \n      \"emprego\", \"trabalhar\", \"curriculo\", \"salario\", \"glassdoor\", \n      \"gupy\", \"como fazer\", \"template\", \"planilha\", \"gratis\", \n      \"crackeado\", \"pirata\"\n    ];\n    const temNegativo = termosNegativos.some(t => termo.includes(t));\n\n    // Se o termo bater com a palavra-chave ou produto core e não tiver negativa\n    if (termo && kw && !temNegativo) {\n      if (termo === kw || termo.includes(kw) || kw.includes(termo)) {\n        return false;\n      }\n    }\n\n    const termosCore = [\n      \"reportei\", \"dashboard\", \"dashboards\", \"relatorio\", \"relatorios\", \n      \"metricas\", \"automacao\", \"marketing digital\", \"trafego pago\", \n      \"redes sociais\", \"google ads\", \"meta ads\", \"instagram\"\n    ];\n    if (termosCore.some(tc => termo.includes(tc)) && !temNegativo) {\n      // Se tiver clara intenção de contratação / assinatura / ferramenta\n      if (\n        termo.includes(\"preco\") || \n        termo.includes(\"planos\") || \n        termo.includes(\"assinar\") || \n        termo.includes(\"ferramenta\") || \n        termo.includes(\"software\") || \n        termo.includes(\"plataforma\") || \n        termo.includes(\"contratar\") || \n        termo.includes(\"comprar\") ||\n        termo.includes(\"agencia\")\n      ) {\n        return false;\n      }\n    }\n\n    return true;\n  }).map(linha => ({\n    \"Campanha\": linha[\"Campanha\"] || \"Reportei\",\n    \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"Reportei\",\n    \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n    \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n    \"Conversoes\": String(linha[\"Conversões\"] || linha[\"Conversoes\"] || \"0\"),\n    \"Impressoes\": String(linha[\"Impr.\"] || linha[\"Impressoes\"] || \"0\"),\n    \"Observacao\": linha[\"Observacao\"] || \"Validar pertinência para Reportei\",\n    \"Cliente\": \"Reportei\",\n    \"Cliente_JID\": \"120363412429579994@g.us\"\n  }));\n\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Reportei\"] = staticData.stats[\"Reportei\"] || { totalDuvidas: 0, erros: [], listaDuvidas: [] };\n  staticData.stats[\"Reportei\"].totalDuvidas = (staticData.stats[\"Reportei\"].totalDuvidas || 0) + duvidas.length;\n  staticData.stats[\"Reportei\"].listaDuvidas = staticData.stats[\"Reportei\"].listaDuvidas || [];\n  staticData.stats[\"Reportei\"].listaDuvidas.push(...duvidas);\n\n  return [{\n    json: {\n      tem_duvidas: duvidas.length > 0,\n      total_duvidas: duvidas.length,\n      lista_duvidas: duvidas\n    }\n  }];\n} catch (e) {\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Reportei\"] = staticData.stats[\"Reportei\"] || { totalDuvidas: 0, erros: [] };\n  staticData.stats[\"Reportei\"].erros = staticData.stats[\"Reportei\"].erros || [];\n  staticData.stats[\"Reportei\"].erros.push(e.message);\n\n  return [{\n    json: {\n      tem_duvidas: false,\n      total_duvidas: 0,\n      lista_duvidas: [],\n      erro: e.message\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        1136
+      ],
+      "id": "5ab6ccdd-3027-4830-ba1b-b9383dce1b39",
+      "name": "Avaliar Lote (Dúvidas? - Reportei)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_tem_duvidas_reportei",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        1136
+      ],
+      "id": "0fc0d251-0201-4f2b-a4e1-286d8d6d5a5b",
+      "name": "Tem Dúvidas no Lote? (Reportei)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const duvidas = $json.lista_duvidas || [];\nreturn duvidas.map(d => ({ json: d }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        1136
+      ],
+      "id": "a533c24d-1031-41d2-9588-bff038ad3e2b",
+      "name": "Desmembrar Dúvidas (Reportei)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendPoll/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\\n  (() => {\\n    const termoRaw = String($json['Termo de pesquisa'] || 'N/A').trim();\\n    const kwRaw = String($json['Palavra-chave'] || 'N/A').trim();\\n    const campRaw = String($json['Campanha'] || 'Reportei').trim();\\n    const obsRaw = String($json['Observacao'] || 'Avaliar pertinência').replace(/\\n/g, ' ').trim();\\n\\n    const termo = termoRaw.length > 50 ? termoRaw.substring(0, 47) + '...' : termoRaw;\\n    const kw = kwRaw.length > 35 ? kwRaw.substring(0, 32) + '...' : kwRaw;\\n\\n    const topo = `🏢 *Cliente:* Reportei\\\\n🔍 *Termo:* \\\"${termo}\\\"\\\\n🔑 *KW:* ${kw}\\\\n💬 *Obs:* `;\\n    const espacoLivre = 250 - topo.length;\\n\\n    let obsTratada = obsRaw;\\n    let campFinal = '';\\n\\n    if (obsRaw.length <= espacoLivre - 25 && campRaw) {\\n      const sobra = espacoLivre - obsRaw.length - 5;\\n      if (sobra >= 10) {\\n        campFinal = `\\\\n📁 ${campRaw.substring(0, sobra)}`;\\n      }\\n    } else if (obsRaw.length > espacoLivre) {\\n      obsTratada = obsRaw.substring(0, espacoLivre - 3) + '...';\\n    }\\n\\n    return JSON.stringify({\\n      number: '120363435040456024@g.us',\\n      name: topo + obsTratada + campFinal,\\n      selectableCount: 1,\\n      values: [\\n        '✅ Segmentar',\\n        '❌ Negativar',\\n        '⚠️ Teste A/B',\\n        '🏢 Concorrente',\\n        '❓ Dúvida (Enviar ao Cliente)'\\n      ]\\n    });\\n  })()\\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1504,
+        1136
+      ],
+      "id": "5fbd9587-8c3f-4cf3-8b65-6e4ec4424dde",
+      "name": "Enviar Enquete WhatsApp (Reportei)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.mapaEnquetes = staticData.mapaEnquetes || {};\n\nconst itemsEnquete = $input.all();\nconst duvidasOriginais = $('Desmembrar Dúvidas (Reportei)').all();\n\nfor (let i = 0; i < itemsEnquete.length; i++) {\n  const item = itemsEnquete[i].json;\n  \n  const pollId = item.key?.id || item.id || item.messageId;\n  const d = duvidasOriginais[i]?.json;\n  \n  if (pollId && d) {\n    staticData.mapaEnquetes[pollId] = {\n      termo: d['Termo de pesquisa'] || 'Termo em auditoria',\n      palavra_chave: d['Palavra-chave'] || 'N/A',\n      comentario: d['Observacao'] || 'Validar intenção comercial com a equipe',\n      campanha: d['Campanha'] || 'Reportei',\n      grupo: d['Grupo de anúncios'] || 'Geral',\n      cliente: 'Reportei',\n      cliente_jid: '120363412429579994@g.us',\n      especialistas_jid: '120363435040456024@g.us'\n    };\n  }\n}\n\nreturn [{ json: { loop: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        1136
+      ],
+      "id": "e8976fc7-9205-4b60-a393-91f1912759a9",
+      "name": "Unificar para 1 Sinal (Reportei)"
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1056,
+        1328
+      ],
+      "id": "9b77d8d3-2c3f-406b-b935-e4424d530cf5",
+      "name": "Pausa Anti-Spam (Reportei)",
+      "webhookId": "espera-lote-reportei"
+    }
+  ],
+  "connections": {
+    "Notificar Início Reportei": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Semanal (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Termos da Planilha (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Inicializar Estatísticas (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Estatísticas (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lote de Itens (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Concluir Auditoria (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Texto IA (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concluir Auditoria (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Teve Dúvidas no Processo? (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Teve Dúvidas no Processo? (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Notificar Fim com Dúvidas (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Sem Dúvidas (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Texto IA (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "IA Auditor Semântico (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IA Auditor Semântico (Reportei)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini (Reportei)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Reportei)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avaliar Lote (Dúvidas? - Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Tem Dúvidas no Lote? (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Dúvidas no Lote? (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Desmembrar Dúvidas (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pausa Anti-Spam (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desmembrar Dúvidas (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Enquete WhatsApp (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Enquete WhatsApp (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Unificar para 1 Sinal (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar para 1 Sinal (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Pausa Anti-Spam (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa Anti-Spam (Reportei)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Reportei)1": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Reportei)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model (Reportei)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Reportei)1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  }
+}

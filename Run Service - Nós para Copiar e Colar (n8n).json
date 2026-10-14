@@ -1,0 +1,682 @@
+{
+  "name": "Run Service - Nós para Copiar e Colar (n8n)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🧹 Esteira de Julgamento: Run Service\nAgente especializado em Dedetização, Controle de Pragas, Desentupidora, Limpa Fossa e Limpeza de Caixas d'Água (BH e Região):\n1. IA Auditor Semântico: Classificação de termos de dedetização, desentupimento e limpeza técnica\n2. Bloqueio de Desperdício: Elimina tutoriais DIY, venenos de balcão e órgãos públicos\n3. Dúvidas: Envia enquetes ao Pocket Interno com a tag Run Service\n4. Consenso: Caso aprovada dúvida, direciona para o grupo Run Service (120363415485750352@g.us)",
+        "height": 908,
+        "width": 3080,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -3904,
+        1732
+      ],
+      "id": "e4f3a100-8431-4820-911a-098765432101",
+      "name": "Sticky Note - Run Service"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: $json.remoteJid || '120363424743503833@g.us',\n  text: '🚀 *COMANDO RECEBIDO*\\n\\n👤 *Solicitante:* ' + ($json.pushName || 'Equipe') + '\\n⏳ Iniciando auditoria semântica da *Run Service*...'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -4000,
+        1940
+      ],
+      "id": "1f586169-ed1a-46b1-ab8c-d18c73d8099d",
+      "name": "Notificar Início Run Service",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                4
+              ],
+              "triggerAtHour": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -4000,
+        2140
+      ],
+      "id": "9a8f4c21-7e5b-4c28-971a-6d1234ef5678",
+      "name": "Trigger Semanal (Run Service)",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1FeCv5mdPalSha9dJf5XegkkL_HS2IYHm0adkTMbgPyE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1FeCv5mdPalSha9dJf5XegkkL_HS2IYHm0adkTMbgPyE/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3776,
+        2116
+      ],
+      "id": "850dde11-2036-4642-8426-bb59f56c9623",
+      "name": "Ler Termos da Planilha (Run Service)",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "XYA9aww9CIscaVaV",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst staticData = $getWorkflowStaticData('global');\nstaticData.stats = staticData.stats || {};\nstaticData.stats[\"Run Service\"] = {\n  totalLidos: items.length,\n  totalDuvidas: 0,\n  erros: [],\n  inicio: new Date().toISOString()\n};\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3552,
+        2116
+      ],
+      "id": "eb0f840d-eeae-4ea5-97e6-eb0e97ee6d2d",
+      "name": "Inicializar Estatísticas (Run Service)"
+    },
+    {
+      "parameters": {
+        "batchSize": 25,
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3328,
+        2116
+      ],
+      "id": "f8f8f8cc-6015-49ee-a954-4a714d971f13",
+      "name": "Lote de Itens (Run Service)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst stats = staticData.stats?.[\"Run Service\"] || { totalLidos: 0, totalDuvidas: 0, erros: [], listaDuvidas: [] };\nconst totalDuvidas = stats.totalDuvidas || 0;\nconst totalLidos = stats.totalLidos || 0;\nconst erros = stats.erros || [];\nconst listaDuvidas = stats.listaDuvidas || [];\nconst listaNomes = [...new Set(listaDuvidas.map(d => d['Termo de pesquisa'] || d['Termo']).filter(Boolean))];\n\nreturn [{\n  json: {\n    cliente: \"Run Service\",\n    total_lidos: totalLidos,\n    total_duvidas: totalDuvidas,\n    tem_duvidas: totalDuvidas > 0,\n    lista_duvidas_nomes: listaNomes,\n    teve_erros: erros.length > 0,\n    erros: erros\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        1940
+      ],
+      "id": "280ecdbc-abe7-4c8e-b1f2-097059a590e7",
+      "name": "Concluir Auditoria (Run Service)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_teve_duvidas_run_service",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2816,
+        1940
+      ],
+      "id": "6193c230-bcce-4322-ab8e-01b694e7e8a5",
+      "name": "Teve Dúvidas no Processo? (Run Service)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363424743503833@g.us',\n  text: '✅ *AUDITORIA CONCLUÍDA: Run Service*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n✨ *Resultado:* Não foram encontradas dúvidas!\\n\\nTodos os termos foram classificados com segurança pela IA entre *Segmentar* e *Negativar*. Nenhuma enquete foi necessária.'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        2100
+      ],
+      "id": "df8a9aaa-17ac-4f91-b682-2aaae28c8bff",
+      "name": "Notificar Sem Dúvidas (Run Service)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendText/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  number: '120363424743503833@g.us',\n  text: '🏁 *AUDITORIA FINALIZADA: Run Service*\\n\\n📊 *Total de termos auditados:* ' + $json.total_lidos + '\\n❓ *Total de dúvidas geradas:* ' + $json.total_duvidas + '\\n\\nTodas as enquetes foram enviadas acima para a votação da equipe!'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2464,
+        1908
+      ],
+      "id": "715cae93-0e76-4fb6-b952-cfca6c96dc63",
+      "name": "Notificar Fim com Dúvidas (Run Service)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst textoParaIA = JSON.stringify(items.map(i => i.json));\nreturn {\n  json: {\n    meu_texto_pronto: textoParaIA\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3104,
+        2276
+      ],
+      "id": "75678a27-d953-4e25-9124-fd155e27f2d1",
+      "name": "Preparar Texto IA (Run Service)"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA DE TRÁFEGO PAGO (Run Service)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Run Service (Controle Ambiental, Dedetizadora, Desentupidora, Limpa Fossa e Limpeza de Caixas d'Água atuando em BH, Contagem e Região).\n\nClassifique cada Termo da entrada em UMA das 4 opções de decisão (marcando o emoji e deixando as outras 3 vazias \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se contiver intenção de resolver o problema sem contratar a empresa, produtos físicos ou concorrentes:\n- Tutoriais / \"Faça Você Mesmo\": como acabar com, como matar, como espantar, como tirar, o que fazer, como capturar, cheiro para, cloro.\n- Produtos Físicos / Venenos: adesivo pega rato, gel, veneno, armadilha, ratoeira, repelente, comprar veneno.\n- Concorrentes Locais Fortes: 4 as, ambienthal, eco controle, jr dedetização, nikkey, bd clean, biocontrol, biotec, br pragas.\n- Institucional / Público: prefeitura, zoonoses, vigilância sanitária gratuita.\n- RH / Curiosos: vagas, emprego, currículo, curso, salário.\n\n2. ✅ SEGMENTAR (Lead Core / Serviços Run Service):\nMarque SEGMENTAR=\"✅\" se expressar intenção clara de contratação de um serviço prestado pela empresa:\n- Serviços Diretos: dedetização, dedetizadora, desentupidora, desentupimento, desratização, descupinização, controle de pragas, limpeza de caixa d'água, limpa fossa.\n- Intenção Comercial / Local: perto de mim, empresa de, serviço de, em bh, em contagem, preço, valor, orçamento.\n- Pragas atreladas a serviço: dedetização de baratas, controle de cupim, dedetização de carrapatos, retirada de vespeiro.\n- ALINHAMENTO COM PALAVRA-CHAVE: Se o termo corresponder aos serviços principais da Run Service, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real dúvida de intenção de busca ou viabilidade geográfica:\n- Termos \"Nus\" e Genéricos da Praga: Apenas o nome do animal sem contexto de serviço (ex: \"barata\", \"rato\", \"cupim na parede\", \"escorpião\"). Não sabemos se a pessoa quer ler sobre o inseto, comprar veneno ou contratar uma empresa.\n- Geografia Distante: Cidades afastadas da Grande BH (ex: Alfenas, Itabira, Rio do Sul) para validação de viabilidade de deslocamento e frete.\n\n4. ⚠️ TESTE_AB:\nMarque TESTE_AB=\"⚠️\" se for uma praga atípica, serviço secundário ou oportunidade de expansão (ex: \"dedetização caramujo africano\", \"percevejo de cama\", \"lacraia\", \"sanitização de ambientes\").\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação.",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2880,
+        2276
+      ],
+      "id": "dac9d734-e872-480e-906b-8a12f9403ead",
+      "name": "IA Auditor Semântico (Run Service)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2808,
+        2492
+      ],
+      "id": "b274787c-ab8b-446c-bebc-6b9708832be8",
+      "name": "Google Gemini (Run Service)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CJ590DJ4YzYgkyyf",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=🎯 COMANDO: AUDITORIA SEMÂNTICA DE TRÁFEGO PAGO (Run Service)\nDADOS DE ENTRADA: {{ $json.meu_texto_pronto }}\n\nVocê é o Auditor Semântico de Tráfego Pago da Run Service (Controle Ambiental, Dedetizadora, Desentupidora, Limpa Fossa e Limpeza de Caixas d'Água atuando em BH, Contagem e Região).\n\nClassifique cada Termo da entrada em UMA das 4 opções de decisão (marcando o emoji e deixando as outras 3 vazias \"\"):\n\n⚖️ CRITÉRIOS DE DECISÃO:\n\n1. ❌ NEGATIVAR:\nMarque NEGATIVAR=\"❌\" e preencha \"Observacao\" se contiver intenção de resolver o problema sem contratar a empresa, produtos físicos ou concorrentes:\n- Tutoriais / \"Faça Você Mesmo\": como acabar com, como matar, como espantar, como tirar, o que fazer, como capturar, cheiro para, cloro.\n- Produtos Físicos / Venenos: adesivo pega rato, gel, veneno, armadilha, ratoeira, repelente, comprar veneno.\n- Concorrentes Locais Fortes: 4 as, ambienthal, eco controle, jr dedetização, nikkey, bd clean, biocontrol, biotec, br pragas.\n- Institucional / Público: prefeitura, zoonoses, vigilância sanitária gratuita.\n- RH / Curiosos: vagas, emprego, currículo, curso, salário.\n\n2. ✅ SEGMENTAR (Lead Core / Serviços Run Service):\nMarque SEGMENTAR=\"✅\" se expressar intenção clara de contratação de um serviço prestado pela empresa:\n- Serviços Diretos: dedetização, dedetizadora, desentupidora, desentupimento, desratização, descupinização, controle de pragas, limpeza de caixa d'água, limpa fossa.\n- Intenção Comercial / Local: perto de mim, empresa de, serviço de, em bh, em contagem, preço, valor, orçamento.\n- Pragas atreladas a serviço: dedetização de baratas, controle de cupim, dedetização de carrapatos, retirada de vespeiro.\n- ALINHAMENTO COM PALAVRA-CHAVE: Se o termo corresponder aos serviços principais da Run Service, marque SEMPRE SEGMENTAR (✅) e NUNCA DÚVIDA!\n\n3. ❓ DÚVIDA (Validação Estratégica com a Equipe):\nMarque DUVIDA=\"❓\" e preencha \"Observacao\" APENAS se houver real dúvida de intenção de busca ou viabilidade geográfica:\n- Termos \"Nus\" e Genéricos da Praga: Apenas o nome do animal sem contexto de serviço (ex: \"barata\", \"rato\", \"cupim na parede\", \"escorpião\"). Não sabemos se a pessoa quer ler sobre o inseto, comprar veneno ou contratar uma empresa.\n- Geografia Distante: Cidades afastadas da Grande BH (ex: Alfenas, Itabira, Rio do Sul) para validação de viabilidade de deslocamento e frete.\n\n4. ⚠️ TESTE_AB:\nMarque TESTE_AB=\"⚠️\" se for uma praga atípica, serviço secundário ou oportunidade de expansão (ex: \"dedetização caramujo africano\", \"percevejo de cama\", \"lacraia\", \"sanitização de ambientes\").\n\n📤 REGRAS DE SAÍDA:\n- Retorne EXATAMENTE a mesma quantidade de itens da entrada.\n- Retorne APENAS um Array JSON puro (sem markdown, sem ```json).\n- Chaves por objeto: \"Termo de pesquisa\", \"Palavra-chave\", \"Campanha\", \"Grupo de anúncios\", \"SEGMENTAR\", \"NEGATIVAR\", \"TESTE_AB\", \"DUVIDA\", \"Observacao\", \"Conversões\", \"Impr.\"\n- No campo \"Observacao\": forneça justificativa concisa, direta e objetiva (máximo de 80 a 100 caracteres), sem enrolação.",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.1,
+      "position": [
+        -2528,
+        2388
+      ],
+      "id": "a9a17a01-342d-4d84-8ebe-e3886bd0e692",
+      "name": "IA Auditor Semântico (Run Service)1",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -2456,
+        2620
+      ],
+      "id": "941af480-71a4-43de-ab9e-67284ea0d356",
+      "name": "Google Gemini Chat Model (Run Service)",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YKaM0MbeUjc1DPp5",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nlet rawText = item.json.output || item.json.text || item.json.response || \"\";\n\nrawText = rawText.replace(/\\`\\`\\`json/gi, \"\")\n                 .replace(/\\`\\`\\`/gi, \"\")\n                 .replace(/^json/gi, \"\")\n                 .replace(/\\\\\\\\n/g, \" \")\n                 .trim();\n\nfunction extrairJSON(texto) {\n  const inicio = texto.indexOf('[');\n  const fim = texto.lastIndexOf(']');\n  if (inicio === -1 || fim === -1) {\n    const inicioObj = texto.indexOf('{');\n    const fimObj = texto.lastIndexOf('}');\n    if (inicioObj !== -1 && fimObj !== -1) {\n      return [JSON.parse(texto.substring(inicioObj, fimObj + 1))];\n    }\n    throw new Error(\"Formato JSON não reconhecido\");\n  }\n  return JSON.parse(texto.substring(inicio, fim + 1));\n}\n\nfunction normalizar(str) {\n  return String(str || '')\n    .toLowerCase()\n    .normalize(\"NFD\")\n    .replace(/[\\\\u0300-\\\\u036f]/g, \"\")\n    .replace(/[^a-z0-9]/g, \" \")\n    .replace(/\\\\s+/g, \" \")\n    .trim();\n}\n\ntry {\n  let dados = extrairJSON(rawText);\n  if (!Array.isArray(dados)) dados = [dados];\n\n  const duvidas = dados.filter(linha => {\n    const d = String(linha[\"DUVIDA\"] || \"\").trim();\n    const s = String(linha[\"SEGMENTAR\"] || \"\").trim();\n    const n = String(linha[\"NEGATIVAR\"] || \"\").trim();\n    if (s.includes(\"✅\") || n.includes(\"❌\")) return false;\n    if (!d.includes(\"❓\") && !d.includes(\"?\")) return false;\n\n    // GUARD-RAIL: Evita que termos alinhados com palavra-chave ou serviços core virem dúvida\n    const termo = normalizar(linha[\"Termo de pesquisa\"] || linha[\"Termo\"]);\n    const kw = normalizar(linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"]);\n\n    const termosNegativos = [\"como acabar\", \"como matar\", \"como espantar\", \"como tirar\", \"o que fazer\", \"como capturar\", \"cheiro para\", \"cloro\", \"pega rato\", \"gel\", \"veneno\", \"armadilha\", \"ratoeira\", \"repelente\", \"4 as\", \"ambienthal\", \"eco controle\", \"jr dedetizacao\", \"nikkey\", \"bd clean\", \"biocontrol\", \"biotec\", \"br pragas\", \"prefeitura\", \"zoonoses\", \"vigilancia sanitaria\", \"vagas\", \"emprego\", \"curriculo\", \"curso\", \"salario\"];\n    const temNegativo = termosNegativos.some(t => termo.includes(t));\n\n    // Se o termo bater com a palavra-chave ou serviço core e não tiver negativa\n    if (termo && kw && !temNegativo) {\n      if (termo === kw || termo.includes(kw) || kw.includes(termo)) {\n        return false;\n      }\n    }\n\n    const termosCore = [\"dedetizacao\", \"dedetizadora\", \"desentupidora\", \"desentupimento\", \"desratizacao\", \"descupinizacao\", \"controle de pragas\", \"limpeza de caixa\", \"limpa fossa\"];\n    if (termosCore.some(tc => termo.includes(tc)) && !temNegativo) {\n      // Se tiver clara intenção comercial ou de contratação\n      if (termo.includes(\"preco\") || termo.includes(\"comprar\") || termo.includes(\"valor\") || termo.includes(\"cotacao\") || termo.includes(\"orcamento\") || termo.includes(\"perto de mim\") || termo.includes(\"empresa\") || termo.includes(\"servico\") || termo.includes(\"bh\") || termo.includes(\"contagem\")) {\n        return false;\n      }\n    }\n\n    return true;\n  }).map(linha => ({\n    \"Campanha\": linha[\"Campanha\"] || \"Run Service\",\n    \"Grupo de anúncios\": linha[\"Grupo de anúncios\"] || linha[\"Grupo_Anuncio\"] || \"Run Service\",\n    \"Palavra-chave\": linha[\"Palavra-chave\"] || linha[\"Palavra_Chave\"] || \"N/A\",\n    \"Termo de pesquisa\": linha[\"Termo de pesquisa\"] || linha[\"Termo\"] || \"N/A\",\n    \"Conversoes\": String(linha[\"Conversões\"] || linha[\"Conversoes\"] || \"0\"),\n    \"Impressoes\": String(linha[\"Impr.\"] || linha[\"Impressoes\"] || \"0\"),\n    \"Observacao\": linha[\"Observacao\"] || \"Validar pertinência para Run Service\",\n    \"Cliente\": \"Run Service\",\n    \"Cliente_JID\": \"120363415485750352@g.us\"\n  }));\n\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Run Service\"] = staticData.stats[\"Run Service\"] || { totalDuvidas: 0, erros: [], listaDuvidas: [] };\n  staticData.stats[\"Run Service\"].totalDuvidas = (staticData.stats[\"Run Service\"].totalDuvidas || 0) + duvidas.length;\n  staticData.stats[\"Run Service\"].listaDuvidas = staticData.stats[\"Run Service\"].listaDuvidas || [];\n  staticData.stats[\"Run Service\"].listaDuvidas.push(...duvidas);\n\n  return [{\n    json: {\n      tem_duvidas: duvidas.length > 0,\n      total_duvidas: duvidas.length,\n      lista_duvidas: duvidas\n    }\n  }];\n} catch (e) {\n  const staticData = $getWorkflowStaticData('global');\n  staticData.stats = staticData.stats || {};\n  staticData.stats[\"Run Service\"] = staticData.stats[\"Run Service\"] || { totalDuvidas: 0, erros: [] };\n  staticData.stats[\"Run Service\"].erros = staticData.stats[\"Run Service\"].erros || [];\n  staticData.stats[\"Run Service\"].erros.push(e.message);\n\n  return [{\n    json: {\n      tem_duvidas: false,\n      total_duvidas: 0,\n      lista_duvidas: [],\n      erro: e.message\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2176,
+        2276
+      ],
+      "id": "ca91269e-72c4-4549-b86b-0d3f46096183",
+      "name": "Avaliar Lote (Dúvidas? - Run Service)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond_tem_duvidas_run_service",
+              "leftValue": "={{ $json.tem_duvidas }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -1952,
+        2276
+      ],
+      "id": "1c1b8f8c-e992-4000-bb44-5618f3f62041",
+      "name": "Tem Dúvidas no Lote? (Run Service)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const duvidas = $json.lista_duvidas || [];\nreturn duvidas.map(d => ({ json: d }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1728,
+        2276
+      ],
+      "id": "fd6d798b-563d-4156-8a82-0293f2559c67",
+      "name": "Desmembrar Dúvidas (Run Service)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://n8n_evolution-api:8080/message/sendPoll/Riku",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "C8713677A772-4C1C-91B1-AB5207975AC9"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\\n  (() => {\\n    const termoRaw = String($json['Termo de pesquisa'] || 'N/A').trim();\\n    const kwRaw = String($json['Palavra-chave'] || 'N/A').trim();\\n    const campRaw = String($json['Campanha'] || 'Run Service').trim();\\n    const obsRaw = String($json['Observacao'] || 'Avaliar pertinência').replace(/\\n/g, ' ').trim();\\n\\n    const termo = termoRaw.length > 50 ? termoRaw.substring(0, 47) + '...' : termoRaw;\\n    const kw = kwRaw.length > 35 ? kwRaw.substring(0, 32) + '...' : kwRaw;\\n\\n    const topo = `🏢 *Cliente:* Run Service\\\\n🔍 *Termo:* \\\"${termo}\\\"\\\\n🔑 *KW:* ${kw}\\\\n💬 *Obs:* `;\\n    const espacoLivre = 250 - topo.length;\\n\\n    let obsTratada = obsRaw;\\n    let campFinal = '';\\n\\n    if (obsRaw.length <= espacoLivre - 25 && campRaw) {\\n      const sobra = espacoLivre - obsRaw.length - 5;\\n      if (sobra >= 10) {\\n        campFinal = `\\\\n📁 ${campRaw.substring(0, sobra)}`;\\n      }\\n    } else if (obsRaw.length > espacoLivre) {\\n      obsTratada = obsRaw.substring(0, espacoLivre - 3) + '...';\\n    }\\n\\n    return JSON.stringify({\\n      number: '120363424743503833@g.us',\\n      name: topo + obsTratada + campFinal,\\n      selectableCount: 1,\\n      values: [\\n        '✅ Segmentar',\\n        '❌ Negativar',\\n        '⚠️ Teste A/B',\\n        '🏢 Concorrente',\\n        '❓ Dúvida (Enviar ao Cliente)'\\n      ]\\n    });\\n  })()\\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1504,
+        2276
+      ],
+      "id": "6c73e45b-cd4f-467f-8dfd-586125ff7327",
+      "name": "Enviar Enquete WhatsApp (Run Service)",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nstaticData.mapaEnquetes = staticData.mapaEnquetes || {};\n\nconst itemsEnquete = $input.all();\nconst duvidasOriginais = $('Desmembrar Dúvidas (Run Service)').all();\n\nfor (let i = 0; i < itemsEnquete.length; i++) {\n  const item = itemsEnquete[i].json;\n  \n  const pollId = item.key?.id || item.id || item.messageId;\n  const d = duvidasOriginais[i]?.json;\n  \n  if (pollId && d) {\n    staticData.mapaEnquetes[pollId] = {\n      termo: d['Termo de pesquisa'] || 'Termo em auditoria',\n      palavra_chave: d['Palavra-chave'] || 'N/A',\n      comentario: d['Observacao'] || 'Validar intenção comercial com a equipe',\n      campanha: d['Campanha'] || 'Run Service',\n      grupo: d['Grupo de anúncios'] || 'Geral',\n      cliente: 'Run Service',\n      cliente_jid: '120363415485750352@g.us'\n    };\n  }\n}\n\nreturn [{ json: { loop: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        2276
+      ],
+      "id": "69c4cc40-4c9f-4a8e-a27a-dcc954169f9e",
+      "name": "Unificar para 1 Sinal (Run Service)"
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -1056,
+        2468
+      ],
+      "id": "b2b0ef14-9a7d-40a7-820b-b409137ed41c",
+      "name": "Pausa Anti-Spam (Run Service)",
+      "webhookId": "espera-lote-run-service"
+    }
+  ],
+  "connections": {
+    "Notificar Início Run Service": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trigger Semanal (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Ler Termos da Planilha (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler Termos da Planilha (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Inicializar Estatísticas (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Estatísticas (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lote de Itens (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Concluir Auditoria (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar Texto IA (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concluir Auditoria (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Teve Dúvidas no Processo? (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Teve Dúvidas no Processo? (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Notificar Fim com Dúvidas (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notificar Sem Dúvidas (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Texto IA (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "IA Auditor Semântico (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IA Auditor Semântico (Run Service)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini (Run Service)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Run Service)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avaliar Lote (Dúvidas? - Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Tem Dúvidas no Lote? (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Dúvidas no Lote? (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Desmembrar Dúvidas (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pausa Anti-Spam (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desmembrar Dúvidas (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Enviar Enquete WhatsApp (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Enquete WhatsApp (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Unificar para 1 Sinal (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unificar para 1 Sinal (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Pausa Anti-Spam (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pausa Anti-Spam (Run Service)": {
+      "main": [
+        [
+          {
+            "node": "Lote de Itens (Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Auditor Semântico (Run Service)1": {
+      "main": [
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Avaliar Lote (Dúvidas? - Run Service)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model (Run Service)": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "IA Auditor Semântico (Run Service)1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "instanceId": "98a7f76cbff973591af08e09b5be2fed14b55b37d878782c0638229a94477203"
+  }
+}
