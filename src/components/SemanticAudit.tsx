@@ -822,7 +822,7 @@ export function SemanticAudit({
             dataIndex: 'termo_de_pesquisa',
             key: 'termo_de_pesquisa',
             fixed: 'left' as const,
-            width: 290,
+            width: 250,
             render: (text: string, record: CampaignTerm) => {
                 const termToSearch = text || record?.termo_de_pesquisa || '—';
                 const isSearching = record?.id ? searchingTerms.has(record.id) : false;
@@ -859,13 +859,13 @@ export function SemanticAudit({
                             {record?.campanha && (
                                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 px-1.5 py-0.5 rounded w-fit border border-indigo-200 dark:border-indigo-500/20">
                                     <Megaphone size={10} className="text-indigo-500 dark:text-indigo-400" />
-                                    <span className="truncate max-w-[220px]" title={record.campanha}>{record.campanha}</span>
+                                    <span className="truncate max-w-[180px]" title={record.campanha}>{record.campanha}</span>
                                 </div>
                             )}
                             {record?.grupo_de_anuncios && (
                                 <div className="flex items-center gap-1.5 text-[10px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-500/10 px-1.5 py-0.5 rounded w-fit border border-purple-200 dark:border-purple-500/20">
                                     <Layers size={10} className="text-purple-500 dark:text-purple-400" />
-                                    <span className="truncate max-w-[220px]" title={record.grupo_de_anuncios}>{record.grupo_de_anuncios}</span>
+                                    <span className="truncate max-w-[180px]" title={record.grupo_de_anuncios}>{record.grupo_de_anuncios}</span>
                                 </div>
                             )}
                         </div>
@@ -877,9 +877,9 @@ export function SemanticAudit({
             title: 'Métricas (Performance)',
             key: 'performance',
             align: 'center' as const,
-            width: 250,
+            width: 220,
             render: (_: any, record: CampaignTerm) => (
-                <div className="grid grid-cols-4 gap-2 bg-muted/50 dark:bg-slate-900/50 p-2 rounded-xl border border-border dark:border-slate-800">
+                <div className="grid grid-cols-4 gap-1.5 bg-muted/50 dark:bg-slate-900/50 p-1.5 rounded-xl border border-border dark:border-slate-800">
                     <div className="flex flex-col items-center">
                         <span className="text-[9px] uppercase text-slate-500 dark:text-slate-400 font-bold">Impr.</span>
                         <span className="text-xs font-mono font-bold text-foreground dark:text-slate-200">{fmt.num(record.impressoes)}</span>
@@ -902,7 +902,7 @@ export function SemanticAudit({
         {
             title: 'Status',
             key: 'agent_signals',
-            width: 140,
+            width: 130,
             render: (_: any, record: CampaignTerm) => {
                 // ESTADO DINÂMICO: RESPOSTAS CLIENTE (V4.2)
                 if (record.enviado_para_grupo === true) {
@@ -962,7 +962,7 @@ export function SemanticAudit({
             // Visível apenas na aba Respostas Cliente (ver filtro de colunas na Table)
             title: 'Origem',
             key: 'origem',
-            width: 110,
+            width: 90,
             render: (_: unknown, record: CampaignTerm) => {
                 const origem = record.origem ?? 'site';
                 return origem === 'interno'
@@ -1058,7 +1058,7 @@ export function SemanticAudit({
         {
             title: 'Comentário Analista',
             key: 'commentary',
-            width: 230,
+            width: 200,
             render: (_: any, record: CampaignTerm) => {
                 const isSyncing = syncingComments[record.id];
                 return (
@@ -1090,7 +1090,8 @@ export function SemanticAudit({
         {
             title: 'Ações e Categoria',
             key: 'audit_actions',
-            width: 170,
+            fixed: 'right' as const,
+            width: 180,
             render: (_: any, record: CampaignTerm) => {
                 // Valor derivado do estado de triagem local OU do banco de dados (Híbrido V4)
                 const currentCat = triageState[record.id]?.category || (
@@ -1105,7 +1106,7 @@ export function SemanticAudit({
                         <Select
                             value={currentCat}
                             placeholder="Categoria..."
-                            className="w-full min-w-[160px] custom-select-v3-action"
+                            className="w-full min-w-[150px] custom-select-v3-action"
                             onChange={(val) => {
                                 if (val === 'negativar') {
                                     setNegativarData({ id: record.id, matchType: 'exata' });
@@ -1335,7 +1336,7 @@ export function SemanticAudit({
                             showTotal: (total) => `${total} encontrados`,
                             className: "px-6 py-4"
                         }}
-                        scroll={{ x: 1240 }}
+                        scroll={{ x: 1080 }}
                         className="v3-audit-table"
                         rowClassName={getRowClassName}
                         expandable={{
