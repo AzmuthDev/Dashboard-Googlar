@@ -167,6 +167,107 @@ function alvoEsteira(backup, cliente) {
   };
 }
 
+function alvoRoteador(backup) {
+  const nos = new Map(backup.nodes.map(n => [n.name, n]));
+  const obter = (nome) => {
+    if (!nos.has(nome)) throw new Error(`Nó ausente no backup: ${nome}`);
+    return nos.get(nome);
+  };
+
+  const extrair = obter('1. Extrair ID e Voto');
+  obter('2. Buscar Criacao na Evolution');
+  obter('3. Processar Votos e Consenso');
+  const ifRef = obter('Bateu 2 Votos?');
+  const notifRef = obter('Notificar Decisão Interna');
+
+  const nomes = {
+    site: 'Registrar Resposta Site (RPC)',
+    classificar: 'Classificar Origem do Voto',
+    ehSite: 'É Enquete do Site?',
+    notifSite: 'Notificar Resposta Site',
+    preparar: 'Preparar Registro de Decisão',
+    decisao: 'Gravar Decisão (RPC)',
+  };
+
+  const [x, y] = extrair.position;
+  const pos = (col, linha) => [x + col * 224, y + 300 + linha * 200];
+  const node = (name, type, typeVersion, position, parameters, extra = {}) =>
+    ({ type: 'addNode', node: { name, type, typeVersion, position, parameters, ...extra } });
+  const rpc = (nome, funcao, jsonBody, position) => node(nome, 'n8n-nodes-base.httpRequest', 4.4, position, {
+    method: 'POST', url: `${SUPABASE_RPC}/${funcao}`, authentication: 'predefinedCredentialType',
+    nodeCredentialType: 'supabaseApi', sendBody: true, specifyBody: 'json', jsonBody, options: {},
+  }, { credentials: { supabaseApi: CRED_SUPABASE } });
+
+  const textoSite = [
+    "={{ JSON.stringify({",
+    "  number: '120363424743503833@g.us',",
+    "  text: '✅ *RESPOSTA DO CLIENTE RECEBIDA (SITE: ' + String($json.resposta_site.tabela || '').replace('mesa_', '') + ')!*\n\n🔎 *\"' + ($json.resposta_site.termo || 'termo não identificado') + '\"*\n📌 Ação: *' + ($json.resposta_site.acao || 'voto sem ação reconhecida') + '*\n\nA resposta foi registrada no Pocket.'",
+    "}) }}",
+  ].join('\n');
+
+  const ops = [
+    { type: 'removeConnection', source: '1. Extrair ID e Voto', target: '2. Buscar Criacao na Evolution' },
+
+    rpc(nomes.site, 'registrar_resposta_cliente',
+      '={{ JSON.stringify({ p_id_enquete: $json.poll_id ?? null, p_opcao: $json.opcao_votada ?? null, p_voter: $json.voter_name ?? null }) }}',
+      pos(0, 0)),
+
+    node(nomes.classificar, 'n8n-nodes-base.code', 2, pos(1, 0), {
+      jsCode: `${fonteModulo('classificar-origem.cjs')}
+
+const voto = $('1. Extrair ID e Voto').first().json;
+const resposta = $input.first().json;
+return [{ json: classificarOrigem(voto, resposta) }];
+`,
+    }),
+
+    node(nomes.ehSite, 'n8n-nodes-base.if', ifRef.typeVersion, pos(2, 0), {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'strict', version: 1 },
+        conditions: [{ id: 'eh_site', leftValue: '={{ $json.site === true }}', rightValue: '',
+          operator: { type: 'boolean', operation: 'true', singleValue: true } }],
+        combinator: 'and',
+      },
+      options: {},
+    }),
+
+    node(nomes.notifSite, 'n8n-nodes-base.httpRequest', 4.4, pos(3, 0), {
+      method: 'POST', url: notifRef.parameters.url, sendHeaders: true, headerParameters: notifRef.parameters.headerParameters,
+      sendBody: true, specifyBody: 'json', jsonBody: textoSite, options: {},
+    }),
+
+    node(nomes.preparar, 'n8n-nodes-base.code', 2, pos(4, 1), {
+      jsCode: `${fonteModulo('preparar-registro.cjs')}
+
+const r = prepararRegistro($input.first().json);
+if (!r) return [];
+return [{ json: r }];
+`,
+    }),
+
+    rpc(nomes.decisao, 'registrar_decisao_interna', '={{ JSON.stringify($json) }}', pos(5, 1)),
+
+    { type: 'setNodeSettings', nodeName: nomes.site, settings: { onError: 'continueRegularOutput' } },
+    { type: 'setNodeSettings', nodeName: nomes.notifSite, settings: { onError: 'continueRegularOutput' } },
+    { type: 'setNodeSettings', nodeName: nomes.decisao, settings: { onError: 'continueRegularOutput' } },
+
+    { type: 'addConnection', source: '1. Extrair ID e Voto', target: nomes.site },
+    { type: 'addConnection', source: nomes.site, target: nomes.classificar },
+    { type: 'addConnection', source: nomes.classificar, target: nomes.ehSite },
+    { type: 'addConnection', source: nomes.ehSite, target: nomes.notifSite, sourceIndex: 0 },
+    { type: 'addConnection', source: nomes.ehSite, target: '2. Buscar Criacao na Evolution', sourceIndex: 1 },
+    { type: 'addConnection', source: '3. Processar Votos e Consenso', target: nomes.preparar },
+    { type: 'addConnection', source: nomes.preparar, target: nomes.decisao },
+  ];
+
+  validar(backup, ops);
+  return {
+    operations: ops,
+    versionName: 'Roteador: respostas do site + registro de decisoes',
+    versionDescription: 'Votos de enquetes do site (id_enquete achado em mesa_*) sao gravados via registrar_resposta_cliente e notificados; decisoes do interno via registrar_decisao_interna. Gerado por n8n/scripts/gen-ops.mjs.',
+  };
+}
+
 // Toda referência a nó precisa existir no backup ou ter sido criada por uma operação anterior.
 function validar(backup, ops) {
   const existentes = new Set(backup.nodes.map(n => n.name));
@@ -191,6 +292,7 @@ function validar(backup, ops) {
 
 export function gerarOperacoes(backup, alvo) {
   if (TABELA_POR_CLIENTE[alvo]) return alvoEsteira(backup, alvo);
+  if (alvo === 'roteador') return alvoRoteador(backup);
   throw new Error(`Alvo desconhecido: ${alvo}`);
 }
 

@@ -4,7 +4,7 @@
 function normChave(s) {
   return String(s == null ? '' : s)
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
