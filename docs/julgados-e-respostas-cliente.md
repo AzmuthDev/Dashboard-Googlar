@@ -21,6 +21,7 @@ Código dos nós Code vive em `n8n/code/*.cjs` (testado com `npm test`); `n8n/sc
 - Por esteira: `Buscar Julgados` → `Excluir Já Julgados` → `Há Termos Novos?` → `Inicializar Estatísticas`; aviso no grupo da equipe (`Montar Aviso do Filtro` → `Notificar Filtro`); a saída da IA vai também para `Normalizar Vereditos` → `Gravar Vereditos` (RPC `upsert_veredito`).
 - Roteador: `1. Extrair ID e Voto` → `Registrar Resposta Site (RPC)` → `Classificar Origem do Voto` → `É Enquete do Site?` (sim: notifica a equipe; não: caminho antigo). Decisões do interno: `3. Processar Votos e Consenso` → `Preparar Registro de Decisão` → `Gravar Decisão (RPC)`.
 - Origem: `id_enquete` achado numa `mesa_*` = `site`; caso contrário `interno`.
+- Publicado em 2026-10-14 como versão `55acfeb8-44c8-48c2-8317-06347fabc902`.
 - Reverter: `restore_workflow_version` para a versão `4e8b3a2a-6067-4527-8c47-efef24fea8af` (backup em `n8n/backups/`, não versionado).
 
 ## Tela "Respostas Cliente"
