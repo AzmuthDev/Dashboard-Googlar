@@ -21,7 +21,9 @@ Código dos nós Code vive em `n8n/code/*.cjs` (testado com `npm test`); `n8n/sc
 - Por esteira: `Buscar Julgados` → `Excluir Já Julgados` → `Há Termos Novos?` → `Inicializar Estatísticas`; aviso no grupo da equipe (`Montar Aviso do Filtro` → `Notificar Filtro`); a saída da IA vai também para `Normalizar Vereditos` → `Gravar Vereditos` (RPC `upsert_veredito`).
 - Roteador: `1. Extrair ID e Voto` → `Registrar Resposta Site (RPC)` → `Classificar Origem do Voto` → `É Enquete do Site?` (sim: notifica a equipe; não: caminho antigo). Decisões do interno: `3. Processar Votos e Consenso` → `Preparar Registro de Decisão` → `Gravar Decisão (RPC)`.
 - Origem: `id_enquete` achado numa `mesa_*` = `site`; caso contrário `interno`.
-- Publicado em 2026-10-14 como versão `55acfeb8-44c8-48c2-8317-06347fabc902`.
+- Voto sem campanha/grupo (enquete sem memória no `staticData`: o nó 3 usa `Geral`/`Geral`): `registrar_decisao_interna` casa a linha em aberto só pelo termo (migração `20261014180000_decisao_interna_fallback_termo.sql`), em vez de criar uma linha `Geral/Geral` duplicada.
+- Publicado em 2026-10-14 como versão `55acfeb8-44c8-48c2-8317-06347fabc902`; depois ajustado (cabeçalho em inglês no filtro) e publicado como `8ddd51f5-4738-4ab3-a47b-0023bc726081`.
+- As planilhas dos 6 clientes vêm do Google Ads com cabeçalho em inglês (`Search term`, `Campaign Name`, `Ad Group Name`); `Excluir Já Julgados` lê esses nomes e os em português. Antes da correção o filtro não reconhecia nenhum termo e deixava tudo passar.
 - Reverter: `restore_workflow_version` para a versão `4e8b3a2a-6067-4527-8c47-efef24fea8af` (backup em `n8n/backups/`, não versionado).
 
 ## Tela "Respostas Cliente"

@@ -29,9 +29,14 @@ function excluirJulgados(planilha, julgados) {
   const restantes = [];
   let pulados = 0;
   for (const linha of planilha) {
-    const termo = linha['Termo de pesquisa'] || linha['Termo'];
+    // As planilhas exportadas do Google Ads chegam com cabeçalho em inglês; a IA é quem traduz para as chaves em português.
+    const termo = linha['Termo de pesquisa'] || linha['Termo'] || linha['Search term'];
     if (!normChave(termo)) { restantes.push(linha); continue; }
-    const chave = chaveJulgado(termo, linha['Campanha'], linha['Grupo de anúncios'] || linha['Grupo_Anuncio']);
+    const chave = chaveJulgado(
+      termo,
+      linha['Campanha'] || linha['Campaign Name'],
+      linha['Grupo de anúncios'] || linha['Grupo_Anuncio'] || linha['Ad Group Name']
+    );
     if (conhecidos.has(chave)) pulados++; else restantes.push(linha);
   }
   return { restantes, pulados, filtroIndisponivel: false };

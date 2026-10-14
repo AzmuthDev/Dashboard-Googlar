@@ -134,6 +134,24 @@ begin
   end;
 end $$;
 
+-- (e2) decisao interna sem campanha/grupo (enquete sem memoria: 'Geral'/'Geral') casa pelo termo e nao duplica
+do $$
+declare r jsonb; l record;
+begin
+  perform public.upsert_veredito('mesa_reportei', jsonb_build_array(
+    jsonb_build_object('termo','Dashboard Marketing','campanha','RPT_01','grupo','01_inst','palavra_chave','kw','segmentar',false,'negativar',false,'teste_ab',false,'duvida',true,'observacao','?','impressoes','3','conversoes','0')));
+  r := public.registrar_decisao_interna('mesa_reportei', 'dashboard marketing', 'Geral', 'Geral', 'N/A', null, 'aguardando_cliente');
+  assert (select count(*) from public.mesa_reportei where public._chave_norm(termo_de_pesquisa) = 'dashboard marketing') = 1, 'fallback nao duplica';
+  r := public.registrar_decisao_interna('mesa_reportei', 'Dashboard Marketing', 'Geral', 'Geral', 'N/A', '✅ Segmentar', 'respondido_cliente');
+  select * into l from public.mesa_reportei where public._chave_norm(termo_de_pesquisa) = 'dashboard marketing';
+  assert l.campanha = 'RPT_01' and l.grupo_de_anuncios = '01_inst', 'mantem campanha e grupo reais';
+  assert l.acao = 'segmentar' and l.respondido_cliente and l.segmentar, 'resposta aplicada na linha real';
+
+  -- campanha real que nao existe continua criando linha nova (sem fallback)
+  perform public.registrar_decisao_interna('mesa_reportei', 'dashboard marketing', 'Outra Camp', 'Outro Grupo', 'k', '❌ Negativar', 'decidido_equipe');
+  assert (select count(*) from public.mesa_reportei where public._chave_norm(termo_de_pesquisa) = 'dashboard marketing') = 2, 'campanha real distinta cria linha';
+end $$;
+
 -- (f) privilegios: somente service_role
 do $$
 declare f text;

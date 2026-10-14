@@ -61,3 +61,14 @@ test('aceita chaves alternativas da planilha (Termo, Grupo_Anuncio)', () => {
   const r = excluirJulgados([{ 'Termo': 'a', 'Campanha': 'c', 'Grupo_Anuncio': 'g' }], [julgado('a', 'c', 'g')]);
   assert.equal(r.pulados, 1);
 });
+
+test('aceita cabeçalhos do Google Ads em inglês (Search term, Campaign Name, Ad Group Name)', () => {
+  const planilha = [
+    { 'Search term': 'reportei mcp', 'Campaign Name': 'RPT_01', 'Ad Group Name': '01_inst' },
+    { 'Search term': 'reportei mcp', 'Campaign Name': 'RPT_02', 'Ad Group Name': '01_inst' },
+  ];
+  const r = excluirJulgados(planilha, [julgado('reportei mcp', 'RPT_01', '01_inst')]);
+  assert.equal(r.pulados, 1);
+  assert.equal(r.restantes.length, 1);
+  assert.equal(r.restantes[0]['Campaign Name'], 'RPT_02');
+});
