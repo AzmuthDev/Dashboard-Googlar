@@ -201,7 +201,7 @@ function alvoRoteador(backup) {
   const textoSite = [
     "={{ JSON.stringify({",
     "  number: '120363424743503833@g.us',",
-    "  text: '✅ *RESPOSTA DO CLIENTE RECEBIDA (SITE: ' + String($json.resposta_site.tabela || '').replace('mesa_', '') + ')!*\n\n🔎 *\"' + ($json.resposta_site.termo || 'termo não identificado') + '\"*\n📌 Ação: *' + ($json.resposta_site.acao || 'voto sem ação reconhecida') + '*\n\nA resposta foi registrada no Pocket.'",
+    "  text: '✅ *RESPOSTA DO CLIENTE RECEBIDA (SITE: ' + String($json.resposta_site.tabela || '').replace('mesa_', '') + ')!*\\n\\n🔎 *\"' + ($json.resposta_site.termo || 'termo não identificado') + '\"*\\n📌 Ação: *' + ($json.resposta_site.acao || 'voto sem ação reconhecida') + '*\\n\\nA resposta foi registrada no Pocket.'",
     "}) }}",
   ].join('\n');
 

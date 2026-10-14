@@ -83,6 +83,25 @@ test('roteador: Notificar Resposta Site copia url/apikey, vai à equipe e não c
   assert.ok(no.parameters.jsonBody.includes('RESPOSTA DO CLIENTE RECEBIDA'));
 });
 
+test('roteador: a expressão de Notificar Resposta Site é JS válido e gera JSON com o texto esperado', () => {
+  const { operations: ops } = gerarOperacoes(backupRoteador(), 'roteador');
+  const corpo = noDe(ops, 'Notificar Resposta Site').parameters.jsonBody;
+  const m = /^=\{\{([\s\S]*)\}\}$/.exec(corpo);
+  assert.ok(m, 'jsonBody deve ser uma expressão ={{ ... }}');
+  const json = new Function('$json', `return ${m[1]};`)({
+    resposta_site: { tabela: 'mesa_qualipix', termo: 'pe de cabra', acao: 'negativar' },
+  });
+  const obj = JSON.parse(json);
+  assert.equal(obj.number, '120363424743503833@g.us');
+  assert.ok(obj.text.includes('SITE: qualipix'));
+  assert.ok(obj.text.includes('"pe de cabra"'));
+  assert.ok(obj.text.includes('Ação: *negativar*'));
+  assert.ok(obj.text.includes('\n\n'), 'o texto deve ter quebras de linha');
+  // resposta sem campos (voto ignorado) não pode lançar
+  const vazio = new Function('$json', `return ${m[1]};`)({ resposta_site: {} });
+  assert.ok(JSON.parse(vazio).text.includes('voto sem ação reconhecida'));
+});
+
 test('roteador: o código de Classificar Origem roda com stubs do n8n', () => {
   const { operations: ops } = gerarOperacoes(backupRoteador(), 'roteador');
   const code = noDe(ops, 'Classificar Origem do Voto').parameters.jsCode;
