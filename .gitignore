@@ -33,3 +33,7 @@ dist-ssr
 # Project specific
 scratch/
 UpperScript-master/
+
+# n8n: backups e saidas geradas (contem segredos dos workflows)
+n8n/backups/
+n8n/out/
