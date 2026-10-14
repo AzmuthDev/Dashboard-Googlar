@@ -128,19 +128,19 @@ export function KeywordPlanner({ activeCompanyId }: { activeCompanyId?: string |
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    <Card className="p-8 border-border bg-card shadow-xl rounded-3xl overflow-hidden relative">
+                    <Card className="p-5 sm:p-8 border-border bg-card shadow-xl rounded-3xl overflow-hidden relative">
                         <div className="absolute top-0 right-0 p-8 opacity-5">
                             <Search size={120} />
                         </div>
                         <div className="relative z-10">
-                            <h1 className="text-3xl font-black uppercase tracking-tighter mb-4 text-foreground">
+                            <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter mb-4 text-foreground">
                                 Planejador de Palavras
                             </h1>
                             <p className="text-muted-foreground text-sm mb-8 flex items-center gap-2">
                                 <Zap size={14} className="text-primary" />
                                 Encontre os termos que dominam o mercado e expanda seu gradil.
                             </p>
-                            <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
                                 <Input 
                                     placeholder="Ex: 'advogado especialista em familia'..."
                                     size="large"
@@ -151,7 +151,7 @@ export function KeywordPlanner({ activeCompanyId }: { activeCompanyId?: string |
                                 />
                                 <Button 
                                     type="primary" size="large" 
-                                    className="h-14 px-8 rounded-2xl font-bold bg-primary text-primary-foreground border-none"
+                                    className="h-14 px-8 w-full sm:w-auto rounded-2xl font-bold bg-primary text-primary-foreground border-none"
                                     onClick={handleSearch}
                                     loading={isLoading}
                                 >
@@ -164,13 +164,13 @@ export function KeywordPlanner({ activeCompanyId }: { activeCompanyId?: string |
                         {results.length > 0 && (
                             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}>
                                 <Card className="border-border bg-card shadow-xl rounded-3xl overflow-hidden">
-                                    <div className="p-6 border-b border-border flex items-center justify-between">
+                                    <div className="p-4 sm:p-6 border-b border-border flex items-center justify-between">
                                         <h3 className="font-bold text-foreground flex items-center gap-2">
                                             <TrendingUp size={18} className="text-primary" />
                                             Oportunidades Encontradas
                                         </h3>
                                     </div>
-                                    <Table dataSource={results} columns={columns} pagination={false} rowKey="id" rowClassName="hover:bg-muted/50 transition-colors" />
+                                    <Table dataSource={results} columns={columns} pagination={false} scroll={{ x: 560 }} rowKey="id" rowClassName="hover:bg-muted/50 transition-colors" />
                                 </Card>
                             </motion.div>
                         )}

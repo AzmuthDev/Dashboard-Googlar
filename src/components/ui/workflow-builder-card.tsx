@@ -85,7 +85,7 @@ export const WorkflowBuilderCard = ({
                     )}
                 </div>
 
-                <div className={cn("px-6 pb-6 flex-1 flex flex-col", logoUrl ? "pt-10" : "pt-6")}>
+                <div className={cn("px-4 sm:px-6 pb-6 flex-1 flex flex-col", logoUrl ? "pt-10" : "pt-6")}>
                     {/* Always-visible header content */}
                     <div className="flex items-start justify-between">
                         <div className="flex flex-col">
@@ -103,7 +103,7 @@ export const WorkflowBuilderCard = ({
                                     <span className={status === "Active" ? "text-emerald-700 dark:text-emerald-500/80" : "text-red-700 dark:text-red-500/80"}>{status === "Active" ? "Online" : "Offline"}</span>
                                 </div>
                             </div>
-                            <h3 className="mt-2 text-2xl font-black text-zinc-900 dark:text-white tracking-tighter leading-none">
+                            <h3 className="mt-2 text-xl sm:text-2xl break-words font-black text-zinc-900 dark:text-white tracking-tighter leading-none">
                                 {title}
                             </h3>
                         </div>
@@ -125,7 +125,7 @@ export const WorkflowBuilderCard = ({
                 </div>
 
                 {/* Card Footer */}
-                <div className="flex items-center justify-between border-t border-zinc-300 dark:border-zinc-800/50 p-6 bg-zinc-100/50 dark:bg-white/[0.02] flex-shrink-0 mt-auto rounded-b-2xl">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-300 dark:border-zinc-800/50 p-4 sm:p-6 bg-zinc-100/50 dark:bg-white/[0.02] flex-shrink-0 mt-auto rounded-b-2xl">
                     <div className="flex items-center">
                         <AnimatedTooltip items={users} />
                     </div>

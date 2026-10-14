@@ -27,17 +27,17 @@ export function AuditoriaLSAPage({ activeCompanyId }: AuditoriaLSAPageProps) {
 
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-8">
                 <div>
-                    <h1 className="text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
-                        <HeadsetIcon className="w-8 h-8 text-primary" />
+                    <h1 className="text-2xl sm:text-3xl font-black text-foreground tracking-tight flex items-center gap-3">
+                        <HeadsetIcon className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-primary" />
                         Auditoria LSA
                     </h1>
                     <p className="text-muted-foreground mt-1">
                         Acompanhe e audite os leads e áudios gerados pelas campanhas de Local Services Ads.
                     </p>
                 </div>
-                <div className="w-72">
+                <div className="w-full md:w-72">
                     <Input
                         prefix={<Search className="text-muted-foreground w-4 h-4" />}
                         placeholder="Buscar por termo ou lead..."
@@ -54,11 +54,11 @@ export function AuditoriaLSAPage({ activeCompanyId }: AuditoriaLSAPageProps) {
                     <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">Carregando áudios...</p>
                 </div>
             ) : filteredAudios.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-3xl mt-8">
+                <div className="flex flex-col items-center justify-center p-6 sm:p-12 bg-card border border-border rounded-3xl mt-8">
                     <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center mb-6">
                         <Mic className="text-2xl text-muted-foreground" />
                     </div>
-                    <h2 className="text-2xl font-black uppercase text-foreground mb-4">Nenhum áudio encontrado</h2>
+                    <h2 className="text-xl sm:text-2xl text-center font-black uppercase text-foreground mb-4">Nenhum áudio encontrado</h2>
                     <p className="text-muted-foreground text-center max-w-md">
                         {searchTerm 
                             ? 'Sua busca não retornou nenhum resultado. Tente outros termos.'
@@ -68,7 +68,7 @@ export function AuditoriaLSAPage({ activeCompanyId }: AuditoriaLSAPageProps) {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                     {filteredAudios.map((audio) => (
-                        <div key={audio.id} className="bg-card border border-border rounded-2xl p-6 flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                        <div key={audio.id} className="bg-card border border-border rounded-2xl p-4 sm:p-6 flex flex-col shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">ID do Lead</span>

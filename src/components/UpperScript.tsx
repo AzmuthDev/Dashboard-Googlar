@@ -733,10 +733,10 @@ export function UpperScript({
             </div>
 
             {/* FONTE DOS DADOS E PERFIL GEOGRÁFICO */}
-            <div className="mb-6 px-5 py-3 rounded-3xl bg-card border border-border shadow-sm flex flex-wrap items-center gap-x-8 gap-y-3">
-                <div className="flex items-center gap-3">
+            <div className="mb-6 px-4 sm:px-5 py-3 rounded-3xl bg-card border border-border shadow-sm flex flex-wrap items-center gap-x-8 gap-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center items-stretch gap-2 sm:gap-3 w-full sm:w-auto">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Fonte dos dados</span>
-                    <div className="flex items-center gap-1 p-1 rounded-xl bg-muted">
+                    <div className="flex flex-wrap items-stretch sm:items-center gap-1 p-1 rounded-xl bg-muted">
                         <button
                             onClick={() => {
                                 if (uploadedData && uploadedData.length > 0) {
@@ -745,7 +745,7 @@ export function UpperScript({
                                     fileInputRef.current?.click();
                                 }
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            className={`flex-1 sm:flex-none justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                                 dataSourceMode === 'upload'
                                     ? 'bg-card text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -758,7 +758,7 @@ export function UpperScript({
 
                         <button
                             onClick={() => setDataSourceMode('demo')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            className={`flex-1 sm:flex-none justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                 dataSourceMode === 'demo'
                                     ? 'bg-card text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -775,7 +775,7 @@ export function UpperScript({
                                     message.warning("Nenhum termo de pesquisa encontrado para a empresa selecionada.");
                                 }
                             }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                            className={`flex-1 sm:flex-none justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                                 dataSourceMode === 'company'
                                     ? 'bg-card text-foreground shadow-sm'
                                     : 'text-muted-foreground hover:text-foreground'
@@ -805,9 +805,9 @@ export function UpperScript({
                     )}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center items-stretch gap-2 sm:gap-3 w-full sm:w-auto">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Perfil geográfico</span>
-                    <div className="flex items-center gap-1 p-1 rounded-xl bg-muted">
+                    <div className="flex flex-wrap items-stretch sm:items-center gap-1 p-1 rounded-xl bg-muted">
                         {([
                             ['internacional', 'Internacional'],
                             ['brasil', 'Brasil'],
@@ -816,7 +816,7 @@ export function UpperScript({
                             <button
                                 key={key}
                                 onClick={() => setGeoProfile(key)}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                                className={`flex-1 sm:flex-none justify-center text-center px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                                     geoProfile === key
                                         ? 'bg-card text-foreground shadow-sm'
                                         : 'text-muted-foreground hover:text-foreground'
@@ -1423,7 +1423,7 @@ export function UpperScript({
                                 <span className="text-muted-foreground hidden sm:inline">|</span>
                                 <span className="flex items-center gap-1 text-blue-600 font-medium">
                                     <span>↔</span>
-                                    <span><strong>Navegação:</strong> Clique com o botão esquerdo e arraste para os lados para navegar pelas colunas.</span>
+                                    <span><strong>Navegação:</strong> <span className="sm:hidden">Deslize para os lados para ver todas as colunas.</span><span className="hidden sm:inline">Clique com o botão esquerdo e arraste para os lados para navegar pelas colunas.</span></span>
                                 </span>
                             </div>
                             <span className="font-mono text-xs text-amber-600 font-bold">

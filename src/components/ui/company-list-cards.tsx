@@ -129,7 +129,7 @@ export const CompanyCards = React.forwardRef<HTMLDivElement, CompanyCardsProps>(
                                         key={company.id}
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className="flex-shrink-0 snap-center"
+                                        className="flex-shrink-0 snap-center w-[80vw] max-w-sm sm:w-auto"
                                     >
                                         <WorkflowBuilderCard
                                             imageUrl={company.coverUrl || company.logoUrl || ""}

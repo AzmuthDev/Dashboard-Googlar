@@ -1357,3 +1357,64 @@ body:not(.dark) {
   background: var(--foreground);
 }
 
+
+/* ── Header: select sem moldura interna (variant borderless) ───────────── */
+.dark .luxury-select .ant-select-selector {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* O <input> interno do Select/AutoComplete não é um campo próprio: a regra global
+   `.dark input` desenhava uma segunda moldura (efeito de parênteses) dentro dele. */
+.dark .ant-select input,
+.dark .ant-select-input,
+.ant-select input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Mobile (<768px): correções globais ───────────────────────────────── */
+@media (max-width: 767px) {
+  html, body {
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* 16px evita o zoom automático do iOS ao focar campos */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  .ant-input,
+  .ant-select-selection-search-input,
+  .ant-input-number-input {
+    font-size: 16px !important;
+  }
+
+  /* Modais do Ant Design nunca estouram a largura da tela */
+  .ant-modal {
+    max-width: calc(100vw - 24px) !important;
+    margin: 0 auto;
+  }
+  .ant-modal .ant-modal-content {
+    padding: 16px;
+  }
+
+  /* Tabelas e blocos largos rolam dentro do próprio container */
+  .ant-table-wrapper,
+  .ant-table-content {
+    overflow-x: auto;
+  }
+
+  /* Toasts não ficam fora da tela */
+  [data-sonner-toaster] {
+    max-width: calc(100vw - 24px);
+  }
+
+  /* Alvos de toque mínimos */
+  .ant-btn {
+    min-height: 40px;
+  }
+}

@@ -49,7 +49,7 @@ export const EvervaultCard = ({
   return (
     <div
       className={cn(
-        "p-0.5 bg-transparent aspect-video flex items-center justify-center w-full h-full relative overflow-visible",
+        "p-0.5 bg-transparent aspect-[2.4/1] sm:aspect-video flex items-center justify-center w-full h-full relative overflow-visible",
         className
       )}
     >
@@ -91,7 +91,7 @@ export const EvervaultCard = ({
                     <div className="absolute w-full h-full bg-white/[0.05] dark:bg-black/[0.05] blur-[10px]" />
                     {label && (
                         <p className={cn(
-                            "absolute top-0 text-[10px] font-bold uppercase tracking-widest mb-2 z-20",
+                            "absolute top-0 w-full text-center text-[10px] font-bold uppercase tracking-widest mb-2 z-20",
                             isDark ? "text-zinc-500" : "text-zinc-400"
                         )}>
                             {label}

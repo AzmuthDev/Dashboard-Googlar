@@ -12,6 +12,7 @@ import { cn } from '../lib/utils';
 import { useCampaignTerms, useCompanies } from '../hooks/useCampaignData';
 import { type CampaignTerm, type Company } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { deduplicateTermsByOrigin, getTermOriginKey } from '../utils/termDeduplication';
 import { fetchTermsFromTable, deleteDuplicateTermsFromTable } from '../lib/supabaseProvider';
 import { queueSevenNotification } from '../utils/sevenNotifier';
@@ -97,6 +98,7 @@ export function SemanticAudit({
     const queryClient = useQueryClient();
 
     // Selection state
+    const isMobile = useIsMobile();
     const [selectedCampaign, setSelectedCampaign] = useState<string | null>(null);
     const [selectedAdGroup, setSelectedAdGroup]   = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('duvidas');
@@ -1140,7 +1142,7 @@ export function SemanticAudit({
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Cabeçalho: título e ações globais da mesa */}
-            <div className="px-5 py-4 rounded-3xl border shadow-sm bg-card border-border">
+            <div className="px-4 sm:px-5 py-4 rounded-3xl border shadow-sm bg-card border-border">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="p-2.5 bg-muted rounded-2xl shrink-0">
@@ -1192,7 +1194,7 @@ export function SemanticAudit({
                     className="rounded-3xl border shadow-xl overflow-hidden transition-all duration-300 bg-card border-border"
                 >
                     {/* Abas de status: linha própria, para nunca disputar espaço com os botões */}
-                    <div className="px-5 pt-3 border-b border-border">
+                    <div className="px-3 sm:px-5 pt-3 border-b border-border">
                         <Tabs
                             activeKey={activeTab}
                             onChange={(key) => { setActiveTab(key); setSelectedRowKeys([]); }}
@@ -1209,13 +1211,13 @@ export function SemanticAudit({
                     </div>
 
                     {/* Barra de ferramentas: filtros à esquerda, ações à direita (quebra de linha em telas estreitas) */}
-                    <div className="px-5 py-3 border-b border-border bg-muted/20 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
+                    <div className="px-3 sm:px-5 py-3 border-b border-border bg-muted/20 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                             <Select
                                 showSearch
                                 allowClear
                                 placeholder="Todas as campanhas"
-                                className={cn("w-[220px]", FILTER_SELECT_CLS)}
+                                className={cn("w-full sm:w-[220px]", FILTER_SELECT_CLS)}
                                 popupClassName={FILTER_POPUP_CLS}
                                 value={selectedCampaign}
                                 onChange={val => { setSelectedCampaign(val ?? null); setSelectedAdGroup(null); setSelectedRowKeys([]); }}
@@ -1226,7 +1228,7 @@ export function SemanticAudit({
                                 allowClear
                                 disabled={!selectedCampaign}
                                 placeholder={selectedCampaign ? 'Todos os grupos' : 'Escolha uma campanha'}
-                                className={cn("w-[220px]", FILTER_SELECT_CLS)}
+                                className={cn("w-full sm:w-[220px]", FILTER_SELECT_CLS)}
                                 popupClassName={FILTER_POPUP_CLS}
                                 value={selectedAdGroup}
                                 onChange={val => { setSelectedAdGroup(val ?? null); setSelectedRowKeys([]); }}
@@ -1236,7 +1238,7 @@ export function SemanticAudit({
                                 <Select
                                     value={originFilter}
                                     onChange={setOriginFilter}
-                                    className={cn("w-[170px]", FILTER_SELECT_CLS)}
+                                    className={cn("w-full sm:w-[170px]", FILTER_SELECT_CLS)}
                                     popupClassName={FILTER_POPUP_CLS}
                                     options={[
                                         { value: 'all', label: 'Origem: todas' },
@@ -1318,14 +1320,14 @@ export function SemanticAudit({
                         </div>
                     </div>
 
-                    <p className="px-5 py-2 text-[12px] text-muted-foreground border-b border-border">
+                    <p className="px-3 sm:px-5 py-2 text-[12px] text-muted-foreground border-b border-border">
                         {TAB_HINTS[activeTab]}
                     </p>
 
                     <Table
                         size="small"
                         dataSource={filteredTerms}
-                        columns={activeTab === 'responses' ? columns : columns.filter(c => c.key !== 'origem')}
+                        columns={(activeTab === 'responses' ? columns : columns.filter(c => c.key !== 'origem')).map(c => isMobile ? { ...c, fixed: undefined } : c)}
                         rowKey="id"
                         rowSelection={{
                             selectedRowKeys,
@@ -1334,7 +1336,7 @@ export function SemanticAudit({
                         pagination={{ 
                             pageSize: 20, 
                             showTotal: (total) => `${total} encontrados`,
-                            className: "px-6 py-4"
+                            className: "px-3 sm:px-6 py-4"
                         }}
                         scroll={{ x: 1080 }}
                         className="v3-audit-table"
@@ -1347,7 +1349,7 @@ export function SemanticAudit({
                                     <motion.div 
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
-                                        className="mx-6 mb-4 p-4 bg-muted/40 rounded-xl border border-dashed border-border flex items-center gap-12"
+                                        className="mx-3 sm:mx-6 mb-4 p-4 bg-muted/40 rounded-xl border border-dashed border-border flex flex-wrap items-center gap-x-8 gap-y-3 sm:gap-12"
                                     >
                                         <div className="flex flex-col">
                                             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Volume Mensal</span>

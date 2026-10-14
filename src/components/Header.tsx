@@ -43,31 +43,30 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
     }, [activeCompanyId, isConfigured])
 
     return (
-        <AntHeader style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid var(--border)',
-            padding: '0 32px',
-            background: 'transparent',
-            height: '80px' // Slightly taller for premium feel
-        }}>
-            <div className="flex items-center gap-4">
-                <h1 className="text-[26px] font-black uppercase tracking-tighter text-foreground m-0 leading-none">
+        <AntHeader
+            className="!flex !flex-wrap !items-center !justify-between gap-x-4 gap-y-3 !h-auto md:!h-20 !leading-normal !py-3 md:!py-0 !px-4 md:!px-8"
+            style={{
+                borderBottom: '1px solid var(--border)',
+                background: 'transparent',
+            }}>
+            <div className="flex items-center gap-4 min-w-0 flex-1 md:flex-none pl-14 md:pl-0 min-h-11">
+                <h1 className="text-lg sm:text-2xl md:text-[26px] font-black uppercase tracking-tighter text-foreground m-0 leading-tight truncate">
                     {currentView === 'laboratorio-ab' ? 'Laboratório A/B' : 
                      currentView === 'semantic-audit' ? 'Triagem de Especialistas' :
                      (currentView === 'upperscript' || currentView === 'ferramenta') ? 'Upper Script' :
+                     currentView === 'keyword-planner' ? 'Planejador' :
+                     currentView === 'auditoria-lsa' ? 'Áudios LSA' :
                      currentView === 'users' ? 'Usuários' : 
                      currentView === 'companies' ? 'Empresas' : 'Dashboard'}
                 </h1>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full md:w-auto">
                 {currentView === 'semantic-audit' && (
                     <Input
                         placeholder="Buscar Termo..."
                         prefix={<SearchOutlined className="text-white" />}
-                        className="w-64 rounded-xl border-zinc-800 bg-[#111111] text-white placeholder-zinc-300 hover:border-white focus:border-white shadow-xl px-4 py-2 transition-all"
+                        className="w-full md:w-64 rounded-xl border-zinc-800 bg-[#111111] text-white placeholder-zinc-300 hover:border-white focus:border-white shadow-xl px-4 py-2 transition-all"
                     />
                 )}
 
@@ -85,15 +84,15 @@ export function Header({ onRefresh, isConfigured, isLoading, activeCompanyId, on
                 )}
 
                 {currentView !== 'upperscript' && currentView !== 'ferramenta' && (
-                    <div className="flex items-center gap-2 bg-[#111111] p-1.5 rounded-xl border border-zinc-800 shadow-xl transition-all hover:border-zinc-700">
+                    <div className="flex items-center gap-2 bg-[#111111] p-1.5 rounded-xl w-full md:w-auto min-w-0 border border-zinc-800 shadow-xl transition-all hover:border-zinc-700">
                         <DatabaseOutlined className="text-white ml-2 opacity-70" />
                         <Select
                             placeholder={(<span className="text-zinc-300 font-bold uppercase text-[10px] tracking-widest">Selecionar Empresa</span>)}
                             value={activeCompanyId || undefined}
                             onChange={onSelectCompany}
-                            style={{ width: 220 }}
+                            style={{ minWidth: 0 }}
                             variant="borderless"
-                            className="font-bold dark-selector luxury-select"
+                            className="font-bold dark-selector luxury-select flex-1 min-w-0 md:!w-[220px] md:flex-none"
                             options={linkedCompanies.map(c => ({
                                 value: c.id,
                                 label: (

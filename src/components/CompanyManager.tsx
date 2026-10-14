@@ -264,7 +264,7 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                 </motion.div>
             )}
 
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 <div>
                     <Title level={4} className="!m-0 !text-black dark:!text-white">
                         Módulos de Empresas
@@ -278,7 +278,7 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                         type="default"
                         icon={<PlusOutlined />}
                         onClick={openCreateModal}
-                        className="btn-bw-inverse !border-none shadow-md font-bold px-6"
+                        className="btn-bw-inverse !border-none shadow-md font-bold px-6 w-full sm:w-auto"
                         size="large"
                     >
                         Nova Empresa

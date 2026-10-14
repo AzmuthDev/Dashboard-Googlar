@@ -427,8 +427,8 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
         : allUsersIncludingRoot.filter(u => u.email.toLowerCase() === currentUser?.email.toLowerCase())
 
     return (
-        <div style={{ padding: '24px' }}>
-            <div className="mb-8">
+        <div className="p-0 md:p-6">
+            <div className="mb-6 md:mb-8">
                 <UserProfileCard
                     name={currentUserDetails.name || 'Sócio Administrador'}
                     email={currentUser?.email || 'admin@googlar.com'}
@@ -443,8 +443,8 @@ export function UserManager({ currentUser }: { currentUser: AuthorizedUser | nul
                 />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <div>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <div className="min-w-0">
                     <Title level={4} style={{ color: '#FFFFFF', margin: 0 }}>
                         {isAdmin ? 'Gerenciar Acessos' : 'Meu Perfil'}
                     </Title>

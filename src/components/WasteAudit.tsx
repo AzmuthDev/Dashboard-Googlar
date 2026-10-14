@@ -23,12 +23,12 @@ export function WasteAudit({ data, onNegativar }: WasteAuditProps) {
     const maxCost = Math.max(...topWaste.map(item => parseFloat(String(item.custo || '0')) || 0), 1);
 
     return (
-        <div className="mb-16 p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500 bg-card border-border shadow-xl">
-            <div className="flex items-center justify-between mb-8 px-2">
+        <div className="mb-10 sm:mb-16 p-4 sm:p-8 rounded-[24px] sm:rounded-[32px] border backdrop-blur-md transition-all duration-500 bg-card border-border shadow-xl">
+            <div className="flex items-center justify-between mb-6 sm:mb-8 sm:px-2">
                 <div className="flex items-center gap-4">
-                    <div className="w-2 h-10 bg-[#ef4444] rounded-full shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+                    <div className="w-2 h-10 shrink-0 bg-[#ef4444] rounded-full shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
                     <div>
-                        <h3 className="text-xl font-black uppercase tracking-tighter flex items-center gap-2 text-foreground">
+                        <h3 className="text-base sm:text-xl font-black uppercase tracking-tighter flex items-center gap-2 text-foreground">
                             Termos de Baixa Eficiência (Custo Crítico)
                             <ChartExplicationTooltip 
                                 content="Lista os 5 principais termos de pesquisa com o maior volume de custo associado e zero conversão, ordenados pelo valor desperdiçado."

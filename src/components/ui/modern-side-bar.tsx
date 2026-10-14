@@ -102,7 +102,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
             {/* Mobile hamburger button */}
             <button
                 onClick={toggleSidebar}
-                className="fixed top-6 left-6 z-50 p-3 rounded-lg bg-card shadow-md border border-border md:hidden hover:bg-accent transition-all duration-200"
+                className="fixed top-4 left-4 z-50 h-11 w-11 flex items-center justify-center rounded-xl bg-card shadow-md border border-border md:hidden hover:bg-accent transition-all duration-200"
                 aria-label="Toggle sidebar"
             >
                 {isOpen ?
@@ -122,7 +122,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
             {/* Sidebar */}
             <div
                 className={`
-          fixed top-0 left-0 h-full z-40 transition-all duration-500 ease-in-out flex flex-col 
+          fixed top-0 left-0 h-[100dvh] md:h-full max-w-[85vw] z-40 transition-all duration-500 ease-in-out flex flex-col 
           bg-background border-r border-white/10
           ${isDarkMode ? 'shadow-2xl' : 'shadow-[4px_0_24px_rgba(0,0,0,0.02)]'}
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -132,7 +132,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
         `}
             >
                 {/* Header with logo and collapse button */}
-                <div className="flex items-center justify-between p-6 bg-transparent">
+                <div className="flex items-center justify-between p-6 pl-[72px] md:pl-6 min-h-[88px] bg-transparent">
                     {!isCollapsed && (
                         <div className="flex items-center cursor-pointer" onClick={() => onViewChange('dashboard')}>
                             <img

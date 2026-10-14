@@ -81,7 +81,7 @@ export function IntentDistributionChart({ data, isDark }: IntentDistributionChar
 
     return (
         <div className={cn(
-            "p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500 h-full card",
+            "p-4 sm:p-8 rounded-[24px] sm:rounded-[32px] border backdrop-blur-md transition-all duration-500 h-full card",
             isDark 
                 ? "bg-[#0a0a0b] metal-border shadow-2xl" 
                 : "bg-white border-zinc-100 shadow-xl"
@@ -89,7 +89,7 @@ export function IntentDistributionChart({ data, isDark }: IntentDistributionChar
             <div className="flex flex-col gap-1 mb-8">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-2 bg-zinc-800 rounded-full" />
-                    <h3 className={cn("text-xl font-black uppercase tracking-tighter flex items-center gap-2", isDark ? "text-white" : "text-zinc-900")}>
+                    <h3 className={cn("text-base sm:text-xl font-black uppercase tracking-tighter flex items-center gap-2", isDark ? "text-white" : "text-zinc-900")}>
                         Distribuição de Desperdício
                         <ChartExplicationTooltip 
                             content="Exibe a porcentagem do custo desperdiçado dividida por intenção de busca (Negativar, Dúvida, Testar)."

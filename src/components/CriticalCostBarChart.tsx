@@ -13,6 +13,7 @@ import {
 import type { CampaignTerm } from '../types'
 import { cn } from '../lib/utils'
 import { ChartExplicationTooltip } from './ChartExplicationTooltip'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface CriticalCostBarChartProps {
     data: CampaignTerm[]
@@ -45,6 +46,7 @@ const CustomTooltip = ({ active, payload, isDark }: any) => {
 }
 
 export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps) {
+    const isMobile = useIsMobile()
     // Top 10 terms by cost for visibility
     const chartData = useMemo(() => {
         return data
@@ -59,16 +61,16 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
 
     return (
         <div className={cn(
-            "p-8 rounded-[32px] border backdrop-blur-md transition-all duration-500",
+            "p-4 sm:p-8 rounded-[24px] sm:rounded-[32px] border backdrop-blur-md transition-all duration-500",
             isDark 
                 ? "bg-black metal-border shadow-2xl" 
                 : "bg-white border-zinc-100 shadow-xl"
         )}>
-            <div className="flex items-center justify-between mb-10">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 sm:mb-10">
                 <div className="flex items-center gap-4">
                     <div className="w-2 h-10 bg-zinc-800 rounded-full" />
                     <div>
-                        <h3 className={cn("text-xl font-black uppercase tracking-tighter flex items-center gap-2", isDark ? "text-white" : "text-zinc-900")}>
+                        <h3 className={cn("text-base sm:text-xl font-black uppercase tracking-tighter flex items-center gap-2", isDark ? "text-white" : "text-zinc-900")}>
                             Análise de Desempenho
                             <ChartExplicationTooltip 
                                 content="Analisa o desempenho dos termos sem conversão, comparando o Custo (R$) com o Volume (Cliques/Impressões)."
@@ -77,7 +79,7 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
                         <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Visibilidade de Investimento vs. Relevância</p>
                     </div>
                 </div>
-                <div className="flex gap-6">
+                <div className="flex flex-wrap gap-x-6 gap-y-2">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-zinc-800" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 whitespace-nowrap">Em Análise</span>
@@ -89,12 +91,12 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
                 </div>
             </div>
 
-            <div className="h-[450px] w-full">
+            <div className="h-[360px] sm:h-[450px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={chartData}
                         layout="vertical"
-                        margin={{ top: 5, right: 30, left: 15, bottom: 5 }}
+                        margin={{ top: 5, right: isMobile ? 60 : 30, left: isMobile ? 0 : 15, bottom: 5 }}
                         barSize={24}
                     >
                         <defs>
@@ -131,8 +133,8 @@ export function CriticalCostBarChart({ data, isDark }: CriticalCostBarChartProps
                             fontWeight="black"
                             tickLine={false}
                             axisLine={false}
-                            width={150}
-                            tickFormatter={(value) => value.length > 20 ? `${value.substring(0, 20)}...` : value}
+                            width={isMobile ? 90 : 150}
+                            tickFormatter={(value) => { const max = isMobile ? 13 : 20; return value.length > max ? `${value.substring(0, max)}...` : value }}
                         />
                         <Tooltip content={<CustomTooltip isDark={isDark} />} cursor={{ fill: isDark ? '#18181b' : '#f4f4f5', opacity: 0.5 }} />
                         <Bar 

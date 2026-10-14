@@ -145,7 +145,7 @@ function App() {
                 <MetallicGradients />
                 <Toaster position="top-right" richColors expand={true} theme={isDarkMode ? 'dark' : 'light'} closeButton />
                 {isAuthenticated ? (
-                <div className="flex min-h-screen bg-background overflow-hidden font-geist">
+                <div className="flex min-h-[100dvh] bg-background overflow-hidden font-geist">
                     <ModernSidebar
                         currentUser={currentUser}
                         onViewChange={(view: any) => setCurrentView(view)}
@@ -154,18 +154,18 @@ function App() {
                         onToggleTheme={() => setIsDarkMode(!isDarkMode)}
                         onLogout={async () => { await signOut(); setCurrentView('companies'); setActiveCompanyId(null); }}
                     />
-                    <Layout className="flex-1 bg-background h-screen overflow-y-auto w-full border-l border-border">
+                    <Layout className="flex-1 bg-background h-[100dvh] overflow-y-auto w-full border-l border-border">
                         <Header
                             onRefresh={() => { if (activeCompanyId) { refetch(); message.success("Atualizando..."); } }}
                             isConfigured={isValidArray} isLoading={isTermsLoading || isLocalLoading}
                             activeCompanyId={activeCompanyId} onSelectCompany={setActiveCompanyId}
                             currentView={currentView} data={campaignTerms || []}
                         />
-                        <Content className="px-4 py-8 md:px-8 min-h-full bg-background transition-colors duration-500">
+                        <Content className="px-4 py-6 md:py-8 md:px-8 min-h-full min-w-0 overflow-x-clip bg-background transition-colors duration-500">
                             <ErrorBoundary>
                                 {currentView === 'dashboard' && (
                                 <>
-                                    <div className="flex justify-end gap-3 mb-8">
+                                    <div className="flex flex-wrap justify-end gap-3 mb-6 md:mb-8">
                                         {localData && (
                                             <button onClick={() => setLocalData(null)} className="btn-bw-secondary flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold border border-border">
                                                 <FileSpreadsheet className="w-4 h-4" /> <span>LIMPAR DADOS</span>
@@ -200,13 +200,13 @@ function App() {
                                             <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">Acessando Mesa Isolada...</p>
                                         </div>
                                     ) : !isValidArray ? (
-                                        <div className="flex flex-col items-center justify-center p-12 bg-card border border-border rounded-3xl mb-8 animate-in fade-in zoom-in">
+                                        <div className="flex flex-col items-center justify-center p-5 sm:p-12 bg-card border border-border rounded-3xl mb-8 animate-in fade-in zoom-in">
                                             <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg">
                                                 <CloudUploadOutlined className="text-2xl text-white" />
                                             </div>
-                                            <h2 className="text-2xl font-black uppercase text-foreground mb-4">Ingestão de Dados</h2>
+                                            <h2 className="text-xl sm:text-2xl text-center font-black uppercase text-foreground mb-4">Ingestão de Dados</h2>
                                             <div className="w-full max-w-lg space-y-6">
-                                                <div className="bg-muted/30 p-6 rounded-2xl border border-border text-center">
+                                                <div className="bg-muted/30 p-3 sm:p-6 rounded-2xl border border-border text-center">
                                                     <Upload.Dragger multiple={false} showUploadList={false} customRequest={async({file, onSuccess}:any)=>{
                                                         setIsLocalLoading(true);
                                                         try { const d = await carregarDados(file, "local", activeCompanyId!); setLocalData(d); message.success("Sucesso!"); onSuccess("ok"); } catch(e:any){ message.error(e.message); } finally { setIsLocalLoading(false); }
@@ -220,18 +220,18 @@ function App() {
                                         </div>
                                     ) : (
                                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                                            <div ref={dashboardGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 w-full">
+                                            <div ref={dashboardGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8 w-full">
                                                 <EvervaultCard label="ECONOMIA GERADA" text={<><span className="text-xl opacity-70 font-normal">R$</span> {(Number(totalEconomy) || 0).toFixed(2).replace('.', ',')}</>} trend="up" trendValue="+5.2%" isDark={isDarkMode} />
                                                 <EvervaultCard label="TERMOS AUDITADOS" text={totalTerms.toString()} trend="up" trendValue="+12.5%" isDark={isDarkMode} />
                                                 <EvervaultCard label="NOVOS LEADS B2B" text={newLeads.toString()} trend="up" trendValue="+18.1%" isDark={isDarkMode} />
                                                 <StatsCard label="ACURÁCIA IA" value={`${accuracy}%`} trend="neutral" trendValue="0.0%" isDark={isDarkMode} />
                                             </div>
 
-                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 w-full min-h-[380px]">
-                                                <div className="lg:col-span-2 h-full">
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8 w-full lg:min-h-[380px]">
+                                                <div className="lg:col-span-2 h-[340px] lg:h-full">
                                                     <TermsChart data={effectiveData as any} isDark={isDarkMode} />
                                                 </div>
-                                                <div className="h-full">
+                                                <div className="h-[380px] lg:h-full">
                                                     <DistributionChart data={effectiveData as any} isDark={isDarkMode} />
                                                 </div>
                                             </div>
@@ -271,10 +271,10 @@ function App() {
                     </Layout>
                 </div>
             ) : (
-                <div className="relative min-h-screen w-full flex items-center justify-center">
+                <div className="relative min-h-[100dvh] w-full flex items-center justify-center px-4 py-10 pb-14">
                     <AnimatedBackground />
                     <div className="relative z-20 w-full max-w-md animate-fadeIn"><LoginForm /></div>
-                    <footer className="absolute bottom-4 left-0 right-0 text-center text-white/40 text-[10px] uppercase font-black tracking-widest z-20">© 2025 GOOGLAR — ANTYGRAVITI OS V4.1 REFRESHED</footer>
+                    <footer className="absolute bottom-4 left-0 right-0 px-4 text-center text-white/40 text-[9px] sm:text-[10px] uppercase font-black tracking-widest z-20">© 2025 GOOGLAR — ANTYGRAVITI OS V4.1 REFRESHED</footer>
                 </div>
             )}
             </>

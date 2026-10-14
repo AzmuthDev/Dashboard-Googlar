@@ -50,7 +50,7 @@ export const UserProfileCard = ({
 
     return (
         <motion.div
-            className="bg-muted/30 p-3 rounded-2xl w-full max-w-[260px] mx-auto space-y-3"
+            className="bg-muted/30 p-3 rounded-2xl w-full max-w-none sm:max-w-[260px] mx-auto space-y-3"
             initial="collapsed"
             whileHover="expanded"
         >
@@ -111,7 +111,7 @@ export const UserProfileCard = ({
                 </div>
                 <span className="grid flex-1">
                     <motion.span className="text-xs font-medium text-muted-foreground row-start-1 col-start-1" variants={summaryTextVariants}>
-                        {isCurrentUser && 'Meu Perfil'}
+                        {isCurrentUser && !onEditProfile && 'Meu Perfil'}
                     </motion.span>
 
                     {/* Action Buttons Container - Always visible if not collapsed */}
@@ -122,17 +122,17 @@ export const UserProfileCard = ({
                             </button>
                         )}
                         {!isCurrentUser && onEditPassword && (
-                            <button onClick={onEditPassword} className="p-1 rounded hover:bg-muted text-amber-500 transition-colors" title="Mudar Senha">
+                            <button onClick={onEditPassword} className="p-2 sm:p-1 rounded hover:bg-muted text-amber-500 transition-colors" title="Mudar Senha">
                                 <Key className="size-3.5" />
                             </button>
                         )}
                         {onEditUser && !isCurrentUser && (
-                            <button onClick={onEditUser} className="p-1 rounded hover:bg-muted text-blue-500 transition-colors" title="Editar Usuário / Nível">
+                            <button onClick={onEditUser} className="p-2 sm:p-1 rounded hover:bg-muted text-blue-500 transition-colors" title="Editar Usuário / Nível">
                                 <Edit3 className="size-3.5" />
                             </button>
                         )}
                         {onDelete && !isCurrentUser && (
-                            <button onClick={onDelete} className="p-1 rounded hover:bg-red-500/10 text-red-500 transition-colors" title="Remover Acesso">
+                            <button onClick={onDelete} className="p-2 sm:p-1 rounded hover:bg-red-500/10 text-red-500 transition-colors" title="Remover Acesso">
                                 <Trash2 className="size-3.5" />
                             </button>
                         )}

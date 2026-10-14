@@ -70,7 +70,7 @@ export function LabABPage({ data, isLoading }: LabABPageProps) {
                         <FlaskConical size={24} />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-black uppercase tracking-tighter text-foreground">
+                        <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-foreground">
                             Laboratório A/B
                         </h1>
                         <p className="text-muted-foreground font-bold uppercase tracking-widest text-[10px]">
@@ -97,7 +97,7 @@ export function LabABPage({ data, isLoading }: LabABPageProps) {
                 </button>
             </div>
 
-            <Card className="p-6 border-2 border-border bg-card flex items-start gap-4 transition-all duration-300 hover:border-primary/20 shadow-sm text-foreground">
+            <Card className="p-4 sm:p-6 border-2 border-border bg-card flex items-start gap-4 transition-all duration-300 hover:border-primary/20 shadow-sm text-foreground">
                 <div className="p-2 rounded-xl bg-muted text-amber-500 shrink-0">
                     <Info size={20} />
                 </div>
