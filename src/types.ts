@@ -100,6 +100,8 @@ export interface CampaignTerm {
     enviado_para_grupo?: boolean;
     respondido_cliente?: boolean;
     acao?: string;
+    origem?: 'interno' | 'site' | null;
+    data_resposta?: string | null;
     comentario?: string;
     descricao?: string;
     sugestao_grupo_v4?: string;

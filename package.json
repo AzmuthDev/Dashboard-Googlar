@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test \"n8n/code/*.test.cjs\" \"n8n/scripts/*.test.mjs\""
+    "test": "node --test \"n8n/code/*.test.cjs\" \"n8n/scripts/*.test.mjs\" \"src/utils/*.test.ts\""
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
