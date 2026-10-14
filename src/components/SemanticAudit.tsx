@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Table, Button, message, Input, Select, Tooltip, Tabs, Modal as AntModal } from 'antd';
+import { Table, Button, message, Input, Select, Tooltip, Tabs, Checkbox, Tag, Modal as AntModal } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import {
     FileText, TrendingUp, User, ShieldCheck, Search, Send, Sparkles, Clock, ClipboardPaste,
@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { deduplicateTermsByOrigin, getTermOriginKey } from '../utils/termDeduplication';
 import { fetchTermsFromTable, deleteDuplicateTermsFromTable } from '../lib/supabaseProvider';
 import { queueSevenNotification } from '../utils/sevenNotifier';
+import { acaoDoTermo, montarExportacao, type TipoExport, type MatchNegativa } from '../utils/adsExport';
 
 // --- Types ---
 type CategoryKey = 'negativar' | 'duvida' | 'segmentar' | 'teste_ab' | 'manter' | null;
@@ -101,6 +102,12 @@ export function SemanticAudit({
     const [isExportModalVisible, setIsExportModalVisible] = useState(false);
     const [exportText, setExportText] = useState('');
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+    // Respostas Cliente: filtro de origem e exportação por tipo
+    const [originFilter, setOriginFilter] = useState<'all' | 'interno' | 'site'>('all');
+    const [exportSource, setExportSource] = useState<CampaignTerm[] | null>(null);
+    const [exportTipos, setExportTipos] = useState<TipoExport[]>(['segmentar', 'negativar', 'teste_ab']);
+    const [exportMatch, setExportMatch] = useState<MatchNegativa>('exact');
 
     // Refs
     const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -200,8 +207,11 @@ export function SemanticAudit({
             // Se não for a aba "Todos", aplica os filtros
             if (activeTab !== 'all') {
                 result = result.filter((t: CampaignTerm) => {
-                    // Aba Respostas: apenas os enviados
-                    if (activeTab === 'responses') return t.enviado_para_grupo === true;
+                    // Aba Respostas: apenas os enviados (linhas sem origem vieram do Pocket do site)
+                    if (activeTab === 'responses') {
+                        if (t.enviado_para_grupo !== true) return false;
+                        return originFilter === 'all' || (t.origem ?? 'site') === originFilter;
+                    }
                     
                     // Para as outras abas específicas, oculta os que já foram enviados
                     if (t.enviado_para_grupo === true) return false;
@@ -241,7 +251,13 @@ export function SemanticAudit({
             console.error('[Tab Filter Error]:', e);
             return [];
         }
-    }, [baseFilteredTerms, activeTab]);
+    }, [baseFilteredTerms, activeTab, originFilter]);
+
+    // Resultado da exportação da aba Respostas (recalculado ao mudar tipos ou correspondência)
+    const exportResult = useMemo(
+        () => (exportSource ? montarExportacao(exportSource, { tipos: exportTipos, matchNegativa: exportMatch }) : null),
+        [exportSource, exportTipos, exportMatch]
+    );
 
     // --- Tab Counts ---
     const counts = useMemo(() => {
@@ -874,16 +890,19 @@ export function SemanticAudit({
                         );
                     }
                     if (record.respondido_cliente === true) {
+                        const acaoResposta = acaoDoTermo(record);
                         return (
                             <div className="flex flex-col gap-1">
                                 <div className={cn(
                                     "px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest w-fit",
-                                    record.acao === 'negativar' ? "bg-red-500/10 border-red-500/20 text-red-500" :
-                                    record.acao === 'manter' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
+                                    acaoResposta === 'negativar' ? "bg-red-500/10 border-red-500/20 text-red-500" :
+                                    acaoResposta === 'segmentar' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
                                     "bg-amber-500/10 border-amber-500/20 text-amber-500"
                                 )}>
-                                    {record.acao === 'negativar' ? '❌ ' : record.acao === 'manter' ? '✅ ' : '❓ '}
-                                    {record.acao?.toUpperCase() || 'RESPONDIDO'}
+                                    {acaoResposta === 'negativar' ? '❌ NEGATIVAR' :
+                                     acaoResposta === 'segmentar' ? '✅ SEGMENTAR' :
+                                     acaoResposta === 'teste_ab' ? '⚠️ TESTE A/B' :
+                                     (record.acao?.toUpperCase() || 'RESPONDIDO')}
                                 </div>
                                 {record.data_resposta && (
                                     <div className="text-[9px] text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
@@ -912,6 +931,18 @@ export function SemanticAudit({
                 return record.status_granularidade ? (
                     <div className="w-fit px-2 py-0.5 rounded-full bg-zinc-500/10 border border-zinc-500/20 text-zinc-600 dark:bg-zinc-500/20 dark:text-slate-400 text-[10px] font-medium italic">{record.status_granularidade}</div>
                 ) : null;
+            }
+        },
+        {
+            // Visível apenas na aba Respostas Cliente (ver filtro de colunas na Table)
+            title: 'Origem',
+            key: 'origem',
+            width: 110,
+            render: (_: unknown, record: CampaignTerm) => {
+                const origem = record.origem ?? 'site';
+                return origem === 'interno'
+                    ? <Tag color="purple">Interno</Tag>
+                    : <Tag color="blue">Site</Tag>;
             }
         },
         {
@@ -1189,15 +1220,35 @@ export function SemanticAudit({
                                 { key: 'responses', label: `📩 Respostas Cliente (${counts.responses})` },
                             ]}
                         />
+                        {activeTab === 'responses' && (
+                            <Select
+                                value={originFilter}
+                                onChange={setOriginFilter}
+                                size="large"
+                                className="mb-4 mr-3 w-44"
+                                options={[
+                                    { value: 'all', label: 'Origem: Todas' },
+                                    { value: 'interno', label: 'Origem: Interno' },
+                                    { value: 'site', label: 'Origem: Site' },
+                                ]}
+                            />
+                        )}
                         {(activeTab === 'aprovadas' || activeTab === 'negativas' || activeTab === 'responses') && (
-                            <Button 
+                            <Button
                                 type="primary"
                                 icon={<Download className="w-4 h-4" />}
                                 onClick={() => {
-                                    const termsToExport = selectedRowKeys.length > 0 
+                                    const termsToExport = selectedRowKeys.length > 0
                                         ? filteredTerms.filter(t => selectedRowKeys.includes(t.id))
                                         : filteredTerms;
-                                    
+
+                                    // Respostas Cliente: exportação por tipo (modal com seleção de tipos e correspondência)
+                                    if (activeTab === 'responses') {
+                                        setExportSource(termsToExport);
+                                        setIsExportModalVisible(true);
+                                        return;
+                                    }
+
                                     let text = "Campaign\tAd Group\tKeyword\n";
                                     termsToExport.forEach(t => {
                                         let kw = t.termo_de_pesquisa;
@@ -1226,7 +1277,7 @@ export function SemanticAudit({
                     <Table
                         size="small"
                         dataSource={filteredTerms}
-                        columns={columns}
+                        columns={activeTab === 'responses' ? columns : columns.filter(c => c.key !== 'origem')}
                         rowKey="id"
                         rowSelection={{
                             selectedRowKeys,
@@ -1449,6 +1500,79 @@ export function SemanticAudit({
                 destroyOnClose
             >
                 <div className="mt-6 space-y-4">
+                    {activeTab === 'responses' && exportResult && (
+                        <>
+                            <div className="flex flex-wrap items-center gap-4">
+                                <Checkbox.Group
+                                    value={exportTipos}
+                                    onChange={(v) => setExportTipos(v as TipoExport[])}
+                                    options={[
+                                        { label: '✅ Segmentar', value: 'segmentar' },
+                                        { label: '❌ Negativar', value: 'negativar' },
+                                        { label: '⚠️ Teste A/B', value: 'teste_ab' },
+                                    ]}
+                                />
+                                <Select
+                                    value={exportMatch}
+                                    onChange={setExportMatch}
+                                    disabled={!exportTipos.includes('negativar')}
+                                    className="w-52"
+                                    options={[
+                                        { value: 'exact', label: 'Negativa: Exata' },
+                                        { value: 'phrase', label: 'Negativa: Frase' },
+                                        { value: 'broad', label: 'Negativa: Ampla' },
+                                    ]}
+                                />
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                                {exportResult.total} linha(s) para exportar
+                                {exportResult.omitidos > 0 ? ` · ${exportResult.omitidos} omitida(s) por falta de campanha ou grupo` : ''}
+                            </p>
+                            <Input.TextArea
+                                value={exportResult.editor}
+                                readOnly
+                                autoSize={{ minRows: 6, maxRows: 14 }}
+                                className="!bg-slate-900 !border-slate-700 !text-slate-200 font-mono text-[11px] rounded-xl p-4 w-full whitespace-pre"
+                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                            />
+                            <Button
+                                type="primary"
+                                className="w-full font-bold h-10 rounded-xl bg-blue-600 hover:bg-blue-700 border-none"
+                                disabled={exportResult.editor.trim().split('\n').length <= 1}
+                                onClick={() => {
+                                    navigator.clipboard.writeText(exportResult.editor);
+                                    message.success('Termos copiados para a área de transferência!');
+                                }}
+                            >
+                                Copiar para o Google Ads Editor
+                            </Button>
+                            {exportTipos.includes('teste_ab') && (
+                                <>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        Teste A/B: lista para o analista (não gera critério do Editor)
+                                    </p>
+                                    <Input.TextArea
+                                        value={exportResult.testeAb}
+                                        readOnly
+                                        autoSize={{ minRows: 3, maxRows: 10 }}
+                                        className="!bg-slate-900 !border-slate-700 !text-slate-200 font-mono text-[11px] rounded-xl p-4 w-full whitespace-pre"
+                                        onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                                    />
+                                    <Button
+                                        className="w-full font-bold h-10 rounded-xl"
+                                        disabled={exportResult.testeAb.trim().split('\n').length <= 1}
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(exportResult.testeAb);
+                                            message.success('Lista de Teste A/B copiada!');
+                                        }}
+                                    >
+                                        Copiar lista de Teste A/B
+                                    </Button>
+                                </>
+                            )}
+                        </>
+                    )}
+                    {!(activeTab === 'responses' && exportResult) && (<>
                     <Input.TextArea
                         value={exportText}
                         readOnly
@@ -1467,6 +1591,7 @@ export function SemanticAudit({
                     >
                         Copiar para Área de Transferência
                     </Button>
+                    </>)}
                 </div>
             </AntModal>
         </div>
