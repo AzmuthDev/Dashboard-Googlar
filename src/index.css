@@ -799,8 +799,15 @@ body:not(.dark) {
    V3 Premium Audit Table — Sticky & High Contrast
 ═══════════════════════════════════════════════════════ */
 .v3-audit-table .ant-table-cell {
-  padding: 16px 12px !important;
+  padding: 12px 10px !important;
   border-bottom: 1px solid var(--border) !important;
+}
+
+.v3-audit-table .ant-table-thead > tr > th {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .v3-audit-table .ant-table-cell-fix-left,
