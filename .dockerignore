@@ -2,9 +2,25 @@ node_modules
 dist
 .git
 .env
+.env.*
 README.md
 Dockerfile
 .dockerignore
 *.zip
+*.rar
 *.bat
 src/tests
+UpperScript-master
+scratch
+*.xlsx
+*.xls
+n8n
+docs
+.superpowers
+.agents
+.claude
+*.md
+*.json.bak*
+*.backup*.json
+Analise ADS Endomarcas.json
+Pocket interno - Magic Hands*.json
