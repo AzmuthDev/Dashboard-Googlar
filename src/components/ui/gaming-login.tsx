@@ -208,8 +208,8 @@ const LoginForm: React.FC<LoginFormProps> = () => {
             <div className="mb-10 text-center">
                 <h2 className="text-3xl font-bold mb-4 relative group flex justify-center">
                     <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-white/40 blur-[40px] rounded-full z-0 pointer-events-none animate-pulse" style={{ animationDuration: '3s' }}></span>
-                    <span className="relative flex justify-center items-center h-[90px] w-auto z-10">
-                        <img src="/logo.png?v=2" alt="Googlar Logo" className="h-full w-auto object-contain drop-shadow-2xl" />
+                    <span className="relative flex justify-center items-center h-16 w-auto z-10">
+                        <img src="/googlar-horizontal-escuro.svg" alt="Googlar Logo" className="h-full w-auto max-w-full object-contain drop-shadow-2xl" />
                     </span>
                 </h2>
                 <p className="flex flex-col items-center">

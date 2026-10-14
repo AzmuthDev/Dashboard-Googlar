@@ -134,11 +134,12 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
                 {/* Header with logo and collapse button */}
                 <div className="flex items-center justify-between p-6 bg-transparent">
                     {!isCollapsed && (
-                        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => onViewChange('dashboard')}>
-                            <img src="/logo.png?v=2" alt="Googlar" className="w-20 h-20 object-contain drop-shadow-sm" />
-                            <div className="flex flex-col">
-                                <span translate="no" className="font-extrabold tracking-tight text-3xl text-foreground">Googlar</span>
-                            </div>
+                        <div className="flex items-center cursor-pointer" onClick={() => onViewChange('dashboard')}>
+                            <img
+                                src={isDarkMode ? '/googlar-horizontal-escuro.svg' : '/googlar-horizontal-claro.svg'}
+                                alt="Googlar"
+                                className="h-9 w-auto object-contain"
+                            />
                         </div>
                     )}
 
@@ -147,7 +148,7 @@ export function ModernSidebar({ className = "", currentUser, currentView, onView
                             className="flex items-center justify-center mx-auto cursor-pointer"
                             onClick={() => onViewChange('dashboard')}
                         >
-                            <img src="/logo.png?v=2" alt="Googlar" className="w-20 h-20 object-contain drop-shadow-sm" />
+                            <img src="/googlar-icone.svg" alt="Googlar" className="w-10 h-10 object-contain drop-shadow-sm" />
                         </div>
                     )}
 
