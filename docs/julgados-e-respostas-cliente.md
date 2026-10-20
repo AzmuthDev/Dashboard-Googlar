@@ -33,6 +33,8 @@ Código dos nós Code vive em `n8n/code/*.cjs` (testado com `npm test`); `n8n/sc
 
 ## Pendências conhecidas (não alteradas)
 
+> Atualização 2026-10-20: os itens do Endomarcas (nó gravando em `mesa_qualipix`) e do `Trigger Refresh Dashboard` do Qualipix foram removidos na reconstrução dos workflows do site; ver `docs/pocket-site-workflows.md`.
+
 - Chave da Evolution API em texto puro em vários nós (inclusive nos nós novos, que copiam o padrão dos vizinhos).
 - Workflow de Endomarcas do site com um nó gravando em `mesa_qualipix`.
 - `Trigger Refresh Dashboard` do Qualipix do site aponta para URL de exemplo.
