@@ -66,7 +66,7 @@ const FormInput: React.FC<FormInputProps> = ({ icon, type, placeholder, value, o
                 value={value}
                 onChange={onChange}
                 required={required}
-                className="w-full pl-10 pr-3 py-3 bg-[#eef2f6] border border-transparent rounded-[10px] text-zinc-900 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/50 transition-colors shadow-[inset_0_2px_4px_rgba(0,0,0,0.06)]"
+                className="w-full pl-10 pr-3 py-3 bg-white/[0.06] border border-white/15 rounded-[10px] text-white placeholder:text-white/45 caret-[#3df2a0] focus:outline-none focus:border-[#3df2a0]/60 focus:ring-2 focus:ring-[#3df2a0]/20 transition-colors"
             />
         </div>
     );
@@ -174,7 +174,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
 
                 <form onSubmit={handleResetSubmit} className="space-y-6">
                     <FormInput
-                        icon={<Mail className="text-zinc-500" size={18} />}
+                        icon={<Mail className="text-zinc-400" size={18} />}
                         type="email"
                         placeholder="Seu e-mail profissional"
                         value={resetEmail}
@@ -219,7 +219,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
                 <FormInput
-                    icon={<Mail className="text-zinc-500" size={18} />}
+                    icon={<Mail className="text-zinc-400" size={18} />}
                     type="email"
                     placeholder="Email address"
                     value={email}
@@ -229,7 +229,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
 
                 <div className="relative">
                     <FormInput
-                        icon={<Lock className="text-zinc-500" size={18} />}
+                        icon={<Lock className="text-zinc-400" size={18} />}
                         type={showPassword ? "text" : "password"}
                         placeholder="Password"
                         value={password}
@@ -238,7 +238,7 @@ const LoginForm: React.FC<LoginFormProps> = () => {
                     />
                     <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 focus:outline-none transition-colors"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-100 focus:outline-none transition-colors"
                         onClick={() => setShowPassword(!showPassword)}
                         aria-label={showPassword ? "Hide password" : "Show password"}
                     >
