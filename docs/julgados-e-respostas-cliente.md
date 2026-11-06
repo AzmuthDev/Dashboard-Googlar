@@ -21,6 +21,7 @@ Código dos nós Code vive em `n8n/code/*.cjs` (testado com `npm test`); `n8n/sc
 - Por esteira: `Buscar Julgados` → `Excluir Já Julgados` → `Há Termos Novos?` → `Inicializar Estatísticas`; aviso no grupo da equipe (`Montar Aviso do Filtro` → `Notificar Filtro`); a saída da IA vai também para `Normalizar Vereditos` → `Gravar Vereditos` (RPC `upsert_veredito`).
 - Roteador: `1. Extrair ID e Voto` → `Registrar Resposta Site (RPC)` → `Classificar Origem do Voto` → `É Enquete do Site?` (sim: notifica a equipe; não: caminho antigo). Decisões do interno: `3. Processar Votos e Consenso` → `Preparar Registro de Decisão` → `Gravar Decisão (RPC)`.
 - Origem: `id_enquete` achado numa `mesa_*` = `site`; caso contrário `interno`.
+- Enquete de dúvida ("Enviar Enquete WhatsApp (X)"): a expressão vive em `n8n/code/enquete-duvida.expr.txt` e é gerada por `n8n/scripts/gen-enquete.mjs` (testada com `npm test`). Em 2026-10-19 os 6 nós estavam com a expressão escapada duas vezes (`={{\n ...` com barra e n literais) e falhavam com `invalid syntax`: nenhuma enquete ia para o grupo dos especialistas, mas o aviso final dizia que tudo foi enviado (o nó tem `onError: continueRegularOutput`). Versão corrigida: `012bc7e0-c514-4d21-a8b0-7cb32f3a1c8c`.
 - Voto sem campanha/grupo (enquete sem memória no `staticData`: o nó 3 usa `Geral`/`Geral`): `registrar_decisao_interna` casa a linha em aberto só pelo termo (migração `20261014180000_decisao_interna_fallback_termo.sql`), em vez de criar uma linha `Geral/Geral` duplicada.
 - Publicado em 2026-10-14 como versão `55acfeb8-44c8-48c2-8317-06347fabc902`; depois ajustado (cabeçalho em inglês no filtro) e publicado como `8ddd51f5-4738-4ab3-a47b-0023bc726081`.
 - As planilhas dos 6 clientes vêm do Google Ads com cabeçalho em inglês (`Search term`, `Campaign Name`, `Ad Group Name`); `Excluir Já Julgados` lê esses nomes e os em português. Antes da correção o filtro não reconhecia nenhum termo e deixava tudo passar.
@@ -31,6 +32,8 @@ Código dos nós Code vive em `n8n/code/*.cjs` (testado com `npm test`); `n8n/sc
 `src/components/SemanticAudit.tsx` + `src/utils/adsExport.ts`: coluna e filtro de origem, status por ação (segmentar/negativar/teste A/B) e exportação por tipo (formato Google Ads Editor: `Campaign`, `Ad group`, `Keyword`, `Criterion Type`; negativa Exata/Frase/Ampla; Teste A/B em lista separada).
 
 ## Pendências conhecidas (não alteradas)
+
+> Atualização 2026-10-20: os itens do Endomarcas (nó gravando em `mesa_qualipix`) e do `Trigger Refresh Dashboard` do Qualipix foram removidos na reconstrução dos workflows do site; ver `docs/pocket-site-workflows.md`.
 
 - Chave da Evolution API em texto puro em vários nós (inclusive nos nós novos, que copiam o padrão dos vizinhos).
 - Workflow de Endomarcas do site com um nó gravando em `mesa_qualipix`.
