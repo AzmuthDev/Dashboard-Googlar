@@ -161,7 +161,8 @@ Depois de editar a skill, rode o comando e comite os arquivos gerados.
 Testes: `npm test` cobre o módulo puro (`_shared/pocket-ads`). O `index.ts` roda em Deno e só é exercitado
 no deploy.
 
-Versões no ar: ver painel do Supabase (Edge Functions › pocket-mcp e google-ads-oauth).
+Versões no ar (09/11/2026, commit 50ea4bb): `pocket-mcp` v2 e `google-ads-oauth` v2, ambas ACTIVE e com
+`verify_jwt = false`. Migrações aplicadas: `claude_google_ads` e `oauth_confirmacao`.
 
 ## 9. Pendências conhecidas
 
