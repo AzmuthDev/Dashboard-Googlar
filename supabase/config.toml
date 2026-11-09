@@ -2,3 +2,6 @@ project_id = "jmptroahcezmpjdplxwy"
 
 [functions.pocket-mcp]
 verify_jwt = false
+
+[functions.google-ads-oauth]
+verify_jwt = false
