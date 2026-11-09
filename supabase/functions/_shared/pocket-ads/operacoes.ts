@@ -24,7 +24,8 @@ export { matchDe } from './destinos.ts';
 export const GOOGLE_ADS_API_VERSION = 'v26';
 
 export interface Mutacao {
-    servico: 'adGroupCriteria' | 'campaignCriteria' | 'sharedCriteria' | 'customerNegativeCriteria';
+    /** `sharedSets`/`campaignSharedSets`/`customerNegativeCriteria`: criação e vínculo de listas (ferramentas.ts). */
+    servico: 'adGroupCriteria' | 'campaignCriteria' | 'sharedCriteria' | 'customerNegativeCriteria' | 'sharedSets' | 'campaignSharedSets';
     operations: unknown[];
     /** posição do ItemResolvido de cada operação */
     indices: number[];

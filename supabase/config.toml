@@ -1,0 +1,4 @@
+project_id = "jmptroahcezmpjdplxwy"
+
+[functions.pocket-mcp]
+verify_jwt = false
