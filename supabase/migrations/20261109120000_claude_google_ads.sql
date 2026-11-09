@@ -84,11 +84,12 @@ create or replace view public.minha_conexao_google_ads
     from public.google_ads_conexoes
    where profile_id = auth.uid();
 
-revoke all on public.claude_conexoes from anon;
+-- Os defaults do Supabase dão tudo a anon/authenticated; zera antes de conceder só o necessário.
+revoke all on public.claude_conexoes from anon, authenticated;
 revoke all on public.google_ads_conexoes from anon, authenticated;
 revoke all on public.google_ads_oauth_estados from anon, authenticated;
 revoke all on public.envios_google_ads from anon, authenticated;
-revoke all on public.minha_conexao_google_ads from anon;
+revoke all on public.minha_conexao_google_ads from anon, authenticated;
 
 grant select, insert, update on public.claude_conexoes to authenticated;
 grant select (profile_id, modo, google_email, criado_em, revogado_em) on public.google_ads_conexoes to authenticated;

@@ -96,6 +96,27 @@ begin
   assert has_table_privilege('authenticated', 'public.claude_conexoes', 'select'), 'authenticated le claude_conexoes';
   assert has_table_privilege('authenticated', 'public.minha_conexao_google_ads', 'select'), 'authenticated le a view';
   assert not has_table_privilege('anon', 'public.minha_conexao_google_ads', 'select'), 'anon nao le a view';
+
+  -- authenticated tem exatamente o grant concedido, nada dos defaults (delete/truncate/references/trigger)
+  foreach t in array array['claude_conexoes','google_ads_conexoes','google_ads_oauth_estados','envios_google_ads','minha_conexao_google_ads'] loop
+    assert not has_table_privilege('authenticated', 'public.' || t, 'delete'), 'authenticated nao deve ter delete em ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'truncate'), 'authenticated nao deve ter truncate em ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'references'), 'authenticated nao deve ter references em ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'trigger'), 'authenticated nao deve ter trigger em ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'insert')
+           or t = 'claude_conexoes', 'authenticated nao deve ter insert em ' || t;
+    assert not has_table_privilege('authenticated', 'public.' || t, 'update')
+           or t = 'claude_conexoes', 'authenticated nao deve ter update em ' || t;
+  end loop;
+  assert has_table_privilege('authenticated', 'public.claude_conexoes', 'insert')
+     and has_table_privilege('authenticated', 'public.claude_conexoes', 'update'),
+    'authenticated deve ter insert e update em claude_conexoes';
+  -- google_ads_conexoes: so select nas colunas sem segredo
+  assert has_column_privilege('authenticated', 'public.google_ads_conexoes', 'modo', 'select'), 'select em modo';
+  assert not has_column_privilege('authenticated', 'public.google_ads_conexoes', 'refresh_token_cifrado', 'select'), 'sem select em refresh_token_cifrado';
+  assert not has_column_privilege('authenticated', 'public.google_ads_conexoes', 'client_secret_cifrado', 'select'), 'sem select em client_secret_cifrado';
+  assert not has_column_privilege('authenticated', 'public.google_ads_conexoes', 'modo', 'update'), 'sem update em google_ads_conexoes';
+  assert not has_column_privilege('authenticated', 'public.google_ads_conexoes', 'modo', 'insert'), 'sem insert em google_ads_conexoes';
 end $$;
 
 -- (f) comportamento: a view devolve so a linha do dono e os segredos continuam inacessiveis
