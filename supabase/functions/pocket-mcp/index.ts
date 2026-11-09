@@ -6,7 +6,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { erroParse, responderMcp } from '../_shared/pocket-ads/mcp.ts';
 import { hashToken } from '../_shared/pocket-ads/cifra.ts';
 import { criarClienteAds } from '../_shared/pocket-ads/googleAds.ts';
-import { criarFerramentas, MESA_VALIDA, montarCredenciais } from '../_shared/pocket-ads/ferramentas.ts';
+import { criarFerramentas, ErroMesaIncompativel, MESA_VALIDA, montarCredenciais } from '../_shared/pocket-ads/ferramentas.ts';
 import type {
     ConexaoGoogle, Empresa, LinhaConexaoGoogle, LinhaMesa, Perfil, RegistroEnvio, Repositorio,
 } from '../_shared/pocket-ads/ferramentas.ts';
@@ -22,19 +22,21 @@ const db = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
 });
 
-type Resultado<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
+type Resultado<T> = PromiseLike<{ data: T[] | null; error: { message: string; code?: string } | null }>;
 
-async function dados<T>(r: Resultado<T>): Promise<T[]> {
+async function dados<T>(r: Resultado<T>, mesa = false): Promise<T[]> {
     const { data, error } = await r;
+    // 42703 = undefined_column: a mesa não tem as colunas de resposta do cliente (ex.: mesa_supress).
+    if (error && mesa && error.code === '42703') throw new ErroMesaIncompativel();
     if (error) throw new Error(error.message);
     return data ?? [];
 }
 
 /** Lê todas as páginas (PostgREST corta em 1000 linhas). A consulta deve ter ordem estável. */
-async function todasAsPaginas<T>(consulta: (de: number, ate: number) => Resultado<T>): Promise<T[]> {
+async function todasAsPaginas<T>(consulta: (de: number, ate: number) => Resultado<T>, mesa = false): Promise<T[]> {
     const saida: T[] = [];
     for (let de = 0; ; de += PAGINA) {
-        const pagina = await dados(consulta(de, de + PAGINA - 1));
+        const pagina = await dados(consulta(de, de + PAGINA - 1), mesa);
         saida.push(...pagina);
         if (pagina.length < PAGINA) return saida;
     }
@@ -63,12 +65,12 @@ const repositorio: Repositorio = {
     },
 
     linhasRespondidas: (mesa) => todasAsPaginas<LinhaMesa>((de, ate) =>
-        db.from(mesaSegura(mesa)).select(COLUNAS_MESA).eq('respondido_cliente', true).order('id').range(de, ate)),
+        db.from(mesaSegura(mesa)).select(COLUNAS_MESA).eq('respondido_cliente', true).order('id').range(de, ate), true),
 
     async linhasPorIds(mesa, ids) {
         const saida: LinhaMesa[] = [];
         for (let i = 0; i < ids.length; i += LOTE_IDS) {
-            saida.push(...await dados<LinhaMesa>(db.from(mesaSegura(mesa)).select(COLUNAS_MESA).in('id', ids.slice(i, i + LOTE_IDS))));
+            saida.push(...await dados<LinhaMesa>(db.from(mesaSegura(mesa)).select(COLUNAS_MESA).in('id', ids.slice(i, i + LOTE_IDS)), true));
         }
         return saida;
     },

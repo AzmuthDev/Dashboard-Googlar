@@ -57,6 +57,15 @@ export interface RegistroEnvio {
     erro?: string | null;
     resource_name?: string | null;
 }
+/** A mesa do cliente não tem as colunas de resposta do cliente no formato do Pocket (ex.: mesa_supress). */
+export class ErroMesaIncompativel extends Error {
+    constructor(mensagem = 'mesa sem colunas de resposta do cliente') {
+        super(mensagem);
+        this.name = 'ErroMesaIncompativel';
+    }
+}
+const MSG_MESA_INCOMPATIVEL = 'A mesa deste cliente não tem respostas de cliente no formato do Pocket.';
+
 export interface Repositorio {
     /** Empresas do perfil (todas se admin). */
     empresasDoPerfil(perfil: Perfil): Promise<Empresa[]>;
@@ -198,7 +207,14 @@ export function criarFerramentas(dep: DepFerramentas): Ferramenta[] {
 
     /** Termos respondidos de um tipo, sem os que não têm destino e (salvo `incluir`) sem os já subidos. */
     async function termosDoTipo(mesa: string, tipo: TipoAcao, incluir: boolean) {
-        const [linhas, subidos] = await Promise.all([db.linhasRespondidas(mesa), db.jaSubidos(mesa, tipo)]);
+        let linhas: LinhaMesa[];
+        let subidos: Set<string>;
+        try {
+            [linhas, subidos] = await Promise.all([db.linhasRespondidas(mesa), db.jaSubidos(mesa, tipo)]);
+        } catch (e) {
+            if (e instanceof ErroMesaIncompativel) throw new ErroUsuario(MSG_MESA_INCOMPATIVEL);
+            throw e;
+        }
         let omitidos = 0;
         let ocultos = 0;
         const visiveis: { linha: LinhaMesa; jaSubido: boolean }[] = [];
@@ -218,7 +234,14 @@ export function criarFerramentas(dep: DepFerramentas): Ferramenta[] {
     async function linhasDoPedido(mesa: string, ids: string[], tipo: TipoAcao): Promise<LinhaMesa[]> {
         const invalidos = ids.filter((id) => !UUID.test(id));
         if (invalidos.length) throw new ErroUsuario(`termo não pertence a este cliente: ${listaCurta(invalidos)}.`);
-        const porId = new Map((await db.linhasPorIds(mesa, ids)).map((l) => [l.id, l]));
+        let encontradas: LinhaMesa[];
+        try {
+            encontradas = await db.linhasPorIds(mesa, ids);
+        } catch (e) {
+            if (e instanceof ErroMesaIncompativel) throw new ErroUsuario(MSG_MESA_INCOMPATIVEL);
+            throw e;
+        }
+        const porId = new Map(encontradas.map((l) => [l.id, l]));
         const faltam = ids.filter((id) => !porId.has(id));
         if (faltam.length) throw new ErroUsuario(`termo não pertence a este cliente: ${listaCurta(faltam)}.`);
         const linhas = ids.map((id) => porId.get(id)!);
@@ -476,6 +499,9 @@ export function criarFerramentas(dep: DepFerramentas): Ferramenta[] {
                         const [s, n, t] = await Promise.all(TIPOS.map((tipo) => termosDoTipo(mesa, tipo, false)));
                         return { ...base, pendentes: { segmentar: s.visiveis.length, negativar: n.visiveis.length, teste_ab: t.visiveis.length } };
                     } catch (err) {
+                        if (err instanceof ErroUsuario && err.message === MSG_MESA_INCOMPATIVEL) {
+                            return { ...base, pendentes: null, observacao: 'Mesa sem respostas de cliente no formato do Pocket.' };
+                        }
                         console.error(`listar_clientes: falha ao contar termos de ${e.id}:`, err instanceof Error ? err.message : err);
                         return { ...base, pendentes: null };
                     }

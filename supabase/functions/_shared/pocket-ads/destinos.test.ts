@@ -114,3 +114,8 @@ test('emLotes de 1001 itens', () => {
     const lotes = emLotes(Array.from({ length: 1001 }, (_, i) => i));
     assert.deepEqual(lotes.map((l) => l.length), [500, 500, 1]);
 });
+
+test('termo vazio ou só espaços: erro "termo vazio" e sem destino', () => {
+    const r = resolverItens([linha('a', ''), linha('b', '   ')], catalogo(), { tipo: 'segmentar' });
+    assert.deepEqual(r.map((i) => [i.situacao, i.erro, i.destino]), [['erro', 'termo vazio', undefined], ['erro', 'termo vazio', undefined]]);
+});

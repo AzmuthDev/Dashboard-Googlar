@@ -36,7 +36,7 @@ Pocket (navegador) ──► tela "Conectar ao Claude" ──► Edge Function g
 ## 1. Banco (uma migração nova)
 
 ### `companies`
-- `google_ads_customer_id text` — 10 dígitos, sem traços. Só admin edita (tela de empresas).
+- `google_ads_customer_id text` — 10 dígitos, sem traços. Só admin edita na tela de empresas (restrição só na UI: as políticas RLS de `companies`/`profiles` são `ALL true/true` para `authenticated`; ver Pendências em `docs/claude-google-ads.md`).
 - `google_ads_login_customer_id text` — MCC pelo qual a conta é acessada (opcional).
 
 ### `claude_conexoes` — links pessoais do conector

@@ -28,7 +28,7 @@ export interface Company {
     owner_id?: string
     created_at?: string
     tableName?: string
-    /** ID da conta do Google Ads (10 dígitos). Só o admin edita. */
+    /** ID da conta do Google Ads (10 dígitos). Só o admin edita na UI; o banco ainda não impede (ver docs/claude-google-ads.md, Pendências). */
     googleAdsCustomerId?: string | null
     googleAdsLoginCustomerId?: string | null
 }

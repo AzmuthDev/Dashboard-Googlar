@@ -109,7 +109,7 @@ Chame a `subir_*` do tipo com `modo: "previa"` e os `ids` que sobraram. Mostre:
 - Um item pode reunir termos repetidos (vários `ids`): mostre uma linha só.
 - Linha de resumo: "Vão subir: `resumo.ok` · Já existem: `resumo.ja_existe` · Com erro: `resumo.erro`".
 - Mostre cada texto de `avisos` (ex.: lista que será criada e vinculada).
-- Erro "nível conta indisponível" → sugira o nível `lista`. Erro de PMax → em negativas, sugira
+- Se o Google recusar a negativa na conta, ofereça uma lista compartilhada (nível `lista`). Erro de PMax → em negativas, sugira
   `lista` ou `conta`; em segmentar/teste A/B não há como subir esses termos.
 
 ### 6. Confirmação

@@ -34,7 +34,7 @@ Migrações (aplicar nesta ordem, antes de publicar as funções):
 
 | Tabela | Colunas principais | Acesso |
 |---|---|---|
-| `companies` (colunas novas) | `google_ads_customer_id`, `google_ads_login_customer_id` (10 dígitos, check `^\d{10}$`) | como já era; só admin edita na tela de empresas |
+| `companies` (colunas novas) | `google_ads_customer_id`, `google_ads_login_customer_id` (10 dígitos, check `^\d{10}$`) | como já era; só admin edita na tela de empresas (restrição só na UI, ver §9) |
 | `claude_conexoes` | `id`, `profile_id`, `token_hash` (unique), `rotulo`, `criado_em`, `ultimo_uso`, `revogado_em` | RLS `profile_id = auth.uid()`; `authenticated` tem só `select, insert, update` (sem delete/truncate); `anon` nada |
 | `google_ads_conexoes` | `profile_id` (PK), `modo` (`pocket`/`proprio`), `google_email`, `refresh_token_cifrado`, e no modo próprio `developer_token_cifrado` (opcional), `client_id`, `client_secret_cifrado`, `login_customer_id`; `criado_em`, `atualizado_em`, `revogado_em` | `authenticated` lê só as colunas `profile_id, modo, google_email, criado_em, revogado_em` da própria linha; não lê colunas cifradas nem escreve; escrita só `service_role` |
 | `google_ads_oauth_estados` | `estado` (PK), `profile_id`, `expira_em` (10 min), `refresh_token_cifrado`, `google_email`, `confirmacao_hash` | só `service_role` (RLS ligado, sem política) |
@@ -180,3 +180,14 @@ Versões no ar (09/11/2026, commit 50ea4bb): `pocket-mcp` v2 e `google-ads-oauth
 - Sem timeout nas chamadas HTTP ao Google nem limite de páginas nas consultas da API.
 - A conexão Google (modo `pocket`) usa a conta Google de quem autorizou: a permissão real é a dessa pessoa
   no Google Ads.
+- Edição das colunas de conta em `companies` só é restrita na UI. Em produção `companies` e `profiles` têm
+  políticas RLS `ALL true/true` para `authenticated` (anteriores a esta funcionalidade): qualquer usuário
+  logado pode trocar `google_ads_customer_id` (ou se tornar admin), e os próximos envios dos colegas iriam
+  para essa conta com o login Google de cada um. Mitigação atual: a prévia mostra a `conta` e a skill cita a
+  conta antes do OK. Correção: trigger BEFORE UPDATE em `companies` que rejeite mudança nas duas colunas do
+  Ads, salvo `service_role` ou admin real; só vale depois que `profiles.is_admin`/`assigned_company_ids`
+  deixarem de ser graváveis por qualquer autenticado (RPC só para admin na tela de Acessos).
+- Segmentar sobre uma palavra-chave que já existe pausada devolve `ja_existia`, mas ela continua pausada.
+- Uma lista compartilhada nova pode ficar sem vínculo se a vinculação falhar e o usuário repetir o pedido.
+- `jaSubidos` ignora `customer_id`: trocar a conta de um cliente mantém ocultos os envios antigos.
+- A detecção de duplicadas ignora acentos (termos que só diferem por acento contam como o mesmo).

@@ -62,6 +62,7 @@ export function resolverItens(linhas: LinhaTermo[], catalogo: Catalogo, alvo: Al
 
     for (const l of linhas) {
         const texto = l.termo.trim().replace(/\s+/g, ' ');
+        if (!texto) { erro(l, texto, 'termo vazio'); continue; }
         const invalido = validarTextoPalavra(texto);
         if (invalido) { erro(l, texto, invalido); continue; }
 

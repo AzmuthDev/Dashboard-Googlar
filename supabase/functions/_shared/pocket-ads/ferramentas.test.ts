@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- respostas JSON das ferramentas e operações da API lidas nos asserts */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { criarFerramentas, montarCredenciais } from './ferramentas.ts';
+import { criarFerramentas, ErroMesaIncompativel, montarCredenciais } from './ferramentas.ts';
 import type { Empresa, LinhaMesa, Perfil, RegistroEnvio, Repositorio, ConexaoGoogle } from './ferramentas.ts';
 import { ErroUsuario } from './mcp.ts';
 import type { Ferramenta } from './mcp.ts';
@@ -44,17 +44,19 @@ const MESAS: Record<string, LinhaMesa[]> = {
     mesa_qualipix: [linha(101, 'camera', 'Search', 'Cameras', 'segmentar')],
 };
 
-function repoFalso(opts: { enviados?: RegistroEnvio[] } = {}) {
+function repoFalso(opts: { enviados?: RegistroEnvio[]; mesaIncompativel?: string } = {}) {
     const registrados: RegistroEnvio[] = [];
     const chamadas: string[] = [];
     const enviados = opts.enviados ?? [];
     const repo: Repositorio = {
         async empresasDoPerfil() { chamadas.push('empresas'); return EMPRESAS; },
         async linhasRespondidas(mesa) {
+            if (mesa === opts.mesaIncompativel) throw new ErroMesaIncompativel();
             chamadas.push(`respondidas:${mesa}`);
             return (MESAS[mesa] ?? []).filter((l) => l.respondido_cliente);
         },
         async linhasPorIds(mesa, ids) {
+            if (mesa === opts.mesaIncompativel) throw new ErroMesaIncompativel();
             chamadas.push(`porIds:${mesa}`);
             return (MESAS[mesa] ?? []).filter((l) => ids.includes(l.id));
         },
@@ -137,10 +139,11 @@ function montar(o: {
     perfil?: Partial<Perfil>;
     ads?: OpcoesAds;
     enviados?: RegistroEnvio[];
+    mesaIncompativel?: string;
     semCred?: boolean;
     conexao?: ConexaoGoogle | null;
 } = {}) {
-    const r = repoFalso({ enviados: o.enviados });
+    const r = repoFalso({ enviados: o.enviados, mesaIncompativel: o.mesaIncompativel });
     const a = adsFalso(o.ads);
     const credPedidas: (Empresa | null)[] = [];
     const lista = criarFerramentas({
@@ -658,4 +661,14 @@ test('montarCredenciais modo proprio: tudo da linha; login próprio tem priorida
     };
     const c = await montarCredenciais(con, { ...EMPRESAS[0], loginCustomerId: '9998887777' }, { developerToken: 'DEV', chave: CHAVE });
     assert.deepEqual(c, { developerToken: 'DEVU', clientId: 'CIDU', clientSecret: 'CSU', refreshToken: 'RT', loginCustomerId: '1231231234' });
+});
+
+test('mesa sem colunas de resposta: erro claro em listar/subir e observação em listar_clientes', async () => {
+    const m = montar({ mesaIncompativel: 'mesa_magic_hands' });
+    const re = /não tem respostas de cliente no formato do Pocket/;
+    await assert.rejects(m.run('listar_termos_respondidos', { cliente: 'Magic Hands', tipo: 'segmentar' }), erroUsuario(re));
+    await assert.rejects(m.run('subir_segmentadas', { cliente: 'Magic Hands', ids: [u(1)], modo: 'previa' }), erroUsuario(re));
+    const r = await m.run('listar_clientes', {});
+    assert.equal(r.clientes[0].pendentes, null);
+    assert.match(r.clientes[0].observacao, /formato do Pocket/);
 });
