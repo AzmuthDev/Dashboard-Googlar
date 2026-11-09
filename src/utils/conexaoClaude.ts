@@ -1,4 +1,4 @@
-import { VIEW_TITLES, type AppView } from '../components/shell/navigation.ts';
+import type { AppView } from '../components/shell/navigation.ts';
 
 /** URL do conector MCP que o usuário cola no Claude. O segredo só existe no navegador e nessa URL. */
 export function urlConector(supabaseUrl: string, segredo: string): string {
@@ -24,7 +24,8 @@ export function lerRetornoGoogle(search: string): RetornoGoogle {
     const p = new URLSearchParams(search);
     const r: RetornoGoogle = {};
     const view = p.get('view');
-    if (view && Object.prototype.hasOwnProperty.call(VIEW_TITLES, view)) r.view = view as AppView;
+    // Só esta view aceita deep link: as outras podem ser restritas ao admin (isViewLocked).
+    if (view === 'conectar-claude') r.view = view;
     const g = p.get('google_ads');
     if (g === 'ok' || g === 'erro' || g === 'confirmar') r.googleAds = g;
     const motivo = p.get('motivo');

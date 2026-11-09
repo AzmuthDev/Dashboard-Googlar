@@ -21,6 +21,9 @@ test('lerRetornoGoogle lê view, resultado e motivo', () => {
 
 test('lerRetornoGoogle ignora view inexistente e valores inesperados', () => {
     assert.equal(lerRetornoGoogle('?view=xyz').view, undefined);
+    assert.equal(lerRetornoGoogle('?view=dashboard').view, undefined);
+    assert.equal(lerRetornoGoogle('?view=semantic-audit').view, undefined);
+    assert.equal(lerRetornoGoogle('?view=conectar-claude').view, 'conectar-claude');
     assert.equal(lerRetornoGoogle('?google_ads=qualquer').googleAds, undefined);
     assert.deepEqual(lerRetornoGoogle(''), {});
 });
