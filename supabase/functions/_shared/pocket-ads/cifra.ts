@@ -9,7 +9,7 @@ const paraB64 = (bytes: Uint8Array): string => {
     return btoa(s);
 };
 
-const deB64 = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const deB64 = (b64: string): Uint8Array<ArrayBuffer> => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 
 /** SHA-256 do segredo, em hexadecimal minúsculo (64 caracteres). */
 export const hashToken = async (segredo: string): Promise<string> => {
