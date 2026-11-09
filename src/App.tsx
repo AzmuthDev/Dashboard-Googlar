@@ -14,11 +14,13 @@ import { AuditoriaLSAPage } from './components/AuditoriaLSAPage'
 import { SemanticAudit, type AuditNavParams } from './components/SemanticAudit'
 import { KeywordPlanner } from './components/KeywordPlanner'
 import { UpperScript } from './components/UpperScript'
+import { ConectarClaude } from './components/ConectarClaude'
 import ErrorBoundary from './components/ErrorBoundary'
 import { AnimatedBackground, LoginForm } from './components/ui/gaming-login'
 import { useCampaignTerms, useCompanies } from './hooks/useCampaignData'
 import { useAuth } from './contexts/AuthContext'
 import { contarStatus } from './utils/dashboardMetrics'
+import { lerRetornoGoogle, type RetornoGoogle } from './utils/conexaoClaude'
 import type { CampaignTerm } from './types'
 
 const FONT = "Inter, ui-sans-serif, system-ui, sans-serif"
@@ -106,6 +108,20 @@ function App() {
     const [mobileNavOpen, setMobileNavOpen] = useState(false)
     const [commandOpen, setCommandOpen] = useState(false)
 
+    // Volta do Google / ?view=: lida uma vez e a query some da barra de endereço na hora.
+    const [retorno, setRetorno] = useState<RetornoGoogle | null>(() => {
+        const r = lerRetornoGoogle(window.location.search)
+        return r.view || r.googleAds ? r : null
+    })
+    useEffect(() => {
+        const url = new URL(window.location.href)
+        const chaves = ['view', 'google_ads', 'motivo', 'confirmacao']
+        if (!chaves.some(k => url.searchParams.has(k))) return
+        chaves.forEach(k => url.searchParams.delete(k))
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+    }, [])
+    const retornoUsado = useCallback(() => setRetorno(null), [])
+
     // Cada página abre do topo (a área de conteúdo é um único container com rolagem)
     const mainRef = useRef<HTMLElement>(null)
     useEffect(() => { mainRef.current?.scrollTo({ top: 0 }) }, [currentView])
@@ -136,6 +152,8 @@ function App() {
             setActiveCompanyId(saved)
             setCurrentView('dashboard')
         }
+        if (isAuthenticated && retorno?.view) setCurrentView(retorno.view)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated])
 
     // A tela de Empresas avisa quando cria/edita uma empresa
@@ -276,6 +294,7 @@ function App() {
                                         <CompanyManager currentUser={profile} onAccessCompany={handleAccessCompany} onSelectCompany={selectCompany} />
                                     )}
                                     {currentView === 'laboratorio-ab' && <LabABPage data={campaignTerms || []} isLoading={isTermsLoading} />}
+                                    {currentView === 'conectar-claude' && <ConectarClaude retorno={retorno} onRetornoUsado={retornoUsado} />}
                                     {currentView === 'auditoria-lsa' && <AuditoriaLSAPage activeCompanyId={activeCompanyId} />}
                                 </ErrorBoundary>
                             </div>

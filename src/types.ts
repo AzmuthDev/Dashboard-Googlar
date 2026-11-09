@@ -28,6 +28,9 @@ export interface Company {
     owner_id?: string
     created_at?: string
     tableName?: string
+    /** ID da conta do Google Ads (10 dígitos). Só o admin edita. */
+    googleAdsCustomerId?: string | null
+    googleAdsLoginCustomerId?: string | null
 }
 
 export type UserRole = 'admin' | 'standard';

@@ -7,6 +7,20 @@ const BATCH_SIZE = 500
  * Operações de EMPRESA (Companies)
  */
 
+/** Colunas snake_case do Google Ads <-> campos camelCase da Company. */
+function daLinhaEmpresa(row: Record<string, unknown>): Company {
+    const { google_ads_customer_id, google_ads_login_customer_id, ...resto } = row
+    return { ...resto, googleAdsCustomerId: google_ads_customer_id ?? null, googleAdsLoginCustomerId: google_ads_login_customer_id ?? null } as Company
+}
+
+function paraLinhaEmpresa(c: Partial<Company>): Record<string, unknown> {
+    const { googleAdsCustomerId, googleAdsLoginCustomerId, ...resto } = c
+    const linha: Record<string, unknown> = { ...resto }
+    if (googleAdsCustomerId !== undefined) linha.google_ads_customer_id = googleAdsCustomerId
+    if (googleAdsLoginCustomerId !== undefined) linha.google_ads_login_customer_id = googleAdsLoginCustomerId
+    return linha
+}
+
 export async function fetchCompanies(): Promise<Company[]> {
     try {
         const { data, error } = await supabase
@@ -19,7 +33,7 @@ export async function fetchCompanies(): Promise<Company[]> {
             return []
         }
 
-        return (data || []) as Company[]
+        return (data || []).map(daLinhaEmpresa)
     } catch (err) {
         console.error('Exceção ao buscar empresas:', err)
         return []
@@ -45,7 +59,7 @@ export async function createCompany(companyData: Partial<Company>): Promise<{ da
         const { data: { session } } = await supabase.auth.getSession()
         
         const payload = {
-            ...companyData,
+            ...paraLinhaEmpresa(companyData),
             owner_id: session?.user?.id || null // Permite criação mesmo sem sessão (modo bypass)
         }
 
@@ -55,7 +69,7 @@ export async function createCompany(companyData: Partial<Company>): Promise<{ da
             .select()
             .single()
 
-        return { data, error }
+        return { data: data ? daLinhaEmpresa(data) : null, error }
     } catch (err: any) {
         return { data: null, error: err.message }
     }
@@ -78,7 +92,7 @@ export async function updateCompany(id: string, updates: Partial<Company>): Prom
     try {
         const { error } = await supabase
             .from('companies')
-            .update(updates)
+            .update(paraLinhaEmpresa(updates))
             .eq('id', id)
 
         return { error }

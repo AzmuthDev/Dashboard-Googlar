@@ -1,5 +1,5 @@
 import {
-    LayoutDashboard, Building2, ListChecks, Wand2, ScrollText, Mic, Users, type LucideIcon,
+    LayoutDashboard, Building2, ListChecks, Wand2, ScrollText, Mic, Users, Bot, type LucideIcon,
 } from 'lucide-react';
 
 export type AppView =
@@ -11,7 +11,8 @@ export type AppView =
     | 'semantic-audit'
     | 'laboratorio-ab'
     | 'keyword-planner'
-    | 'auditoria-lsa';
+    | 'auditoria-lsa'
+    | 'conectar-claude';
 
 export interface NavItem {
     id: AppView;
@@ -52,6 +53,12 @@ export function getNavSections(isAdmin: boolean | undefined): NavSection[] {
             ],
         },
         {
+            label: 'Conta',
+            items: [
+                { id: 'conectar-claude', name: 'Conectar ao Claude', icon: Bot, keywords: 'claude ia conector google ads mcp' },
+            ],
+        },
+        {
             label: 'Admin',
             items: [
                 { id: 'users', name: isAdmin ? 'Gerenciar Acessos' : 'Meu Perfil', icon: Users, keywords: 'usuarios acessos perfil' },
@@ -70,4 +77,5 @@ export const VIEW_TITLES: Record<AppView, string> = {
     'auditoria-lsa': 'Áudios LSA',
     users: 'Acessos',
     'laboratorio-ab': 'Laboratório A/B',
+    'conectar-claude': 'Conectar ao Claude',
 };

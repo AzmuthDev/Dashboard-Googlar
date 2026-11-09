@@ -6,6 +6,7 @@ import { motion } from 'framer-motion'
 import type { Company } from '../types'
 import { CompanyCards } from './ui/company-list-cards'
 import type { CompanyData } from './ui/company-list-cards'
+import { limparIdConta } from '../utils/conexaoClaude'
 import { LinkDataModal } from './ui/link-data-modal'
 import { 
     fetchCompanies, 
@@ -40,6 +41,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
     const [newCompanySheetsUrl, setNewCompanySheetsUrl] = useState('')
     const [newCompanyLogo, setNewCompanyLogo] = useState<string | undefined>()
     const [newCompanyCover, setNewCompanyCover] = useState<string | undefined>()
+    const [newAdsCustomerId, setNewAdsCustomerId] = useState('')
+    const [newAdsLoginId, setNewAdsLoginId] = useState('')
     const [activeCompanyEdits, setActiveCompanyEdits] = useState<string | null>(null)
     const [userSearchQuery, setUserSearchQuery] = useState('')
     const [activeCompanyLink, setActiveCompanyLink] = useState<string | null>(null)
@@ -70,6 +73,16 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
             return
         }
 
+        // Contas do Google Ads: só o admin altera; aceita colar com traços.
+        let adsPatch: Partial<Company> = {}
+        if (isAdmin) {
+            const cliente = newAdsCustomerId.trim() ? limparIdConta(newAdsCustomerId) : null
+            const mcc = newAdsLoginId.trim() ? limparIdConta(newAdsLoginId) : null
+            if (newAdsCustomerId.trim() && !cliente) { message.error("O ID da conta Google Ads deve ter 10 dígitos."); return }
+            if (newAdsLoginId.trim() && !mcc) { message.error("O ID do MCC deve ter 10 dígitos."); return }
+            adsPatch = { googleAdsCustomerId: cliente, googleAdsLoginCustomerId: mcc }
+        }
+
         setIsProvisioning(true)
         try {
             if (isEditingCompany && editingCompanyId) {
@@ -78,7 +91,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                     name: newCompanyName.trim(),
                     sheetsUrl: newCompanySheetsUrl.trim() || undefined,
                     logoUrl: newCompanyLogo,
-                    coverUrl: newCompanyCover
+                    coverUrl: newCompanyCover,
+                    ...adsPatch
                 })
 
                 if (error) throw new Error(error.message || error)
@@ -99,7 +113,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                     coverUrl: newCompanyCover,
                     users: [],
                     isActive: true,
-                    tableName: tableName
+                    tableName: tableName,
+                    ...adsPatch
                 })
 
                 if (error) throw new Error(error.message || error)
@@ -128,6 +143,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
             setNewCompanySheetsUrl('')
             setNewCompanyLogo(undefined)
             setNewCompanyCover(undefined)
+            setNewAdsCustomerId('')
+            setNewAdsLoginId('')
             setIsEditingCompany(false)
             setEditingCompanyId(null)
             setIsAddModalVisible(false)
@@ -145,6 +162,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
         setNewCompanySheetsUrl('')
         setNewCompanyLogo(undefined)
         setNewCompanyCover(undefined)
+        setNewAdsCustomerId('')
+        setNewAdsLoginId('')
         setIsAddModalVisible(true)
     }
 
@@ -157,6 +176,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
             setNewCompanySheetsUrl(companyToEdit.sheetsUrl || '')
             setNewCompanyLogo(companyToEdit.logoUrl)
             setNewCompanyCover(companyToEdit.coverUrl)
+            setNewAdsCustomerId(companyToEdit.googleAdsCustomerId || '')
+            setNewAdsLoginId(companyToEdit.googleAdsLoginCustomerId || '')
             setIsAddModalVisible(true)
         }
     }
@@ -316,6 +337,8 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                     setNewCompanySheetsUrl('');
                     setNewCompanyLogo(undefined);
                     setNewCompanyCover(undefined);
+                    setNewAdsCustomerId('');
+                    setNewAdsLoginId('');
                 }}
                 okText={isEditingCompany ? "Salvar Alterações" : "Criar Empresa"}
                 cancelText="Cancelar"
@@ -363,6 +386,35 @@ export function CompanyManager({ currentUser, onAccessCompany, onSelectCompany }
                             A planilha deve estar com acesso &quot;Qualquer pessoa com o link&quot; ou compartilhada.
                         </p>
                     </div>
+                    {isAdmin && (
+                        <>
+                            <div>
+                                <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">ID da conta Google Ads (Opcional)</label>
+                                <Input
+                                    placeholder="123-456-7890"
+                                    value={newAdsCustomerId}
+                                    onChange={(e) => setNewAdsCustomerId(e.target.value)}
+                                    onBlur={() => { const l = limparIdConta(newAdsCustomerId); if (l) setNewAdsCustomerId(l) }}
+                                    maxLength={14}
+                                    className="font-mono text-[12px]"
+                                />
+                            </div>
+                            <div>
+                                <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">MCC (Opcional)</label>
+                                <Input
+                                    placeholder="123-456-7890"
+                                    value={newAdsLoginId}
+                                    onChange={(e) => setNewAdsLoginId(e.target.value)}
+                                    onBlur={() => { const l = limparIdConta(newAdsLoginId); if (l) setNewAdsLoginId(l) }}
+                                    maxLength={14}
+                                    className="font-mono text-[12px]"
+                                />
+                                <p className="text-zinc-500 dark:text-slate-400 block mt-2 text-[10px] font-medium leading-tight">
+                                    Conta de administrador (MCC) que acessa esta conta. Pode colar com traços.
+                                </p>
+                            </div>
+                        </>
+                    )}
                     {/* Logo upload — using native input to avoid Ant Design dark mode CSS conflicts */}
                     <div>
                         <label className="block mb-2 text-[10px] font-black uppercase tracking-widest text-zinc-700 dark:text-slate-300">Logo da Empresa (Opcional)</label>
