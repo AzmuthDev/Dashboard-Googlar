@@ -19,6 +19,13 @@ test('segmentar vira adGroupCriteria ENABLED exata', () => {
     ]);
 });
 
+test('customerId com traços ou prefixo customers/ é normalizado', () => {
+    for (const id of ['123-456-7890', 'customers/1234567890', 'customers/123-456-7890']) {
+        const [m] = montarMutacoes(id, [item('x', { campanhaId: '1', grupoId: '10' })], { tipo: 'segmentar' });
+        assert.equal((m.operations[0] as { create: { adGroup: string } }).create.adGroup, 'customers/1234567890/adGroups/10');
+    }
+});
+
 test('teste A/B vira PAUSED', () => {
     const [m] = montarMutacoes('123', [item('x', { campanhaId: '1', grupoId: '10' })], { tipo: 'teste_ab' });
     assert.deepEqual(m.operations, [

@@ -1,23 +1,21 @@
 // Módulo puro, compartilhado entre Edge Functions (Deno) e o front. Sem imports externos.
 //
-// Documentação oficial consultada em 2026-11-09:
-//  - Release notes: https://developers.google.com/google-ads/api/docs/release-notes
-//    Última major estável: v26 (2026-10-14); v26.1 (2026-10-28) é minor da mesma versão,
-//    então a URL REST usa `v26`.
-//  - Shared sets: https://developers.google.com/google-ads/api/docs/targeting/shared-sets
-//  - Customer negative criteria: https://developers.google.com/google-ads/api/samples/add-customer-negative-criteria
+// Procedência (consulta em 2026-11-09):
+//  - Versão: página de release notes buscada diretamente (WebFetch, primeiros 100 mil caracteres):
+//    https://developers.google.com/google-ads/api/docs/release-notes -> última major v26 (2026-10-14);
+//    v26.1 (2026-10-28) é minor da mesma versão, então a URL REST usa `v26`.
+//  - NÍVEL CONTA NÃO VERIFICADO na página oficial: a URL tentada de negativas de conta retornou 404 e o
+//    que segue vem de resumos secundários de busca (páginas shared-sets / add-customer-negative-criteria
+//    do Google e fóruns), não de leitura direta. Confirmar no teste ponta a ponta em conta de teste do Google Ads.
 //
-// Nível `conta` (negativas de conta): o conjunto compartilhado do tipo
-// ACCOUNT_LEVEL_NEGATIVE_KEYWORDS (no máx. 1 por conta) precisa existir e estar vinculado à conta
-// por um CustomerNegativeCriterion (`customerNegativeCriteria:mutate`, create com
-// `negativeKeywordList.sharedSet`). Contrato deste módulo: QUEM CHAMA acha/cria esse shared set e o
-// vincula; aqui a negativa é adicionada ao shared set cujo id vem em `alvo.listaId`, no formato
-// idêntico ao nível `lista`:
+// Hipótese para o nível `conta`: um conjunto compartilhado do tipo ACCOUNT_LEVEL_NEGATIVE_KEYWORDS
+// (aparentemente no máx. 1 por conta) vinculado à conta por um CustomerNegativeCriterion. Contrato deste
+// módulo: QUEM CHAMA acha/cria esse shared set e o vincula; aqui a negativa é adicionada ao shared set
+// cujo id vem em `alvo.listaId`, no mesmo formato do nível `lista`:
 //   POST /vN/customers/{C}/sharedCriteria:mutate
 //   { operations: [{ create: { sharedSet: 'customers/C/sharedSets/S', keyword: { text, matchType } } }],
 //     partialFailure: true }
-// O serviço `customerNegativeCriteria` consta em `Mutacao.servico` só para o vínculo feito pelo chamador.
-// Nota: a doc de limites diverge entre fontes; confirmar no uso real.
+// Limites divergem entre fontes; confirmar no uso real.
 import { matchDe } from './destinos.ts';
 import type { Alvo, ItemResolvido } from './destinos.ts';
 
@@ -35,7 +33,7 @@ export interface Mutacao {
 export interface ResultadoItem { indice: number; ok: boolean; resourceName?: string; erro?: string }
 
 export function montarMutacoes(customerId: string, itens: ItemResolvido[], alvo: Alvo): Mutacao[] {
-    const c = `customers/${customerId}`;
+    const c = `customers/${customerId.replace(/^customers\//, '').replace(/-/g, '')}`;
     const operations: unknown[] = [];
     const indices: number[] = [];
     let servico: Mutacao['servico'];
