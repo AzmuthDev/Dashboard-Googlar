@@ -68,7 +68,11 @@ export function montarMutacoes(customerId: string, itens: ItemResolvido[], alvo:
 
 interface ErroApi { message?: string; location?: { fieldPathElements?: { index?: number }[] } }
 
-export function lerResultado(m: Mutacao, resposta: unknown): ResultadoItem[] {
+/**
+ * `validateOnly`: o Google não devolve `results` na validação, então uma operação sem erro indexado é ok;
+ * um erro sem nenhuma localização indexada continua marcando todas como falha.
+ */
+export function lerResultado(m: Mutacao, resposta: unknown, opcoes: { validateOnly?: boolean } = {}): ResultadoItem[] {
     const r = (resposta ?? {}) as {
         results?: { resourceName?: string }[];
         partialFailureError?: { message?: string; details?: { errors?: ErroApi[] }[] };
@@ -88,7 +92,8 @@ export function lerResultado(m: Mutacao, resposta: unknown): ResultadoItem[] {
     return m.indices.map((indice, pos) => {
         const resourceName = r.results?.[pos]?.resourceName;
         if (erros.has(pos)) return { indice, ok: false, erro: erros.get(pos) };
-        if (falha && !resourceName) return { indice, ok: false, erro: geral };
+        const semLocalizacao = erros.size === 0;
+        if (falha && !resourceName && (!opcoes.validateOnly || semLocalizacao)) return { indice, ok: false, erro: geral };
         return resourceName ? { indice, ok: true, resourceName } : { indice, ok: true };
     });
 }

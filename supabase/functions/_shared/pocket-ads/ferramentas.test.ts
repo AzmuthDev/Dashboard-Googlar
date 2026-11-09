@@ -361,6 +361,25 @@ test('previa: falha parcial na validação vira erro do item', async () => {
     assert.deepEqual(r.resumo, { ok: 0, ja_existe: 0, erro: 1 });
 });
 
+test('previa: com 2 termos, só o que falha na validação vira erro', async () => {
+    const m = montar({
+        ads: {
+            mutar: ({ validateOnly }) => validateOnly ? {
+                partialFailureError: { message: 'Multiple errors', details: [{ errors: [{ message: 'Política violada', location: { fieldPathElements: [{ index: 1 }] } }] }] },
+            } : undefined,
+        },
+    });
+    const r = await m.run('subir_negativas', { cliente: 'Magic Hands', ids: [u(3), u(12)], nivel: 'grupo', modo: 'previa' });
+    assert.equal(m.mutacoes.length, 1);
+    assert.equal(m.mutacoes[0].m.operations.length, 2);
+    const por = Object.fromEntries(r.itens.map((i: any) => [i.termo, i]));
+    assert.equal(por['luva barata'].situacao, 'ok');
+    assert.equal(por['luva barata'].erro, undefined);
+    assert.equal(por['luva flag'].situacao, 'erro');
+    assert.match(por['luva flag'].erro, /Política violada/);
+    assert.deepEqual(r.resumo, { ok: 1, ja_existe: 0, erro: 1 });
+});
+
 test('previa: erro da API no lote inteiro marca os itens do lote; ErroConexaoGoogle propaga', async () => {
     const m = montar({ ads: { mutar: () => { throw new ErroUsuario('Google Ads: sem permissão'); } } });
     const r = await m.run('subir_segmentadas', { cliente: 'Magic Hands', ids: [u(1)], modo: 'previa' });

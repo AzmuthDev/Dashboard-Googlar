@@ -353,7 +353,8 @@ export function criarFerramentas(dep: DepFerramentas): Ferramenta[] {
                 for (const lote of emLotesMutacao(m)) {
                     let res: ResultadoItem[];
                     try {
-                        res = lerResultado(lote, await ads.mutar(conta, lote, modo === 'previa'));
+                        const validateOnly = modo === 'previa';
+                        res = lerResultado(lote, await ads.mutar(conta, lote, validateOnly), { validateOnly });
                     } catch (e) {
                         if (e instanceof ErroConexaoGoogle || !(e instanceof ErroUsuario)) throw e;
                         res = lote.indices.map((indice) => ({ indice, ok: false, erro: e.message }));

@@ -123,6 +123,33 @@ test('lerResultado: erro sem localização marca operações sem resourceName', 
     assert.equal(r[1].erro, 'falhou geral');
 });
 
+test('lerResultado validateOnly: só a operação com erro indexado falha', () => {
+    const m = { servico: 'adGroupCriteria' as const, operations: [{}, {}], indices: [3, 7] };
+    const resposta = {
+        partialFailureError: {
+            message: 'Multiple errors',
+            details: [{ errors: [{ message: 'Politica violada', location: { fieldPathElements: [{ index: 0 }] } }] }],
+        },
+    };
+    assert.deepEqual(lerResultado(m, resposta, { validateOnly: true }), [
+        { indice: 3, ok: false, erro: 'Politica violada' },
+        { indice: 7, ok: true },
+    ]);
+    // sem a opção (gravar), mantém o comportamento: sem resourceName com falha = erro geral
+    assert.deepEqual(lerResultado(m, resposta).map((x) => x.ok), [false, false]);
+});
+
+test('lerResultado validateOnly: erro sem localização marca todas', () => {
+    const m = { servico: 'adGroupCriteria' as const, operations: [{}, {}], indices: [0, 1] };
+    const r = lerResultado(m, { partialFailureError: { message: 'falhou geral' } }, { validateOnly: true });
+    assert.deepEqual(r, [{ indice: 0, ok: false, erro: 'falhou geral' }, { indice: 1, ok: false, erro: 'falhou geral' }]);
+});
+
+test('lerResultado validateOnly: resposta vazia = tudo ok', () => {
+    const m = { servico: 'adGroupCriteria' as const, operations: [{}, {}], indices: [0, 1] };
+    assert.deepEqual(lerResultado(m, {}, { validateOnly: true }), [{ indice: 0, ok: true }, { indice: 1, ok: true }]);
+});
+
 test('matchDe', () => {
     assert.equal(matchDe('frase'), 'PHRASE');
 });
