@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "node --test \"n8n/code/*.test.cjs\" \"n8n/scripts/*.test.mjs\" \"src/utils/*.test.ts\" \"supabase/functions/_shared/pocket-ads/*.test.ts\""
+    "test": "node --test \"n8n/code/*.test.cjs\" \"n8n/scripts/*.test.mjs\" \"scripts/*.test.mjs\" \"src/utils/*.test.ts\" \"supabase/functions/_shared/pocket-ads/*.test.ts\"",
+    "skill:zip": "node scripts/zip-skill.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
@@ -63,6 +64,7 @@
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "fflate": "^0.8.3",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.2.0",
