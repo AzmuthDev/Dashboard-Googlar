@@ -1,6 +1,9 @@
 import type { CampaignTerm } from '../types';
 
-export type TipoExport = 'segmentar' | 'negativar' | 'teste_ab';
+import { acaoDoTermo, semDestino, type TipoAcao } from '../../supabase/functions/_shared/pocket-ads/termos.ts';
+
+export { acaoDoTermo };
+export type TipoExport = TipoAcao;
 export type MatchNegativa = 'exact' | 'phrase' | 'broad';
 
 export interface ResultadoExportacao {
@@ -22,21 +25,7 @@ const CRITERIO_NEGATIVA: Record<MatchNegativa, string> = {
     broad: 'Negative Broad',
 };
 
-/** Ação do cliente para o termo; `manter` (legado) vale `segmentar`; sem `acao`, usa as flags. */
-export function acaoDoTermo(
-    t: Pick<CampaignTerm, 'acao' | 'segmentar' | 'negativar' | 'teste_ab'>
-): TipoExport | null {
-    if (t.acao === 'manter') return 'segmentar';
-    if (t.acao === 'segmentar' || t.acao === 'negativar' || t.acao === 'teste_ab') return t.acao;
-    if (t.acao) return null;
-    if (t.negativar === true) return 'negativar';
-    if (t.teste_ab === true) return 'teste_ab';
-    if (t.segmentar === true) return 'segmentar';
-    return null;
-}
-
 const limpar = (valor: unknown): string => String(valor ?? '').replace(/[\t\r\n]+/g, ' ').trim();
-const semDestino = (valor: string): boolean => valor === '' || /^(n\/a|-)$/i.test(valor);
 
 export function montarExportacao(
     termos: CampaignTerm[],
