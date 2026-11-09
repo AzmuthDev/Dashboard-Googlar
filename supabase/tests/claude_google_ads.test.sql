@@ -67,8 +67,19 @@ begin
   assert not exists (
     select 1 from pg_policies
      where schemaname='public'
-       and tablename in ('google_ads_conexoes','google_ads_oauth_estados','envios_google_ads')),
-    'google_ads_* e envios_google_ads nao devem ter politica';
+       and tablename in ('google_ads_oauth_estados','envios_google_ads')),
+    'google_ads_oauth_estados e envios_google_ads nao devem ter politica';
+
+  -- google_ads_conexoes: exatamente 1 politica, select do dono, para authenticated
+  assert (select count(*) from pg_policies where schemaname='public' and tablename='google_ads_conexoes') = 1,
+    'google_ads_conexoes deve ter exatamente 1 politica';
+  select * into p from pg_policies where schemaname='public' and tablename='google_ads_conexoes';
+  assert p.cmd = 'SELECT', 'politica de google_ads_conexoes deve ser select, e e ' || p.cmd;
+  assert p.roles = array['authenticated']::name[], 'politica de google_ads_conexoes so para authenticated';
+  assert p.qual like '%profile_id%auth.uid()%', 'using de google_ads_conexoes: ' || coalesce(p.qual,'null');
+  assert not exists (select 1 from pg_policies where schemaname='public' and tablename='google_ads_conexoes'
+                       and cmd in ('INSERT','UPDATE','DELETE','ALL')),
+    'google_ads_conexoes nao deve ter politica de escrita';
 end $$;
 
 -- (e) privilegios
@@ -86,6 +97,49 @@ begin
   assert has_table_privilege('authenticated', 'public.minha_conexao_google_ads', 'select'), 'authenticated le a view';
   assert not has_table_privilege('anon', 'public.minha_conexao_google_ads', 'select'), 'anon nao le a view';
 end $$;
+
+-- (f) comportamento: a view devolve so a linha do dono e os segredos continuam inacessiveis
+do $$
+declare pid uuid; outro uuid;
+begin
+  select id into pid from public.profiles order by id limit 1;
+  outro := gen_random_uuid();
+  insert into public.google_ads_conexoes (profile_id, modo, google_email, refresh_token_cifrado)
+    values (pid, 'pocket', 'teste@example.com', 'segredo-cifrado');
+  perform set_config('test.pid', pid::text, true);
+  perform set_config('test.outro', outro::text, true);
+end $$;
+
+set local role authenticated;
+select set_config('request.jwt.claims',
+  json_build_object('sub', current_setting('test.pid'), 'role', 'authenticated')::text, true);
+
+do $$
+begin
+  assert (select count(*) from public.minha_conexao_google_ads) = 1, 'dono deve ver 1 linha na view';
+  assert (select modo from public.minha_conexao_google_ads) = 'pocket', 'modo na view';
+  begin
+    perform refresh_token_cifrado from public.google_ads_conexoes;
+    assert false, 'refresh_token_cifrado deveria ser inacessivel';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    insert into public.google_ads_conexoes (profile_id, modo, refresh_token_cifrado)
+      values (current_setting('test.pid')::uuid, 'pocket', 'x');
+    assert false, 'authenticated nao deve inserir em google_ads_conexoes';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
+select set_config('request.jwt.claims',
+  json_build_object('sub', current_setting('test.outro'), 'role', 'authenticated')::text, true);
+
+do $$
+begin
+  assert (select count(*) from public.minha_conexao_google_ads) = 0, 'outro usuario deve ver 0 linhas na view';
+end $$;
+
+reset role;
 
 rollback;
 select 'OK - todos os testes passaram' as resultado;

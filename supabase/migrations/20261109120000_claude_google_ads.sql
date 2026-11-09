@@ -70,6 +70,13 @@ create policy "Dono gerencia suas conexoes" on public.claude_conexoes
   using (profile_id = auth.uid())
   with check (profile_id = auth.uid());
 
+-- O usuário só lê a própria linha de google_ads_conexoes (e só as colunas sem segredo, ver grant abaixo).
+-- A view security_invoker precisa disso; escrita continua só pelo service_role.
+drop policy if exists "Dono le sua conexao google ads" on public.google_ads_conexoes;
+create policy "Dono le sua conexao google ads" on public.google_ads_conexoes
+  for select to authenticated
+  using (profile_id = auth.uid());
+
 -- Visão sem segredos para o front ler a própria conexão.
 create or replace view public.minha_conexao_google_ads
   with (security_invoker = true) as
@@ -84,4 +91,5 @@ revoke all on public.envios_google_ads from anon, authenticated;
 revoke all on public.minha_conexao_google_ads from anon;
 
 grant select, insert, update on public.claude_conexoes to authenticated;
+grant select (profile_id, modo, google_email, criado_em, revogado_em) on public.google_ads_conexoes to authenticated;
 grant select on public.minha_conexao_google_ads to authenticated;
