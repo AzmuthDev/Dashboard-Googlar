@@ -42,8 +42,8 @@ projeto no Google Cloud, um cliente OAuth, um refresh token e, se acessa as cont
 
 > **Token de desenvolvedor.** O Google encerrou os tokens de desenvolvedor em **09/09/2026**: o acesso
 > à API agora é do **projeto do Google Cloud** (o mesmo do cliente OAuth). Quem já tem um token continua
-> colando o seu (o Google aceita e ignora). O Pocket ainda pede esse campo; se você não tem token,
-> use o botão Google (parte A).
+> colando o seu (o Google aceita e ignora). O Pocket **não exige** o token: o campo é opcional e pode
+> ficar vazio.
 
 ### B1. Projeto e Google Ads API
 1. Entre em https://console.cloud.google.com e crie um projeto (ou escolha um).
@@ -86,8 +86,8 @@ próprio, clique em **Advanced** › **Go to <nome do projeto> (unsafe)**).
    tokens** e copie o **Refresh token**.
 
 ### B5. Colar no Pocket
-1. No Pocket: **Conta › Conectar ao Claude › Conectar o Google Ads › Modo avançado**.
-2. Preencha **Token de desenvolvedor**, **Client ID**, **Client secret**, **Refresh token** e, se você
+1. No Pocket: **Conectar ao Claude › Modo avançado**.
+2. Preencha **Client ID**, **Client secret**, **Refresh token** (o **Token de desenvolvedor** é opcional; pode deixar vazio) e, se você
    acessa as contas por um MCC, **ID do MCC (opcional)** (10 dígitos; pode colar com traços).
 3. Clique em **Conectar com meus tokens**. O Pocket testa na hora e mostra as **Contas acessíveis**.
    Só grava se o teste passar.
@@ -136,7 +136,7 @@ novo na hora, sem novo deploy.
 
 | Segredo | Valor |
 |---|---|
-| `GOOGLE_ADS_DEVELOPER_TOKEN` | O token de desenvolvedor do MCC do Pocket. O Google ignora o token desde 09/09/2026, mas o Pocket ainda exige um valor aqui. |
+| `GOOGLE_ADS_DEVELOPER_TOKEN` | Opcional: pode ficar sem definir. O Google ignora o token de desenvolvedor desde 09/09/2026 e o Pocket não o exige; se definido, é enviado junto das chamadas. |
 | `GOOGLE_OAUTH_CLIENT_ID` | Client ID do cliente OAuth da etapa C2. |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | Client secret do mesmo cliente. |
 | `POCKET_CRYPTO_KEY` | 32 bytes aleatórios em base64, gerados com: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |

@@ -162,7 +162,7 @@ async function proprio(profileId: string, req: Request): Promise<Response> {
     const c = corpo as Record<string, string | undefined>;
     const login = c.login_customer_id ? normalizarIdConta(c.login_customer_id) : undefined;
     const cred = {
-        developerToken: c.developer_token!.trim(),
+        ...(c.developer_token?.trim() ? { developerToken: c.developer_token.trim() } : {}),
         clientId: c.client_id!.trim(),
         clientSecret: c.client_secret!.trim(),
         refreshToken: c.refresh_token!.trim(),
@@ -181,7 +181,7 @@ async function proprio(profileId: string, req: Request): Promise<Response> {
         modo: 'proprio',
         google_email: null,
         refresh_token_cifrado: await cifrar(cred.refreshToken, chave),
-        developer_token_cifrado: await cifrar(cred.developerToken, chave),
+        developer_token_cifrado: cred.developerToken ? await cifrar(cred.developerToken, chave) : null,
         client_id: cred.clientId,
         client_secret_cifrado: await cifrar(cred.clientSecret, chave),
         login_customer_id: login ?? null,

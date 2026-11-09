@@ -8,7 +8,8 @@ import type { Mutacao } from './operacoes.ts';
 import { ErroUsuario } from './mcp.ts';
 
 export interface Credenciais {
-    developerToken: string;
+    /** Opcional: o Google encerrou o developer token em 09/09/2026 e o ignora. */
+    developerToken?: string;
     clientId: string;
     clientSecret: string;
     refreshToken: string;
@@ -84,8 +85,8 @@ export function criarClienteAds(cred: Credenciais, f: typeof fetch = fetch) {
     async function chamar(caminho: string, metodo: 'GET' | 'POST', corpo: unknown, customerId?: string): Promise<any> {
         const headers: Record<string, string> = {
             'Authorization': `Bearer ${await accessToken()}`,
-            'developer-token': cred.developerToken,
         };
+        if (cred.developerToken) headers['developer-token'] = cred.developerToken;
         if (loginId) headers['login-customer-id'] = loginId;
         const init: RequestInit = { method: metodo, headers };
         if (metodo === 'POST') {

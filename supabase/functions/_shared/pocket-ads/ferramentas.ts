@@ -24,7 +24,7 @@ import { decifrar } from './cifra.ts';
 export const MESA_VALIDA = /^mesa_[a-z0-9_]+$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const LIMITE = 500;
-const CAMINHO_CONEXAO = 'Pocket › Conectar ao Claude › Conectar Google Ads';
+const CAMINHO_CONEXAO = 'Pocket › Conectar ao Claude › Conectar com Google';
 const NOME_LISTA_CONTA = 'Negativas da conta (Pocket)';
 const PROVISORIA = 'a-criar';
 
@@ -95,18 +95,18 @@ export async function montarCredenciais(
     const refreshToken = await decifrar(con.refresh_token_cifrado, s.chave);
     let base: Credenciais;
     if (con.modo === 'proprio') {
-        if (!con.developer_token_cifrado || !con.client_id || !con.client_secret_cifrado) {
+        if (!con.client_id || !con.client_secret_cifrado) {
             throw new ErroUsuario(`Conexão própria do Google Ads incompleta; refaça em ${CAMINHO_CONEXAO}.`);
         }
         base = {
-            developerToken: await decifrar(con.developer_token_cifrado, s.chave),
+            ...(con.developer_token_cifrado ? { developerToken: await decifrar(con.developer_token_cifrado, s.chave) } : {}),
             clientId: con.client_id,
             clientSecret: await decifrar(con.client_secret_cifrado, s.chave),
             refreshToken,
         };
     } else {
-        if (!s.developerToken || !s.clientId || !s.clientSecret) throw new Error('Segredos do Google Ads do Pocket ausentes.');
-        base = { developerToken: s.developerToken, clientId: s.clientId, clientSecret: s.clientSecret, refreshToken };
+        if (!s.clientId || !s.clientSecret) throw new Error('Segredos do Google Ads do Pocket ausentes.');
+        base = { ...(s.developerToken ? { developerToken: s.developerToken } : {}), clientId: s.clientId, clientSecret: s.clientSecret, refreshToken };
     }
     const login = con.login_customer_id || cliente?.loginCustomerId;
     return login ? { ...base, loginCustomerId: login } : base;

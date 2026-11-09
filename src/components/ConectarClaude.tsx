@@ -217,8 +217,8 @@ export function ConectarClaude({ retorno, onRetornoUsado }: Props) {
 
     const salvarAvancado = async () => {
         const { developer_token, client_id, client_secret, refresh_token, login_customer_id } = avancado
-        if (!developer_token.trim() || !client_id.trim() || !client_secret.trim() || !refresh_token.trim()) {
-            toast.error('Preencha token de desenvolvedor, client ID, client secret e refresh token.')
+        if (!client_id.trim() || !client_secret.trim() || !refresh_token.trim()) {
+            toast.error('Preencha client ID, client secret e refresh token.')
             return
         }
         let mcc: string | null = null
@@ -229,7 +229,8 @@ export function ConectarClaude({ retorno, onRetornoUsado }: Props) {
         setOcupado(true)
         try {
             const r = await chamarGoogleAds<{ ok: boolean; contas: string[] }>('proprio', {
-                developer_token: developer_token.trim(), client_id: client_id.trim(),
+                ...(developer_token.trim() ? { developer_token: developer_token.trim() } : {}),
+                client_id: client_id.trim(),
                 client_secret: client_secret.trim(), refresh_token: refresh_token.trim(),
                 ...(mcc ? { login_customer_id: mcc } : {}),
             })
@@ -284,10 +285,10 @@ export function ConectarClaude({ retorno, onRetornoUsado }: Props) {
                 <ol className="mt-5 space-y-2 text-sm text-muted-foreground">
                     <li><span className="font-medium text-foreground">1.</span> Gere o link acima.</li>
                     <li>
-                        <span className="font-medium text-foreground">2.</span> No Claude: Configurações › Conectores › Adicionar conector personalizado › cole o link.
+                        <span className="font-medium text-foreground">2.</span> No Claude: Customize › Connectors › Add custom connector › cole o link.
                         {' '}No Claude Code: <code className="rounded bg-surface-2 px-1.5 py-0.5 text-[12px] text-foreground">claude mcp add --transport http pocket &lt;link&gt;</code>
                     </li>
-                    <li><span className="font-medium text-foreground">3.</span> Baixe a skill abaixo e envie em Configurações › Skills.</li>
+                    <li><span className="font-medium text-foreground">3.</span> Baixe a skill abaixo e envie em Customize › Skills.</li>
                     <li><span className="font-medium text-foreground">4.</span> Peça ao Claude, por exemplo: &ldquo;Quais termos da Endomarcas estão prontos para subir?&rdquo;</li>
                 </ol>
 
@@ -341,7 +342,7 @@ export function ConectarClaude({ retorno, onRetornoUsado }: Props) {
                     <summary className="cursor-pointer text-sm font-medium text-foreground">Modo avançado</summary>
                     <p className="mt-2 text-xs text-muted-foreground">Use seus próprios tokens do Google Ads (sem passar pela tela de login do Google).</p>
                     <div className="mt-3 grid gap-2.5">
-                        <Input.Password placeholder="Token de desenvolvedor" {...campo('developer_token')} />
+                        <Input.Password placeholder="Token de desenvolvedor (opcional — o Google não exige mais desde 09/09/2026)" {...campo('developer_token')} />
                         <Input placeholder="Client ID" {...campo('client_id')} />
                         <Input.Password placeholder="Client secret" {...campo('client_secret')} />
                         <Input.Password placeholder="Refresh token" {...campo('refresh_token')} />

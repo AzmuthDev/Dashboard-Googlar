@@ -31,6 +31,10 @@ test('validarDadosProprios', () => {
     assert.match(validarDadosProprios({ ...base, refresh_token: ' ' }) ?? '', /refresh_token/);
     assert.ok(validarDadosProprios(null));
     assert.ok(validarDadosProprios({ ...base, developer_token: 5 }));
+    const { developer_token: _omitido, ...semDev } = base;
+    assert.equal(validarDadosProprios(semDev), null);
+    assert.equal(validarDadosProprios({ ...semDev, developer_token: '' }), null);
+    assert.equal(validarDadosProprios({ ...semDev, developer_token: null }), null);
 });
 
 test('motivoDoRetorno', () => {

@@ -297,12 +297,12 @@ test('empresa sem google_ads_customer_id → pede ao admin', async () => {
     await assert.rejects(m.run('subir_segmentadas', { cliente: 'Endomarcas', ids: [u(1)], modo: 'previa' }), erroUsuario(/admin/));
 });
 
-test('sem credenciais → caminho "Pocket › Conectar ao Claude › Conectar Google Ads"', async () => {
+test('sem credenciais → caminho "Pocket › Conectar ao Claude › Conectar com Google"', async () => {
     const m = montar({ semCred: true });
     await assert.rejects(m.run('subir_segmentadas', { cliente: 'Magic Hands', ids: [u(1)], modo: 'previa' }),
-        erroUsuario(/Pocket › Conectar ao Claude › Conectar Google Ads/));
+        erroUsuario(/Pocket › Conectar ao Claude › Conectar com Google/));
     await assert.rejects(m.run('listar_listas_negativas', { cliente: 'Magic Hands' }),
-        erroUsuario(/Pocket › Conectar ao Claude › Conectar Google Ads/));
+        erroUsuario(/Pocket › Conectar ao Claude › Conectar com Google/));
 });
 
 test('credenciais pedidas com o cliente em mãos (para o login-customer-id)', async () => {
@@ -626,6 +626,25 @@ test('montarCredenciais modo pocket: segredos do Pocket + refresh decifrado; log
         { developerToken: 'DEV', clientId: 'CID', clientSecret: 'CS', chave: CHAVE });
     assert.equal(c2!.loginCustomerId, '9998887777');
     assert.equal(await montarCredenciais(null, EMPRESAS[0], { chave: CHAVE }), null);
+});
+
+test('montarCredenciais modo pocket sem developer token: ok, sem a chave', async () => {
+    const con = { modo: 'pocket' as const, refresh_token_cifrado: await cifrar('RT', CHAVE) };
+    const c = await montarCredenciais(con, EMPRESAS[0], { clientId: 'CID', clientSecret: 'CS', chave: CHAVE });
+    assert.deepEqual(c, { clientId: 'CID', clientSecret: 'CS', refreshToken: 'RT' });
+    await assert.rejects(montarCredenciais(con, EMPRESAS[0], { clientSecret: 'CS', chave: CHAVE }));
+});
+
+test('montarCredenciais modo proprio sem developer token (null): ok', async () => {
+    const con = {
+        modo: 'proprio' as const,
+        refresh_token_cifrado: await cifrar('RT', CHAVE),
+        developer_token_cifrado: null,
+        client_id: 'CIDU',
+        client_secret_cifrado: await cifrar('CSU', CHAVE),
+    };
+    const c = await montarCredenciais(con, EMPRESAS[0], { chave: CHAVE });
+    assert.deepEqual(c, { clientId: 'CIDU', clientSecret: 'CSU', refreshToken: 'RT' });
 });
 
 test('montarCredenciais modo proprio: tudo da linha; login próprio tem prioridade', async () => {

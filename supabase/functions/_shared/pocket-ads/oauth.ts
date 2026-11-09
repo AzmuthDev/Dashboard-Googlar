@@ -32,7 +32,6 @@ export const urlRetornoPocket = (appUrl: string, r: ResultadoConexao): string =>
 export const normalizarIdConta = (v: string): string => v.replace(/-/g, '').trim();
 
 const CAMPOS_PROPRIOS: Array<[string, string]> = [
-    ['developer_token', 'Developer token'],
     ['client_id', 'Client ID'],
     ['client_secret', 'Client secret'],
     ['refresh_token', 'Refresh token'],
@@ -46,6 +45,8 @@ export const validarDadosProprios = (d: unknown): string | null => {
         const v = o[chave];
         if (typeof v !== 'string' || !v.trim()) return `Falta o campo ${chave} (${rotulo}).`;
     }
+    const dev = o.developer_token;
+    if (dev !== undefined && dev !== null && typeof dev !== 'string') return 'O campo developer_token (Developer token) deve ser texto.';
     const login = o.login_customer_id;
     if (login !== undefined && login !== null && login !== '') {
         if (typeof login !== 'string' || !/^\d{10}$/.test(normalizarIdConta(login))) {

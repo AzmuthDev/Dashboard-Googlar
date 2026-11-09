@@ -49,6 +49,18 @@ test('token trocado uma vez para duas consultas; corpo form-encoded', async () =
     assert.equal(busca[0].headers['developer-token'], 'DEVTOK-secreto');
 });
 
+test('developer-token: ausente quando undefined/vazio, presente quando definido', async () => {
+    for (const dt of [undefined, '']) {
+        const m = falso((c) => (ehToken(c) ? undefined : json({ results: [] })));
+        await criarClienteAds({ ...cred, developerToken: dt }, m.f).pesquisar('1', 'q');
+        const busca = m.chamadas.find((c) => c.url.includes('googleAds:search'))!;
+        assert.equal('developer-token' in busca.headers, false);
+    }
+    const m = falso((c) => (ehToken(c) ? undefined : json({ results: [] })));
+    await criarClienteAds({ ...cred, developerToken: 'X' }, m.f).pesquisar('1', 'q');
+    assert.equal(m.chamadas.find((c) => c.url.includes('googleAds:search'))!.headers['developer-token'], 'X');
+});
+
 test('token expirado (margem de 60 s) é renovado', async () => {
     let agora = 1_000_000;
     const realNow = Date.now;
