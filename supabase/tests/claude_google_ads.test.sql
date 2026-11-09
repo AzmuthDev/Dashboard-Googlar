@@ -1,5 +1,5 @@
 -- Teste das tabelas de conexão do Claude e do Google Ads.
--- Rodar inteiro (SQL Editor ou execute_sql) DEPOIS de aplicar a migração 20261109120000_claude_google_ads.sql.
+-- Rodar inteiro (SQL Editor ou execute_sql) DEPOIS de aplicar as migrações 20261109120000_claude_google_ads.sql e 20261109130000_oauth_confirmacao.sql.
 -- Tudo ocorre em transação com ROLLBACK final.
 -- Qualquer falha de ASSERT aborta o script com a mensagem do teste.
 begin;
@@ -18,6 +18,9 @@ begin
     'coluna companies.google_ads_customer_id ausente';
   assert exists (select 1 from information_schema.columns where table_schema='public' and table_name='companies' and column_name='google_ads_login_customer_id'),
     'coluna companies.google_ads_login_customer_id ausente';
+  assert (select count(*) from information_schema.columns where table_schema='public' and table_name='google_ads_oauth_estados'
+            and column_name in ('refresh_token_cifrado','google_email','confirmacao_hash')) = 3,
+    'google_ads_oauth_estados deve ter refresh_token_cifrado, google_email e confirmacao_hash (migracao 20261109130000)';
   assert (select coalesce((reloptions @> array['security_invoker=true']), false) from pg_class where oid = 'public.minha_conexao_google_ads'::regclass),
     'view deve ser security_invoker';
 end $$;

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { motivoDoRetorno, processarRetorno, urlAutorizacao, urlRetornoPocket, validarDadosProprios } from './oauth.ts';
+import { motivoDoRetorno, processarRetorno, urlAutorizacao, urlRetornoPocket, validarConfirmacao, validarDadosProprios } from './oauth.ts';
+import { hashToken } from './cifra.ts';
 import type { DepsRetorno } from './oauth.ts';
 
 test('urlAutorizacao leva escopos, prompt=consent, offline e estado', () => {
@@ -39,16 +40,17 @@ test('motivoDoRetorno', () => {
 });
 
 const futuro = () => new Date(Date.now() + 60_000).toISOString();
-function deps(o: Partial<DepsRetorno> = {}): DepsRetorno & { apagados: string[]; gravados: unknown[] } {
+type Guardado = { estado: string; email: string | null; rt: string; hash: string };
+function deps(o: Partial<DepsRetorno> = {}): DepsRetorno & { apagados: string[]; guardados: Guardado[] } {
     const apagados: string[] = [];
-    const gravados: unknown[] = [];
+    const guardados: Guardado[] = [];
     return {
-        apagados, gravados,
+        apagados, guardados,
         buscarEstado: async () => ({ profile_id: 'p1', expira_em: futuro() }),
         apagarEstado: async (e) => { apagados.push(e); },
         trocarCodigo: async () => ({ refresh_token: 'rt', access_token: 'at' }),
         emailDe: async () => 'a@b.com',
-        gravarConexao: async (p, email, rt) => { gravados.push({ p, email, rt }); },
+        guardarConfirmacao: async (estado, email, rt, hash) => { guardados.push({ estado, email, rt, hash }); },
         ...o,
     };
 }
@@ -59,33 +61,57 @@ test('retorno: recusa e erro do Google', async () => {
     assert.deepEqual(await processarRetorno(q('error=x'), deps()), { ok: false, motivo: 'erro_google' });
 });
 
-test('retorno: estado ausente, desconhecido ou expirado', async () => {
+test('retorno: estado ausente, desconhecido, expirado ou já usado', async () => {
     assert.deepEqual(await processarRetorno(q('code=c'), deps()), { ok: false, motivo: 'expirou' });
     const d1 = deps({ buscarEstado: async () => null });
     assert.deepEqual(await processarRetorno(q('code=c&state=e'), d1), { ok: false, motivo: 'expirou' });
     const d2 = deps({ buscarEstado: async () => ({ profile_id: 'p', expira_em: new Date(Date.now() - 1000).toISOString() }) });
     assert.deepEqual(await processarRetorno(q('code=c&state=e'), d2), { ok: false, motivo: 'expirou' });
     assert.deepEqual(d2.apagados, ['e']);
+    const d3 = deps({ buscarEstado: async () => ({ profile_id: 'p', expira_em: futuro(), confirmacao_hash: 'h' }) });
+    assert.deepEqual(await processarRetorno(q('code=c&state=e'), d3), { ok: false, motivo: 'expirou' });
+    assert.equal(d3.guardados.length, 0);
 });
 
 test('retorno: sem refresh_token e sem code', async () => {
     const d = deps({ trocarCodigo: async () => ({ access_token: 'at' }) });
     assert.deepEqual(await processarRetorno(q('code=c&state=e'), d), { ok: false, motivo: 'sem_refresh' });
-    assert.equal(d.gravados.length, 0);
+    assert.equal(d.guardados.length, 0);
     assert.deepEqual(await processarRetorno(q('state=e'), deps()), { ok: false, motivo: 'erro_google' });
 });
 
-test('retorno: sucesso grava, apaga o estado; e-mail ausente não é fatal', async () => {
+test('retorno: sucesso guarda o hash (não o código) e pede confirmação; estado não é apagado', async () => {
     const d = deps();
-    assert.deepEqual(await processarRetorno(q('code=c&state=e'), d), { ok: true });
-    assert.deepEqual(d.gravados, [{ p: 'p1', email: 'a@b.com', rt: 'rt' }]);
-    assert.deepEqual(d.apagados, ['e']);
+    const r = await processarRetorno(q('code=c&state=e'), d);
+    assert.equal(r.ok, 'confirmar');
+    const codigo = (r as { confirmacao: string }).confirmacao;
+    assert.equal(d.guardados.length, 1);
+    assert.equal(d.guardados[0].hash, await hashToken(codigo));
+    assert.notEqual(d.guardados[0].hash, codigo);
+    assert.deepEqual({ ...d.guardados[0], hash: '' }, { estado: 'e', email: 'a@b.com', rt: 'rt', hash: '' });
+    assert.deepEqual(d.apagados, []);
+    assert.equal(urlRetornoPocket('https://app.com', r),
+        `https://app.com/?view=conectar-claude&google_ads=confirmar&confirmacao=${encodeURIComponent(codigo)}`);
     const d2 = deps({ emailDe: async () => { throw new Error('x'); } });
-    assert.deepEqual(await processarRetorno(q('code=c&state=e'), d2), { ok: true });
-    assert.deepEqual(d2.gravados, [{ p: 'p1', email: null, rt: 'rt' }]);
+    assert.equal((await processarRetorno(q('code=c&state=e'), d2)).ok, 'confirmar');
+    assert.equal(d2.guardados[0].email, null);
 });
 
-test('retorno: falha ao trocar o código ou gravar vira erro_interno', async () => {
+test('retorno: falha ao trocar o código ou guardar vira erro_interno', async () => {
     const d = deps({ trocarCodigo: async () => { throw new Error('boom'); } });
     assert.deepEqual(await processarRetorno(q('code=c&state=e'), d), { ok: false, motivo: 'erro_interno' });
+    const d2 = deps({ guardarConfirmacao: async () => { throw new Error('boom'); } });
+    assert.deepEqual(await processarRetorno(q('code=c&state=e'), d2), { ok: false, motivo: 'erro_interno' });
+});
+
+test('validarConfirmacao', () => {
+    const agora = Date.now();
+    const linha = { profile_id: 'p1', expira_em: new Date(agora + 5000).toISOString(), confirmacao_hash: 'h1', refresh_token_cifrado: 'x:y' };
+    assert.equal(validarConfirmacao(linha, 'p1', 'h1', agora), true);
+    assert.equal(validarConfirmacao(linha, 'p2', 'h1', agora), false); // outro perfil
+    assert.equal(validarConfirmacao(linha, 'p1', 'h2', agora), false); // hash errado
+    assert.equal(validarConfirmacao({ ...linha, expira_em: new Date(agora - 1).toISOString() }, 'p1', 'h1', agora), false);
+    assert.equal(validarConfirmacao({ ...linha, confirmacao_hash: null }, 'p1', '', agora), false);
+    assert.equal(validarConfirmacao({ ...linha, refresh_token_cifrado: null }, 'p1', 'h1', agora), false);
+    assert.equal(validarConfirmacao(null, 'p1', 'h1', agora), false);
 });

@@ -3,11 +3,11 @@
 // verify_jwt = false: /retorno é chamado pelo Google (sem JWT); as demais rotas validam o JWT aqui.
 // NUNCA registrar em log tokens, segredos, códigos ou corpos de requisição/resposta.
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { cifrar, decifrar, novoSegredo } from '../_shared/pocket-ads/cifra.ts';
+import { cifrar, decifrar, hashToken, novoSegredo } from '../_shared/pocket-ads/cifra.ts';
 import { criarClienteAds, ErroConexaoGoogle } from '../_shared/pocket-ads/googleAds.ts';
 import { ErroUsuario } from '../_shared/pocket-ads/mcp.ts';
 import {
-    normalizarIdConta, processarRetorno, urlAutorizacao, urlRetornoPocket, validarDadosProprios,
+    normalizarIdConta, processarRetorno, urlAutorizacao, urlRetornoPocket, validarConfirmacao, validarDadosProprios,
 } from '../_shared/pocket-ads/oauth.ts';
 import type { DepsRetorno } from '../_shared/pocket-ads/oauth.ts';
 
@@ -54,9 +54,11 @@ async function usuarioDoJwt(req: Request): Promise<string | null> {
 const depsRetorno: DepsRetorno = {
     async buscarEstado(estado) {
         const { data, error } = await db.from('google_ads_oauth_estados')
-            .select('profile_id, expira_em').eq('estado', estado).maybeSingle();
+            .select('profile_id, expira_em, confirmacao_hash').eq('estado', estado).maybeSingle();
         if (error) throw new Error(error.message);
-        return data ? { profile_id: String(data.profile_id), expira_em: String(data.expira_em) } : null;
+        return data
+            ? { profile_id: String(data.profile_id), expira_em: String(data.expira_em), confirmacao_hash: data.confirmacao_hash ?? null }
+            : null;
     },
     async apagarEstado(estado) {
         await db.from('google_ads_oauth_estados').delete().eq('estado', estado);
@@ -83,22 +85,48 @@ const depsRetorno: DepsRetorno = {
         const d = await r.json();
         return typeof d.email === 'string' ? d.email : null;
     },
-    async gravarConexao(profileId, email, refreshToken) {
-        const { error } = await db.from('google_ads_conexoes').upsert({
-            profile_id: profileId,
-            modo: 'pocket',
-            google_email: email,
+    async guardarConfirmacao(estado, email, refreshToken, confirmacaoHash) {
+        const { error } = await db.from('google_ads_oauth_estados').update({
             refresh_token_cifrado: await cifrar(refreshToken, env('POCKET_CRYPTO_KEY')),
-            developer_token_cifrado: null,
-            client_id: null,
-            client_secret_cifrado: null,
-            login_customer_id: null,
-            atualizado_em: new Date().toISOString(),
-            revogado_em: null,
-        }, { onConflict: 'profile_id' });
+            google_email: email,
+            confirmacao_hash: confirmacaoHash,
+        }).eq('estado', estado);
         if (error) throw new Error(error.message);
     },
 };
+
+const FALHA_CONFIRMAR = 'Não foi possível confirmar a conexão. Clique em Conectar com Google de novo.';
+
+/** POST /confirmar: só o navegador logado que iniciou o fluxo (JWT do mesmo perfil + código) conclui a conexão. */
+async function confirmar(profileId: string, req: Request): Promise<Response> {
+    let corpo: Record<string, unknown> = {};
+    try { corpo = await req.json(); } catch { /* cai na falha genérica */ }
+    const estado = typeof corpo.estado === 'string' ? corpo.estado : '';
+    const codigo = typeof corpo.confirmacao === 'string' ? corpo.confirmacao : '';
+    if (!estado || !codigo) return json({ erro: FALHA_CONFIRMAR }, 400);
+    // Retira a linha de forma atômica: o estado só pode ser usado uma vez, mesmo se a validação falhar.
+    const { data, error } = await db.from('google_ads_oauth_estados').delete().eq('estado', estado)
+        .select('profile_id, expira_em, confirmacao_hash, refresh_token_cifrado, google_email');
+    if (error) throw new Error(error.message);
+    const linha = data?.[0];
+    if (!validarConfirmacao(linha, profileId, await hashToken(codigo), Date.now())) {
+        return json({ erro: FALHA_CONFIRMAR }, 400);
+    }
+    const { error: e2 } = await db.from('google_ads_conexoes').upsert({
+        profile_id: profileId,
+        modo: 'pocket',
+        google_email: linha!.google_email ?? null,
+        refresh_token_cifrado: linha!.refresh_token_cifrado,
+        developer_token_cifrado: null,
+        client_id: null,
+        client_secret_cifrado: null,
+        login_customer_id: null,
+        atualizado_em: new Date().toISOString(),
+        revogado_em: null,
+    }, { onConflict: 'profile_id' });
+    if (e2) throw new Error(e2.message);
+    return json({ ok: true, google_email: linha!.google_email ?? null });
+}
 
 async function retorno(req: Request): Promise<Response> {
     const app = env('POCKET_APP_URL');
@@ -108,7 +136,7 @@ async function retorno(req: Request): Promise<Response> {
     const logando: DepsRetorno = {
         ...depsRetorno,
         trocarCodigo: (c) => depsRetorno.trocarCodigo(c).catch((e) => { falhou('troca do código', e); throw e; }),
-        gravarConexao: (p, m, t) => depsRetorno.gravarConexao(p, m, t).catch((e) => { falhou('gravação', e); throw e; }),
+        guardarConfirmacao: (s, m, t, h) => depsRetorno.guardarConfirmacao(s, m, t, h).catch((e) => { falhou('gravação', e); throw e; }),
     };
     const r = await processarRetorno(new URL(req.url).searchParams, logando);
     return redirecionar(urlRetornoPocket(app, r));
@@ -123,7 +151,7 @@ async function iniciar(profileId: string): Promise<Response> {
         estado, profile_id: profileId, expira_em: new Date(agora + VALIDADE_ESTADO_MS).toISOString(),
     });
     if (error) throw new Error(error.message);
-    return json({ url: urlAutorizacao(env('GOOGLE_OAUTH_CLIENT_ID'), redirectUri(), estado) });
+    return json({ url: urlAutorizacao(env('GOOGLE_OAUTH_CLIENT_ID'), redirectUri(), estado), estado });
 }
 
 async function proprio(profileId: string, req: Request): Promise<Response> {
@@ -190,13 +218,14 @@ Deno.serve(async (req: Request) => {
     const rota = new URL(req.url).pathname.split('/').filter(Boolean).pop();
     try {
         if (rota === 'retorno' && req.method === 'GET') return await retorno(req);
-        if (!['iniciar', 'proprio', 'desconectar'].includes(rota ?? '') || req.method !== 'POST') {
+        if (!['iniciar', 'confirmar', 'proprio', 'desconectar'].includes(rota ?? '') || req.method !== 'POST') {
             return json({ erro: 'Rota não encontrada.' }, 404);
         }
         if (!configurado()) return json({ erro: SEM_CONFIG }, 500);
         const profileId = await usuarioDoJwt(req);
         if (!profileId) return json({ erro: 'Sessão inválida. Entre de novo no Pocket.' }, 401);
         if (rota === 'iniciar') return await iniciar(profileId);
+        if (rota === 'confirmar') return await confirmar(profileId, req);
         if (rota === 'proprio') return await proprio(profileId, req);
         return await desconectar(profileId);
     } catch (e) {
